@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   Factory,
+  FlaskConical,
   HandCoins,
   Recycle,
   ShieldCheck,
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { landingMessages, type LandingMessages } from "@/components/landing/messages";
 import { getMessages } from "@/i18n/server";
 
-/** Public landing page: the bio-waste marketplace with the quality score as its trust layer. */
+/** Public landing page: the bio-waste marketplace with the AI quality score as its trust layer. */
 export default async function HomePage() {
   const t = await getMessages(landingMessages);
   return (
@@ -46,40 +47,41 @@ type T = LandingMessages;
 
 /* ---------- Shared pieces ---------- */
 
-function CtaButton({
-  href,
-  children,
-  tone = "dark",
-  className,
-}: {
-  href: string;
-  children: React.ReactNode;
-  tone?: "dark" | "light";
-  className?: string;
-}) {
+/** The theme's glowing navy pill, arrow first. */
+function CtaButton({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
   return (
     <Link
       href={href}
       className={cn(
-        "group inline-flex h-14 items-center gap-4 rounded-full ps-7 pe-3 text-[17px] transition-colors sm:text-[18px]",
-        tone === "dark"
-          ? "bg-primary text-primary-foreground hover:bg-[#0d2a23]"
-          : "bg-[#f6f5ef] text-primary hover:bg-white",
+        "btn-navy group inline-flex h-14 items-center gap-3.5 rounded-full ps-7 pe-9 text-[17px] font-semibold transition-[filter] hover:brightness-125 sm:h-[60px] sm:text-[19px]",
         className,
       )}
     >
+      <ArrowRight
+        className="size-5 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
+        strokeWidth={2.25}
+      />
       {children}
-      <span className="flex size-8 items-center justify-center rounded-full bg-honey text-primary transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
-        <ArrowRight className="size-4 rtl:-scale-x-100" strokeWidth={2.5} />
-      </span>
     </Link>
   );
 }
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+/** The quiet outlined pill next to the navy one. */
+function GhostButton({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <p className="flex items-center gap-2 text-[14px] font-medium uppercase tracking-[0.14em] text-moss">
-      <span className="size-1.5 rounded-full bg-honey" />
+    <Link
+      href={href}
+      className="inline-flex h-14 items-center rounded-full border border-[#9fb4cc] bg-white/25 px-9 text-[17px] font-medium transition-colors hover:bg-white/60 sm:h-[60px] sm:text-[18px]"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p className={cn("flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-teal", className)}>
+      <span className="size-1.5 rounded-full bg-gold" />
       {children}
     </p>
   );
@@ -89,7 +91,7 @@ function SectionTitle({ children, className }: { children: React.ReactNode; clas
   return (
     <h2
       className={cn(
-        "text-balance text-[36px] font-normal leading-[1.05] tracking-[-0.035em] sm:text-[52px]",
+        "text-balance text-[36px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-[52px]",
         className,
       )}
     >
@@ -102,32 +104,70 @@ const container = "mx-auto max-w-[1280px] px-5 sm:px-10 lg:px-16";
 
 /* ---------- Hero ---------- */
 
+const TRUST_ICONS: LucideIcon[] = [Sprout, Factory, FlaskConical, Recycle];
+
 function Hero({ t }: { t: T["hero"] }) {
   return (
-    <section className="relative flex flex-col">
+    <section className="relative">
+      {/* A soft blue halo behind the hand, in the photo's own background tones,
+          so the photo's faded edges melt into the page. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 end-0 w-full bg-[radial-gradient(ellipse_55%_50%_at_72%_52%,#b6c8dc_0%,rgba(182,200,220,0.6)_45%,transparent_78%)] rtl:bg-[radial-gradient(ellipse_55%_50%_at_28%_52%,#b6c8dc_0%,rgba(182,200,220,0.6)_45%,transparent_78%)]"
+      />
       <SiteHeader />
-      <div className="relative z-10 px-5 pt-8 text-center sm:pt-12 lg:pt-16">
-        <h1 className="mx-auto max-w-[900px] text-balance text-[44px] font-normal leading-[1.04] tracking-[-0.03em] sm:text-[64px] lg:text-[78px]">
-          {t.title}
-        </h1>
-        <p className="mx-auto mt-6 max-w-[480px] text-pretty text-[17px] leading-snug text-foreground/85 sm:text-[19px]">
-          {t.body}
-        </p>
-        <div className="mt-9 flex justify-center">
-          <CtaButton href="/signup">{t.cta}</CtaButton>
-        </div>
-      </div>
 
-      <div className="relative -mt-6 aspect-[1983/793] min-h-[240px] w-full sm:-mt-[5vw]">
-        <Image
-          src="/hero-moss-cutout.png"
-          alt={t.imageAlt}
-          fill
-          sizes="100vw"
-          loading="eager"
-          fetchPriority="high"
-          className="object-cover object-[45%_100%]"
-        />
+      {/* Static on wide screens so the photo anchors to the full-width section, not this box. */}
+      <div className="relative mx-auto grid max-w-[1440px] px-5 sm:px-10 lg:static lg:min-h-[calc(100dvh-7rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:px-16">
+        <div className="relative z-10 flex flex-col pt-6 pb-10 sm:pt-10 lg:justify-center lg:pt-4 lg:pb-16">
+          <p className="self-start rounded-full border border-white/80 bg-white/55 px-5 py-2 text-[14px] font-medium text-[#0d2547] shadow-[0_8px_24px_-16px_rgba(7,23,51,0.4)] sm:text-[16px]">
+            {t.badge}
+          </p>
+          <h1 className="mt-6 max-w-[640px] text-balance text-[46px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[68px] lg:text-[76px]">
+            {t.title}
+          </h1>
+          <p className="mt-6 max-w-[520px] text-pretty text-[17px] leading-relaxed text-muted-foreground sm:text-[18px]">
+            {t.body}
+          </p>
+          <div className="mt-9 flex flex-wrap items-center gap-4">
+            <CtaButton href="/signup">{t.cta}</CtaButton>
+            <GhostButton href="/dashboard?guest=1">{t.secondary}</GhostButton>
+          </div>
+
+          <div className="mt-12 flex items-center gap-5 lg:mt-20">
+            <ul className="flex" aria-hidden>
+              {TRUST_ICONS.map((Icon, i) => (
+                <li
+                  key={i}
+                  className="-ms-3 flex size-12 items-center justify-center rounded-full border-[3px] border-white bg-[#e9f2f9] text-teal shadow-[0_8px_18px_-10px_rgba(7,23,51,0.5)] first:ms-0 sm:size-14"
+                >
+                  <Icon className="size-5 sm:size-6" strokeWidth={1.6} />
+                </li>
+              ))}
+            </ul>
+            <span aria-hidden className="h-10 w-px bg-foreground/25" />
+            <p className="text-[15px] text-muted-foreground sm:text-[17px]">
+              <strong className="font-semibold text-foreground">{t.trustStrong}</strong> {t.trustRest}
+            </p>
+          </div>
+        </div>
+
+        {/* The robotic hand holding the emblem. On wide screens it bleeds off the page edge. */}
+        <div className="relative -mx-5 aspect-[1546/1017] sm:-mx-10 lg:absolute lg:top-8 lg:bottom-0 lg:end-0 lg:mx-0 lg:aspect-auto lg:w-[58%]">
+          <Image
+            src="/hero-hand.png"
+            alt={t.imageAlt}
+            fill
+            sizes="(min-width: 1024px) 60vw, 100vw"
+            loading="eager"
+            fetchPriority="high"
+            className={cn(
+              "object-cover object-[38%_50%] rtl:-scale-x-100",
+              // Fade the photo's left, top and bottom edges into the halo; the arm runs off the right edge.
+              "[mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent,black_24%),linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]",
+            )}
+          />
+        </div>
       </div>
     </section>
   );
@@ -135,14 +175,13 @@ function Hero({ t }: { t: T["hero"] }) {
 
 /* ---------- What gets traded: looping strip under the hero ---------- */
 
-
 function Residues({ t }: { t: T["residues"] }) {
   // Repeat the set so it overflows a wide screen, then render that block twice:
   // the -50% marquee translate lines the second copy up with the first.
   const loop = Array.from({ length: 2 }, () => t.items).flat();
   return (
     <section aria-label={t.label} className="py-12 sm:py-16">
-      <p className="text-center text-[13px] tracking-[0.02em] text-muted-foreground">{t.label}</p>
+      <p className="text-center text-[13px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{t.label}</p>
       {/* Left to right in both languages: in right-to-left the -50% translate
           would pull a gap into view. Each word still reads in its own script. */}
       <div
@@ -155,10 +194,10 @@ function Residues({ t }: { t: T["residues"] }) {
               key={`${name}-${i}`}
               dir="auto"
               aria-hidden={i >= t.items.length || undefined}
-              className="flex items-center whitespace-nowrap text-[20px] tracking-[-0.03em] text-foreground/45 sm:text-[24px]"
+              className="flex items-center whitespace-nowrap text-[20px] font-medium tracking-[-0.02em] text-foreground/40 sm:text-[24px]"
             >
               {name}
-              <span className="mx-8 size-1.5 rounded-full bg-honey sm:mx-12" />
+              <span className="mx-8 size-1.5 rounded-full bg-teal/60 sm:mx-12" />
             </li>
           ))}
         </ul>
@@ -177,20 +216,20 @@ const FACTORY_ICONS: LucideIcon[] = [Factory, Recycle, ShieldCheck];
 function PointList({ label, points, icons }: { label: string; points: readonly Point[]; icons: LucideIcon[] }) {
   return (
     <div>
-      <p className="text-[13px] font-medium uppercase tracking-[0.16em] text-moss">{label}</p>
-      <ul className="mt-8 space-y-10 lg:space-y-14">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-teal">{label}</p>
+      <ul className="mt-8 space-y-10 lg:space-y-12">
         {points.map((p, i) => {
           const Icon = icons[i];
           return (
-          <li key={p.title} className="flex gap-5">
-            <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#dfe3c9] text-foreground">
-              <Icon className="size-7" strokeWidth={1.5} />
-            </span>
-            <div className="pt-1">
-              <h3 className="text-[19px] tracking-[-0.015em]">{p.title}</h3>
-              <p className="mt-2 max-w-[290px] text-[15px] leading-relaxed text-muted-foreground">{p.body}</p>
-            </div>
-          </li>
+            <li key={p.title} className="flex gap-5">
+              <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/55 text-teal shadow-[0_12px_28px_-18px_rgba(7,23,51,0.5)]">
+                <Icon className="size-6" strokeWidth={1.6} />
+              </span>
+              <div className="pt-0.5">
+                <h3 className="text-[19px] font-semibold tracking-[-0.015em]">{p.title}</h3>
+                <p className="mt-2 max-w-[290px] text-[15px] leading-relaxed text-muted-foreground">{p.body}</p>
+              </div>
+            </li>
           );
         })}
       </ul>
@@ -198,58 +237,109 @@ function PointList({ label, points, icons }: { label: string; points: readonly P
   );
 }
 
+// Where the chips sit on the hub's ring, as [left %, top %]: residues in on the
+// start side, products out on the end side.
+const HUB_IN = [
+  [10, 26],
+  [3, 50],
+  [10, 74],
+];
+const HUB_OUT = [
+  [88, 20],
+  [97, 40],
+  [97, 60],
+  [88, 80],
+];
+
+/** The marketplace hub: the hand-and-emblem photo in concentric rings, residues in, products out. */
+function Hub({ t }: { t: T["markets"] }) {
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[480px]">
+      {/* Still, drawn rings. */}
+      <div aria-hidden className="absolute inset-[6%] rounded-full border border-teal/20" />
+      <div aria-hidden className="absolute inset-[16%] rounded-full border border-dashed border-teal/30" />
+      <div className="absolute inset-[24%] overflow-hidden rounded-full border-[6px] border-white/80 shadow-[0_30px_70px_-30px_rgba(16,72,160,0.65)]">
+        <Image
+          src="/hero-hand.png"
+          alt={t.hubAlt}
+          fill
+          // A square crop shows 66% of the photo's width; 12% puts the emblem in the middle.
+          sizes="260px"
+          className="object-cover object-[12%_50%]"
+        />
+      </div>
+      <p className="btn-navy absolute bottom-[14%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-semibold">
+        {t.hubLabel}
+      </p>
+
+      {/* Ring chips on wider screens; on phones they sit in two rows below. */}
+      {t.hubIn.map((label, i) => (
+        <HubChip key={label} label={label} tone="in" pos={HUB_IN[i]} />
+      ))}
+      {t.hubOut.map((label, i) => (
+        <HubChip key={label} label={label} tone="out" pos={HUB_OUT[i]} />
+      ))}
+    </div>
+  );
+}
+
+function HubChip({ label, tone, pos }: { label: string; tone: "in" | "out"; pos: number[] }) {
+  return (
+    <span
+      // Positions are physical so the ring reads the same way in both languages.
+      style={{ left: `${pos[0]}%`, top: `${pos[1]}%` }}
+      className="absolute hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/80 bg-card/85 px-3.5 py-1.5 text-[13px] font-medium shadow-[0_10px_24px_-14px_rgba(7,23,51,0.5)] backdrop-blur sm:flex"
+    >
+      <span className={cn("size-2 rounded-full", tone === "in" ? "bg-gold" : "bg-leaf")} />
+      {label}
+    </span>
+  );
+}
+
+function HubChipsPhone({ t }: { t: T["markets"] }) {
+  return (
+    <div className="mt-6 space-y-3 sm:hidden">
+      {[
+        { items: t.hubIn, dot: "bg-gold" },
+        { items: t.hubOut, dot: "bg-leaf" },
+      ].map((row, r) => (
+        <ul key={r} className="flex flex-wrap justify-center gap-2">
+          {row.items.map((label) => (
+            <li
+              key={label}
+              className="flex items-center gap-2 rounded-full border border-white/80 bg-card/85 px-3 py-1.5 text-[13px] font-medium"
+            >
+              <span className={cn("size-2 rounded-full", row.dot)} />
+              {label}
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  );
+}
+
 function Marketplaces({ t }: { t: T["markets"] }) {
   return (
     <section id="marketplaces" className="relative scroll-mt-6 overflow-hidden py-24 sm:py-28">
-      {/* Thin drawn curves in the corners, as in the design. Decorative and still. */}
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute -left-10 top-0 hidden h-[260px] w-[420px] text-moss/35 md:block"
-        viewBox="0 0 420 260"
-        fill="none"
-      >
-        <path d="M0 250 C 120 220, 220 150, 300 20" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-      <svg
-        aria-hidden
-        className="pointer-events-none absolute -right-10 bottom-0 hidden h-[300px] w-[520px] text-moss/35 md:block"
-        viewBox="0 0 520 300"
-        fill="none"
-      >
-        <path d="M60 300 C 180 200, 330 230, 520 40" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-
       <div className="relative mx-auto max-w-[1440px] px-5 sm:px-10 lg:px-16">
         <Reveal className="mx-auto max-w-[640px] text-center">
-          <p className="text-[14px] font-medium uppercase tracking-[0.3em]">{t.eyebrow}</p>
+          <Eyebrow className="justify-center">{t.eyebrow}</Eyebrow>
           <SectionTitle className="mt-5">{t.title}</SectionTitle>
-          <p className="mx-auto mt-5 max-w-[470px] text-[17px] leading-relaxed text-foreground/75">
-            {t.body}
-          </p>
+          <p className="mx-auto mt-5 max-w-[470px] text-[17px] leading-relaxed text-muted-foreground">{t.body}</p>
         </Reveal>
 
-        <div className="mt-14 grid gap-14 lg:mt-6 lg:grid-cols-[1fr_minmax(0,1.45fr)_1fr] lg:items-start lg:gap-6">
-          <Reveal className="lg:order-1 lg:pt-6">
+        <div className="mt-14 grid gap-14 lg:mt-12 lg:grid-cols-[1fr_minmax(0,1.3fr)_1fr] lg:items-center lg:gap-8">
+          <Reveal className="lg:order-1">
             <PointList label={t.farmLabel} points={t.farm} icons={FARM_ICONS} />
           </Reveal>
 
-          <Reveal delay={0.1} className="relative mx-auto w-full max-w-[640px] lg:order-2 lg:self-center">
-            <Image
-              src="/globe.png"
-              alt={t.globeAlt}
-              width={1344}
-              height={878}
-              sizes="(min-width: 1024px) 640px, 90vw"
-              className="relative z-10 h-auto w-full"
-            />
-            {/* Soft ground shadow (the one in the photo was cut out with its background). */}
-            <div
-              aria-hidden
-              className="mx-auto -mt-2 h-8 w-[55%] rounded-[50%] bg-[radial-gradient(closest-side,rgba(40,52,20,0.32),transparent)] blur-[2px] sm:mt-4"
-            />
+          <Reveal delay={0.1} className="lg:order-2">
+            <Hub t={t} />
+            <HubChipsPhone t={t} />
           </Reveal>
 
-          <Reveal delay={0.16} className="lg:order-3 lg:pt-6">
+          <Reveal delay={0.16} className="lg:order-3">
             <PointList label={t.factoryLabel} points={t.factory} icons={FACTORY_ICONS} />
           </Reveal>
         </div>
@@ -272,22 +362,28 @@ const READINGS = [
 
 function Quality({ t }: { t: T["quality"] }) {
   return (
-    <section id="quality" className="scroll-mt-6 bg-primary py-24 text-primary-foreground sm:py-32">
-      <div className={cn(container, "grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-20")}>
+    <section
+      id="quality"
+      className="relative scroll-mt-6 overflow-hidden bg-[linear-gradient(180deg,#06204a_0%,#04173a_45%,#020d24_100%)] py-24 text-primary-foreground sm:py-32"
+    >
+      {/* A cyan glow behind the score card, like the joints of the robotic hand. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -end-40 top-1/2 size-[720px] -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(46,196,214,0.22),transparent)]"
+      />
+      <div className={cn(container, "relative grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-20")}>
         <Reveal>
-          <p className="flex items-center gap-2 text-[14px] font-medium uppercase tracking-[0.14em] text-honey">
-            <span className="size-1.5 rounded-full bg-honey" />
+          <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan">
+            <span className="size-1.5 rounded-full bg-gold" />
             {t.eyebrow}
           </p>
           <SectionTitle className="mt-5">{t.title}</SectionTitle>
-          <p className="mt-6 max-w-[480px] text-[17px] leading-relaxed text-primary-foreground/70">
-            {t.body}
-          </p>
+          <p className="mt-6 max-w-[480px] text-[17px] leading-relaxed text-primary-foreground/70">{t.body}</p>
 
           <div className="mt-10 grid gap-x-10 gap-y-7 sm:grid-cols-2">
             {t.tools.map((tool) => (
               <div key={tool.title} className="border-t border-primary-foreground/15 pt-5">
-                <h3 className="text-[18px]">{tool.title}</h3>
+                <h3 className="text-[18px] font-semibold">{tool.title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-primary-foreground/65">{tool.body}</p>
               </div>
             ))}
@@ -295,22 +391,22 @@ function Quality({ t }: { t: T["quality"] }) {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <div className="rounded-[28px] bg-card p-6 text-card-foreground sm:p-9">
-            <div className="flex items-center justify-between text-[14px] text-muted-foreground">
+          <div className="rounded-[28px] border border-white/60 bg-card p-6 text-card-foreground shadow-[0_40px_90px_-40px_rgba(46,196,214,0.55)] sm:p-9">
+            <div className="flex items-center justify-between gap-4 text-[14px] text-muted-foreground">
               <span>{t.card.shipment}</span>
-              <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-moss" /> {t.card.scored}
+              <span className="flex shrink-0 items-center gap-1.5">
+                <span className="size-2 rounded-full bg-leaf" /> {t.card.scored}
               </span>
             </div>
 
             <div className="mt-8 flex items-end justify-between gap-6">
               <div>
-                <p className="text-[88px] leading-none tracking-[-0.05em] tabular-nums sm:text-[112px]">92</p>
+                <p className="text-[88px] font-semibold leading-none tracking-[-0.05em] tabular-nums sm:text-[112px]">92</p>
                 <p className="mt-2 text-[15px] text-muted-foreground">{t.card.scoreLabel}</p>
               </div>
-              <div className="rounded-2xl bg-moss px-5 py-4 text-white">
-                <p className="text-[13px] opacity-80">{t.card.route}</p>
-                <p className="text-[24px] leading-tight">{t.card.routeValue}</p>
+              <div className="btn-navy rounded-2xl px-5 py-4">
+                <p className="text-[13px] opacity-75">{t.card.route}</p>
+                <p className="text-[24px] font-semibold leading-tight">{t.card.routeValue}</p>
               </div>
             </div>
 
@@ -321,12 +417,15 @@ function Quality({ t }: { t: T["quality"] }) {
                     <span>
                       {t.card.readings[i]} <span className="text-muted-foreground">{r.value}</span>
                     </span>
-                    <span className="tabular-nums text-moss" dir="ltr">
+                    <span className="font-medium tabular-nums text-teal" dir="ltr">
                       {r.pts} {t.card.pts}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-moss" style={{ width: r.width }} />
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-teal to-cyan rtl:bg-gradient-to-l"
+                      style={{ width: r.width }}
+                    />
                   </div>
                 </li>
               ))}
@@ -362,42 +461,42 @@ function Pricing({ t }: { t: T["pricing"] }) {
           {t.plans.map((p, i) => {
             const featured = i === FEATURED_PLAN;
             return (
-            <Reveal
-              key={p.name}
-              delay={i * 0.08}
-              className={cn(
-                "flex flex-col rounded-[28px] p-7 sm:p-9",
-                featured ? "bg-primary text-primary-foreground" : "bg-card",
-              )}
-            >
-              <h3 className="text-[20px]">{p.name}</h3>
-              <p className={cn("mt-1 text-[15px]", featured ? "text-primary-foreground/65" : "text-muted-foreground")}>
-                {p.lead}
-              </p>
-              <p className="mt-10 text-[56px] leading-none tracking-[-0.04em]">{p.price}</p>
-              <p className={cn("mt-2 text-[15px]", featured ? "text-primary-foreground/65" : "text-muted-foreground")}>
-                {p.unit}
-              </p>
-              <ul className="mt-8 flex-1 space-y-3 text-[15px]">
-                {p.features.map((f) => (
-                  <li key={f} className="flex gap-3">
-                    <Check className={cn("mt-0.5 size-4 shrink-0", featured ? "text-honey" : "text-moss")} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/signup"
+              <Reveal
+                key={p.name}
+                delay={i * 0.08}
                 className={cn(
-                  "mt-10 flex h-12 items-center justify-center rounded-full text-[16px] transition-colors",
-                  featured
-                    ? "bg-honey text-primary hover:bg-[#f0b03a]"
-                    : "border border-foreground/80 hover:bg-foreground hover:text-background",
+                  "flex flex-col rounded-[28px] p-7 sm:p-9",
+                  featured ? "btn-navy" : "glass",
                 )}
               >
-                {p.cta}
-              </Link>
-            </Reveal>
+                <h3 className="text-[20px] font-semibold">{p.name}</h3>
+                <p className={cn("mt-1 text-[15px]", featured ? "text-primary-foreground/65" : "text-muted-foreground")}>
+                  {p.lead}
+                </p>
+                <p className="mt-10 text-[56px] font-semibold leading-none tracking-[-0.04em]">{p.price}</p>
+                <p className={cn("mt-2 text-[15px]", featured ? "text-primary-foreground/65" : "text-muted-foreground")}>
+                  {p.unit}
+                </p>
+                <ul className="mt-8 flex-1 space-y-3 text-[15px]">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex gap-3">
+                      <Check className={cn("mt-0.5 size-4 shrink-0", featured ? "text-cyan" : "text-teal")} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/signup"
+                  className={cn(
+                    "mt-10 flex h-12 items-center justify-center rounded-full text-[16px] font-semibold transition-colors",
+                    featured
+                      ? "bg-white text-primary hover:bg-[#e3eef8]"
+                      : "border border-foreground/25 hover:border-transparent hover:bg-primary hover:text-primary-foreground",
+                  )}
+                >
+                  {p.cta}
+                </Link>
+              </Reveal>
             );
           })}
         </div>
@@ -411,32 +510,16 @@ function Pricing({ t }: { t: T["pricing"] }) {
 function Faq({ t }: { t: T["faq"] }) {
   return (
     <section id="faq" className="relative scroll-mt-6 py-24 sm:py-32">
-      {/* Divider from Pricing: the thin green wave used in Routes, not a straight rule. */}
-      <svg
-        aria-hidden
-        // Centred, not edge to edge; the ends fade out softly.
-        className="pointer-events-none absolute left-1/2 top-0 h-10 w-[min(900px,80%)] -translate-x-1/2 -translate-y-1/2 text-moss/40 [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)] sm:h-14"
-        viewBox="0 0 1440 56"
-        preserveAspectRatio="none"
-        fill="none"
-      >
-        <path
-          d="M0 34 C 180 6, 360 6, 540 28 S 900 52, 1080 26 S 1320 4, 1440 22"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
       <div className={cn(container, "grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20")}>
         <Reveal>
           <Eyebrow>{t.eyebrow}</Eyebrow>
           <SectionTitle className="mt-5">{t.title}</SectionTitle>
         </Reveal>
         <Reveal delay={0.08}>
-          <Accordion className="border-t border-border">
+          <Accordion className="glass rounded-[28px] px-6 sm:px-8">
             {t.items.map((f) => (
-              <AccordionItem key={f.q} value={f.q} className="border-b border-border">
-                <AccordionTrigger className="py-6 text-[18px] font-normal hover:no-underline sm:text-[20px]">
+              <AccordionItem key={f.q} value={f.q} className="border-b border-border last:border-0">
+                <AccordionTrigger className="py-6 text-[18px] font-medium hover:no-underline sm:text-[19px]">
                   {f.q}
                 </AccordionTrigger>
                 <AccordionContent className="pb-6 text-[16px] leading-relaxed text-muted-foreground">
@@ -456,28 +539,27 @@ function Faq({ t }: { t: T["faq"] }) {
 function ClosingCta({ t }: { t: T["closing"] }) {
   return (
     <section className="px-5 pb-10 sm:px-10 lg:px-16">
-      <div className="relative mx-auto max-w-[1280px] overflow-hidden rounded-[32px] border border-border bg-[#eeede3]">
-        <div className="relative z-10 px-6 pt-16 text-center sm:pt-24">
-          <h2 className="mx-auto max-w-[760px] text-balance text-[40px] leading-[1.04] tracking-[-0.04em] sm:text-[64px]">
+      <div className="relative mx-auto grid max-w-[1280px] overflow-hidden rounded-[32px] border border-white/80 bg-[linear-gradient(120deg,#e8f1f9_0%,#d2e1ef_55%,#b9cbdf_100%)] lg:grid-cols-[1.1fr_1fr]">
+        <div className="relative z-10 px-6 pt-16 pb-6 text-center sm:px-12 sm:pt-20 lg:py-24 lg:text-start">
+          <h2 className="mx-auto max-w-[560px] text-balance text-[40px] font-semibold leading-[1.04] tracking-[-0.04em] sm:text-[58px] lg:mx-0">
             {t.title}
           </h2>
-          <p className="mx-auto mt-5 max-w-[440px] text-[17px] text-muted-foreground">
-            {t.body}
-          </p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <p className="mx-auto mt-5 max-w-[440px] text-[17px] text-muted-foreground lg:mx-0">{t.body}</p>
+          <div className="mt-9 flex flex-col items-center gap-5 sm:flex-row sm:justify-center lg:justify-start">
             <CtaButton href="/signup">{t.cta}</CtaButton>
-            <Link href="/dashboard?guest=1" className="text-[16px] underline-offset-4 hover:underline">
+            <Link href="/dashboard?guest=1" className="text-[16px] font-medium underline-offset-4 hover:underline">
               {t.guest}
             </Link>
           </div>
         </div>
-        <div className="relative h-[clamp(180px,30vw,380px)]">
+        <div className="relative h-[clamp(220px,48vw,420px)] lg:h-auto">
           <Image
-            src="/hero-moss.png"
+            src="/hero-hand.png"
             alt=""
             fill
-            sizes="(min-width: 1280px) 1280px, 100vw"
-            className="object-cover object-[60%_30%] [mask-image:linear-gradient(to_bottom,transparent,black_30%)]"
+            sizes="(min-width: 1024px) 600px, 100vw"
+            // Mirrored in Arabic; the mask mirrors with it.
+            className="object-cover object-[35%_50%] [mask-image:linear-gradient(to_bottom,transparent,black_25%)] rtl:-scale-x-100 lg:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
           />
         </div>
       </div>
@@ -520,13 +602,11 @@ function Footer({ t }: { t: T["footer"] }) {
         <div className="grid gap-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <Wordmark />
-            <p className="mt-4 max-w-[280px] text-[15px] text-muted-foreground">
-              {t.tagline}
-            </p>
+            <p className="mt-4 max-w-[280px] text-[15px] text-muted-foreground">{t.tagline}</p>
           </div>
           {columns.map((col) => (
             <div key={col.title}>
-              <p className="text-[14px] text-muted-foreground">{col.title}</p>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-teal">{col.title}</p>
               <ul className="mt-4 space-y-2.5 text-[15px]">
                 {col.links.map((l) => (
                   <li key={l.label}>

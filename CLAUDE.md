@@ -1,56 +1,58 @@
-# CLAUDE.md — BioGrena Platform
+# CLAUDE.md — BiorefMind Platform
 
-BioGrena is a multi-company B2B SaaS (Agro-Medicinal Biomass Intelligence) built by SiteDZ for the BioGrena project owner. Factories and labs record biomass shipments (pomegranate peels first), get a quality score and a route (A pharmaceutical / B food-grade / C low-grade), inspectors override with a logged reason, and teams get analytics, an AI assistant and PDF reports. Proposal: `proposal/`, study summary: `AI project.pdf`.
+BiorefMind is a second version of the BioGrena platform (`D:\biogrenaplatform`, branch `blank-skeleton` @ `355cf0d`) with a new brand and a new look. Same product: a **bio-waste marketplace** where farmers and factories sell peels, pomace and residues to factories that need them, and every batch gets a 0–100 quality score and a route (A pharmaceutical / B food-grade / C recovery). Inspectors override routes with a logged reason; teams get analytics, an AI assistant and PDF reports. **Never modify the BioGrena project** — this repo is a separate copy.
 
-- Design: `docs/superpowers/specs/2026-09-28-phase-1-platform-design.md`
-- Backend contract: `docs/superpowers/contracts/phase-1-backend.md`
+- Theme design: `docs/superpowers/specs/2026-10-01-biorefmind-theme-design.md`
+- Inherited from BioGrena (still accurate for the backend; brand names in them are BioGrena's): `docs/superpowers/specs/2026-09-28-phase-1-platform-design.md`, `docs/superpowers/contracts/phase-1-backend.md`
+- Owner's theme references (untracked, at the repo root): `theme.png` (the target landing look), `herohandandlogo.png` (hero photo source).
+
+## Business model (from BioGrena, 2026-09-30)
+1. **Farmers → Factories:** farmers and cooperatives list crop residues and factories buy them.
+2. **Factories → Factories:** plants sell by-products to factories that make extracts, pectin, packaging or energy.
+Draft pricing (not confirmed): free for farmers, 5% commission per sale (placeholder), optional "Factory Pro" monthly plan.
 
 ## Stack
-Next.js 16.3 App Router, React 19.2, TypeScript, Tailwind 4, shadcn `base-nova` over Base UI (`src/components/ui/`), `motion`, ECharts, sonner, Convex + Better Auth (`@convex-dev/better-auth`). Boilerplate copied from AI TRIDI (`D:\aitridi\aitrididibaw`) — **never modify that project**. This Next version differs from training data: read `node_modules/next/dist/docs/` before writing Next code; `params`, `searchParams`, `cookies()` are async.
+Next.js 16.3 App Router, React 19.2, TypeScript, Tailwind 4, shadcn `base-nova` over Base UI (`src/components/ui/`), `motion`, ECharts, sonner, Convex + Better Auth (`@convex-dev/better-auth`). This Next version differs from training data: read `node_modules/next/dist/docs/` before writing Next code; `params`, `searchParams`, `cookies()` are async.
 
 - Auth: Better Auth runs inside Convex (`convex/auth.ts`, `convex/http.ts`); the site proxies it at `/api/auth/*` so the cookie is first-party. The browser client (`src/lib/auth-client.ts`) has no `baseURL` on purpose. App profiles live in `users`, linked by lowercase email.
 - Clients call Convex through `api` in `src/lib/backend.ts` and type results with `src/lib/types.ts`.
-- Theme (2026-09-30, cloned from `3templates/main design/`): warm paper background `#ecebe2`, forest ink `#0c241e`, near-black green primary `#061714`, brand amber `honey` `#e8a21e`, `moss` `#5f8f22`; font Inter Tight. Tokens in `src/app/globals.css`. shadcn's `accent` is the quiet beige hover surface, not the amber: use `bg-honey`/`text-honey` for the brand amber. No floating/bobbing motion (owner rule); the only loop is the residue marquee under the hero.
-- Landing page: `src/app/page.tsx` + `src/components/landing/*` (header with hover dropdowns and a phone menu, How it works, Routes). Images in `public/` (`hero-moss-cutout.png`, `globe.png`, `laptop-branch.png` are background-removed cutouts of the owner's designs; `step-*.png` are blended into their cards, not cut out).
+- **Theme (2026-10-01, from `theme.png`):** ice-blue background `#d9e7f3`, navy ink `#071733`, navy primary `#04173a`; the emblem's colours as tokens `teal` `#0b6676`, `leaf` `#14894c`, `gold` `#d69a35`, `cyan` `#2ec4d6`; font Figtree (Arabic: IBM Plex Sans Arabic). Tokens in `src/app/globals.css`, plus two utilities: `btn-navy` (the glowing navy pill/surface) and `glass` (frosted card). shadcn's `accent` is the quiet hover surface. No floating/bobbing motion (owner rule); the only loop is the residue marquee under the hero.
+- Landing page: `src/app/page.tsx` + `src/components/landing/*`. Images in `public/`: `hero-hand.png` (copy of the owner's `herohandandlogo.png`, edges faded into a blue halo with CSS masks — not cut out), `logo-mark.png` (emblem cut from `theme.png`'s header, 77 px, background keyed out; also `src/app/icon.png`). The other visuals (marketplace hub, step previews, dashboard preview) are built in code; their figures are labelled as examples.
+- In Arabic, photos of the hand are mirrored (`rtl:-scale-x-100`) so the arm comes in from the outer edge. A mirrored element's CSS mask mirrors with it — don't add `rtl:` mask variants.
 
-## Arabic (added 2026-09-30)
-English (default) and Arabic (right to left), same approach as AI TRIDI: no URL prefix; the language lives in the `biogrena.lang` cookie.
-- Core in `src/i18n/`: `locale.ts` (`parseLocale`, `dirOf`), `messages.ts` (`defineMessages({ en, ar })` — the Arabic side is typed from the English one, so a missing translation fails `tsc`), `server.ts` (`getLocale`, `getMessages` for server components), `provider.tsx` (`I18nProvider`, `useLocale`, `useMessages`; also feeds Base UI's `DirectionProvider`), `actions.ts` (`saveLocale`), `backend-errors.ts` (Arabic for known backend refusals on the sign-in pages).
+## Arabic
+English (default) and Arabic (right to left): no URL prefix; the language lives in the `biorefmind.lang` cookie.
+- Core in `src/i18n/`: `locale.ts`, `messages.ts` (`defineMessages({ en, ar })` — the Arabic side is typed from the English one, so a missing translation fails `tsc`), `server.ts`, `provider.tsx`, `actions.ts`, `backend-errors.ts`.
 - Text lives in `src/components/landing/messages.ts` and `src/components/auth-messages.ts`. Never write user-facing English straight into a component on these pages.
-- Translated: landing page, `/login`, `/signup`, `/onboarding` (with an EN | عربي switch, `src/components/language-switch.tsx`). The dashboard is deliberately English and left-to-right (its layout wraps it in `lang="en" dir="ltr"`) until it is rebuilt.
-- RTL rules: logical classes (`ms/me`, `ps/pe`, `start/end`, `border-s`, `text-start`); arrows get `rtl:-scale-x-100`; number ranges get `dir="ltr"`; the residue marquee is forced `dir="ltr"`. Arabic pages lead with IBM Plex Sans Arabic (after Inter Tight it never loads, because Inter's Arial fallback already has Arabic glyphs); `:lang(ar)` zeroes letter-spacing; `[lang="en"]` islands keep Inter Tight.
-- Reading the cookie makes every page dynamic (`ƒ` in the build). Fine on Vercel; revisit if the landing page ever needs static or edge caching (cache one copy per language).
+- Translated: landing, `/login`, `/signup`, `/onboarding`. The dashboard is deliberately English and left-to-right until it is rebuilt.
+- RTL rules: logical classes (`ms/me`, `ps/pe`, `start/end`, `border-s`, `text-start`); arrows get `rtl:-scale-x-100`; number ranges and the chart get `dir="ltr"`; the residue marquee is forced `dir="ltr"`.
+- Reading the cookie makes every page dynamic (`ƒ` in the build).
 
 ## Convex
-Project `biogrena-platform`, dev deployment `grandiose-bandicoot-465` (in `.env.local`). Env: `SITE_URL`, `BETTER_AUTH_SECRET`, optional `OPENROUTER_API_KEY`, `AI_MODEL`.
+Own project `biorefmind-platform` (team `azeddine-zellag`), dev deployment `resolute-retriever-764` (in `.env.local`). Env set on dev: `SITE_URL` (= `http://localhost:3100`), `BETTER_AUTH_SECRET`. Optional: `OPENROUTER_API_KEY`, `AI_MODEL`. No production deployment yet.
 
 ## Commands (PowerShell)
 ```
-npm run dev               # http://localhost:3000 (on 8 GB RAM prefer `npm run build; npm start`)
-npx convex dev --once     # push functions + regenerate convex/_generated (set CONVEX_TMPDIR=D:\biogrenaplatform\.convex-tmp)
+npm run dev               # on 8 GB RAM prefer `npm run build; npx next start -p 3100`
+npx convex dev --once     # push functions (set CONVEX_TMPDIR=D:\Biorefmind\.convex-tmp)
 npm test                  # vitest + convex-test (convex/**/*.test.ts)
 npm run typecheck; npm run typecheck:convex; npm run lint; npm run build
 ```
-Deploys (Vercel, `npx convex deploy`) only when the owner says "ship it".
+On a fresh clone run `npx next typegen` (or a build) before `npm run typecheck`: `LayoutProps` is generated. Port 3000 is often taken by another project; local testing uses 3100, matching the dev `SITE_URL`. Deploys (Vercel, `npx convex deploy`) only when the owner says "ship it".
 
-On this machine port 3000 is often taken by another project (Mentada); do not stop it. To test locally on another port, set the dev `SITE_URL` to that origin (`npx convex env set SITE_URL http://localhost:3100`), run `npx next start -p 3100`, and set it back afterwards. A browser smoke script lives in the session scratchpad only; see "Status" for what it covered.
-
-## Status (2026-09-28)
-- **Frontend reset to a blank skeleton** on branch `blank-skeleton`: pages are `/`, `/login`, `/signup`, `/onboarding`, `/dashboard` (empty, auth-guarded). Auth works; everything else is to be rebuilt. The notes below describe the old UI (still on `phase-1`).
-Phase 1 is built on branch `phase-1` and verified locally; **not deployed** (no Vercel project, no production Convex deployment yet).
-- 33 backend tests pass; typecheck, lint and `next build` (15 routes) pass.
-- A real Chrome run passed: landing (no sideways scroll at 360 px), `/demo` scoring, sign-up → dashboard, demo data (40 shipments, charts), shipment list and detail, override logged, printable report, assistant (built-in responder), wrong/right password.
-
-- 2026-09-30 (branch `blank-skeleton`): landing page rebuilt from the owner's designs, and Arabic added (see "Arabic"). Verified in Chrome in both languages at desktop and phone width; 33 tests, typecheck, lint and `next build` (7 routes) pass.
+## Status (2026-10-01)
+Branch `biorefmind-theme` (from `main` = untouched BioGrena import). Rebrand + new theme done; backend unchanged.
+- 33 tests, both type checks, lint and `next build` (8 routes) pass.
+- Real Chrome run: landing at 1536 px and 360 px with no sideways scroll, Arabic right-to-left, sign-up → dashboard, sign-out, wrong password message, sign-in → dashboard; no console errors.
 
 ## Open decisions (ask the owner)
-1. Scoring thresholds in `convex/lib/crops.ts` are placeholders until calibrated with the study's lab data.
-2. The AI assistant needs `OPENROUTER_API_KEY` (and optionally `AI_MODEL`) set on Convex; without it, answers are rule-based.
-3. Landing copy written by us (the 2026-09-30 landing): section headlines, the six marketplace points, the example listings and quality card, and the draft pricing.
-4. Invited teammates sign up at `/signup`, which also asks for a company name and creates a second workspace. A dedicated "join" sign-up is not built yet.
-5. Hosting: Vercel (per proposal) — needs an account/project and a production Convex deployment before "ship it".
-6. Arabic copy was written by us (Modern Standard Arabic) and should be reviewed by a native speaker; the brand stays "BioGrena" in Latin letters inside Arabic text.
-7. The owner's mock-up photos show example figures ("86/100", "1,248 samples", "+22%") and spell the brand "Biogrena" on the laptop screen.
+1. Scoring thresholds in `convex/lib/crops.ts` are placeholders until calibrated with lab data.
+2. The AI assistant needs `OPENROUTER_API_KEY` on Convex; without it, answers are rule-based.
+3. The theme's social icons (Facebook, X, Instagram) were left out: no account links yet.
+4. In Arabic the hero photo is mirrored, so the emblem in it is mirrored too. Alternative: keep it unmirrored on the left.
+5. Copy is BioGrena's with the brand renamed, plus new hero lines ("AI quality scoring for bio-waste", "Farmers, factories & labs on one platform") — Arabic should be reviewed by a native speaker.
+6. The logo is a 77 px cut from `theme.png`; a vector or high-resolution logo file from the owner would be sharper.
+7. Hosting: needs a Vercel project and a production Convex deployment before "ship it".
 
 <!-- BEGIN:nextjs-agent-rules -->
 

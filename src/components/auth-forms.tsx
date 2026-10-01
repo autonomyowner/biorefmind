@@ -18,7 +18,6 @@ import { authMessages } from "@/components/auth-messages";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
 import type { Workspace } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 /** Bare sign-in: email + password, then PostAuthRedirect picks the next page. */
 export function LoginForm() {
@@ -182,7 +181,7 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
         <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[13px] text-muted-foreground">
           {t.perks.map((perk) => (
             <li key={perk} className="flex items-center gap-1.5">
-              <span className="flex size-4 items-center justify-center rounded-full bg-moss text-white">
+              <span className="flex size-4 items-center justify-center rounded-full bg-teal text-white">
                 <Check className="size-2.5" strokeWidth={3} />
               </span>
               {perk}
@@ -196,9 +195,9 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
 
 /* ---------- Shared pieces of the sign-in pages ---------- */
 
-// Taller, softer fields than the app default; the moss ring matches the brand.
+// Taller, softer fields than the app default; the teal ring matches the brand.
 const FIELD =
-  "h-12 rounded-2xl border-foreground/10 bg-white/90 px-4 text-[15px] placeholder:text-foreground/40 focus-visible:border-moss/60 focus-visible:ring-moss/20";
+  "h-12 rounded-2xl border-foreground/10 bg-white/90 px-4 text-[15px] placeholder:text-foreground/40 focus-visible:border-teal/60 focus-visible:ring-teal/20";
 
 function AuthCard({
   title,
@@ -214,12 +213,12 @@ function AuthCard({
   return (
     <div>
       <div className="text-center">
-        <h1 className="text-[34px] leading-[1.05] tracking-[-0.03em] sm:text-[40px]">{title}</h1>
+        <h1 className="text-[34px] font-semibold leading-[1.05] tracking-[-0.035em] sm:text-[40px]">{title}</h1>
         <p className="mx-auto mt-3 max-w-[380px] text-[15px] leading-relaxed text-muted-foreground sm:text-[16px]">
           {lead}
         </p>
       </div>
-      <div className="mt-7 rounded-[28px] border border-white/70 bg-card/80 p-5 shadow-[0_30px_70px_-45px_rgba(12,36,30,0.55)] backdrop-blur-sm sm:p-7">
+      <div className="glass mt-7 rounded-[28px] p-5 sm:p-7">
         {children}
       </div>
       {footer ? <p className="mt-6 text-center text-[15px] text-muted-foreground">{footer}</p> : null}
@@ -244,25 +243,23 @@ function FormError({ error }: { error: string | null }) {
   );
 }
 
-/** The site's dark pill with the amber arrow; a spinner while busy. */
+/** The site's glowing navy pill, arrow first; a spinner while busy. */
 function SubmitButton({ busy, children }: { busy: boolean; children: React.ReactNode }) {
   return (
     <button
       type="submit"
       disabled={busy}
-      className={cn(
-        "group !mt-5 flex h-14 w-full items-center justify-between rounded-full bg-primary ps-6 pe-3 text-[17px] text-primary-foreground transition-colors hover:bg-[#0d2a23] disabled:opacity-80",
-        busy && "justify-center",
-      )}
+      className="btn-navy group !mt-5 flex h-14 w-full items-center justify-center gap-3 rounded-full text-[17px] font-semibold transition-[filter] hover:brightness-125 disabled:opacity-80"
     >
       {busy ? (
         <Spinner size="sm" label={null} />
       ) : (
         <>
+          <ArrowRight
+            className="size-5 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
+            strokeWidth={2.25}
+          />
           {children}
-          <span className="flex size-8 items-center justify-center rounded-full bg-honey text-primary transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5">
-            <ArrowRight className="size-4 rtl:-scale-x-100" strokeWidth={2.5} />
-          </span>
         </>
       )}
     </button>

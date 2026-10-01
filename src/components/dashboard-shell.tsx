@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -43,7 +44,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const sidebar = (
     <nav className="flex flex-col gap-0.5 p-3">
-      <p className="px-3 pt-1 pb-3 text-[17px] font-semibold">BioGrena</p>
+      <p className="flex items-center gap-2 px-3 pt-1 pb-4 text-[18px] font-bold tracking-[-0.02em] text-[#08263f]">
+        <Image src="/logo-mark.png" alt="" width={77} height={77} className="size-7" />
+        BiorefMind
+      </p>
       {SIDEBAR_ITEMS.map((item, i) => (
         <button
           key={item}
@@ -51,8 +55,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           onClick={() => setMenuOpen(false)}
           className={
             i === 0
-              ? "rounded-lg bg-primary px-3 py-2 text-left text-[15px] font-medium text-primary-foreground"
-              : "rounded-lg px-3 py-2 text-left text-[15px] hover:bg-muted"
+              ? "btn-navy rounded-xl px-3 py-2 text-left text-[15px] font-medium"
+              : "rounded-xl px-3 py-2 text-left text-[15px] hover:bg-accent"
           }
         >
           {item}
@@ -63,7 +67,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-1 bg-grouped">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r bg-background md:block">{sidebar}</aside>
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-white/70 bg-card/70 backdrop-blur md:block">{sidebar}</aside>
       {menuOpen ? (
         <div className="fixed inset-0 z-20 md:hidden">
           <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/20" onClick={() => setMenuOpen(false)} />
