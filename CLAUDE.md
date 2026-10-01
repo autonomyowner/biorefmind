@@ -41,7 +41,7 @@ npm run typecheck; npm run typecheck:convex; npm run lint; npm run build
 On a fresh clone run `npx next typegen` (or a build) before `npm run typecheck`: `LayoutProps` is generated. Port 3000 is often taken by another project; local testing uses 3100, matching the dev `SITE_URL`. Deploys (Vercel, `npx convex deploy`) only when the owner says "ship it".
 
 ## Status (2026-10-01)
-Branch `biorefmind-theme` (from `main` = untouched BioGrena import). Rebrand + new theme done; backend unchanged.
+GitHub: `https://github.com/autonomyowner/biorefmind` (pushed `main` and `biorefmind-theme`, 2026-10-01). Branch `biorefmind-theme` (from `main` = untouched BioGrena import). Rebrand + new theme done; backend unchanged.
 - 33 tests, both type checks, lint and `next build` (8 routes) pass.
 - Real Chrome run: landing at 1536 px and 360 px with no sideways scroll, Arabic right-to-left, sign-up → dashboard, sign-out, wrong password message, sign-in → dashboard; no console errors.
 
