@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+/* `ar:` styles apply only on Arabic pages. */
+@custom-variant ar (&:lang(ar));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* Latin glyphs from Inter Tight, Arabic glyphs from IBM Plex Sans Arabic. */
+  --font-sans: var(--font-brand), var(--font-arabic), system-ui, sans-serif;
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* iOS grouped background (the light grey behind white cards). */
+  --color-grouped: var(--grouped);
+  --color-moss: var(--moss);
+  --color-honey: var(--honey);
+
+  --animate-marquee: marquee 40s linear infinite;
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* BioGrena brand: warm paper background, deep forest ink, amber accent, moss green. */
+:root {
+  --background: #ecebe2;
+  --foreground: #0c241e;
+  --grouped: #e3e1d5;
+  --card: #f6f5ef;
+  --card-foreground: #0c241e;
+  --popover: #f6f5ef;
+  --popover-foreground: #0c241e;
+  --primary: #061714;
+  --primary-foreground: #f6f5ef;
+  --secondary: #dfddd0;
+  --secondary-foreground: #0c241e;
+  --muted: #e3e1d5;
+  --muted-foreground: rgba(12, 36, 30, 0.66);
+  /* shadcn "accent" = the quiet hover surface in menus and lists. */
+  --accent: #e8e6da;
+  --accent-foreground: #0c241e;
+  /* Brand colours: amber (arrow circles, dots) and moss green. */
+  --honey: #e8a21e;
+  --moss: #5f8f22;
+  --destructive: #c2410c;
+  --border: rgba(12, 36, 30, 0.14);
+  --input: rgba(12, 36, 30, 0.2);
+  --ring: #5f8f22;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-brand), var(--font-arabic), system-ui, sans-serif;
+  }
+  /* Arabic pages lead with IBM Plex Sans Arabic. (After Inter Tight it never
+     loads: Inter's metric fallback is Arial, which already has Arabic glyphs.) */
+  :lang(ar) body {
+    font-family: var(--font-arabic), var(--font-brand), system-ui, sans-serif !important;
+  }
+  /* English islands on an Arabic page (the wordmark, the English-only dashboard). */
+  :lang(ar) [lang="en"] {
+    font-family: var(--font-brand), system-ui, sans-serif;
+  }
+  /* Arabic letters join up: negative tracking breaks them, and it has no uppercase. */
+  :lang(ar) * {
+    letter-spacing: 0 !important;
+  }
+  /* Arabic script is taller than Latin: the tight display leading would clip it. */
+  :lang(ar) h1,
+  :lang(ar) h2 {
+    line-height: 1.3 !important;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .animate-marquee {
+    animation: none !important;
+  }
+}
