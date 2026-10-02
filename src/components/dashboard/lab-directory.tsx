@@ -53,9 +53,10 @@ export function LabDirectory({ id, title }: { id?: string; title: string }) {
       ) : labs.length === 0 ? (
         <p className="rounded-2xl bg-white/50 px-4 py-6 text-center text-[15px] text-muted-foreground">{t.directory.empty}</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        // minmax(0, …) so a long lab name truncates instead of widening the page.
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
           {labs.map((lab) => (
-            <li key={lab.companyId} className="rounded-2xl border border-white bg-white/70 p-4 shadow-[0_10px_24px_-20px_rgba(20,30,120,0.6)]">
+            <li key={lab.companyId} className="min-w-0 rounded-2xl border border-white bg-white/70 p-4 shadow-[0_10px_24px_-20px_rgba(20,30,120,0.6)]">
               <div className="flex items-start gap-3">
                 <span className="orb flex size-10 shrink-0 items-center justify-center rounded-full">
                   <FlaskConical className="size-[18px]" strokeWidth={1.8} />
