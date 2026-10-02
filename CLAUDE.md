@@ -52,6 +52,18 @@ GitHub: `https://github.com/autonomyowner/biorefmind`. `main` carries BiorefMind
 - 33 tests, both type checks, lint and `next build` (8 routes) pass.
 - Real Chrome run: landing at 1536 px and 360 px with no sideways scroll, Arabic right-to-left, sign-up → dashboard, sign-out, wrong password message, sign-in → dashboard; no console errors.
 
+## Account types (2026-10-02, live)
+Three kinds of workspace: `farm` (free), `lab` ($30/month, 14-day trial, listed in the directory while trial or paid), `factory` (enterprise, custom). Design: `docs/superpowers/specs/2026-10-02-three-account-types-design.md`; plan: `docs/superpowers/plans/2026-10-02-three-account-types.md`. Pieces 2–4 (marketplace, lab requests, billing) are not built yet.
+- Backend: rules in `convex/lib/accounts.ts` (+ catalog in `convex/lib/catalog.ts`); `companies.create/mine/updateProfile`, `labs.directory`, `enterprise.request`, `admin.overview/setLabPaidUntil`. 44 tests.
+- Website: two-step sign-up (`src/components/auth-forms.tsx`), per-kind dashboards (`src/components/dashboard/*`, bilingual), admin page `/admin` (`src/components/admin/admin-page.tsx`).
+- **Admins** = Convex env `ADMIN_EMAILS`. Sign-up does **not** verify emails, so only list addresses whose account already exists (whoever registers an address first owns it). Prod lists only `admin@biorefmind-preview.app` (account created at launch; password given to the owner).
+
+## Production (shipped 2026-10-02)
+- Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
+- Convex prod: `adventurous-hornet-38` (`https://adventurous-hornet-38.eu-west-1.convex.cloud`); env `SITE_URL=https://biorefmind.vercel.app`, `BETTER_AUTH_SECRET`, `ADMIN_EMAILS`. Deploy functions with `npx convex deploy -y`.
+- Vercel env (production): `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`. **Add Vercel env values from Git Bash with `printf '%s' value | vercel env add …`** — piping from PowerShell prepends a BOM and breaks every request ("Invalid URL").
+- Rollback: code `5f68dd5` is the first shipped `main`; no earlier production existed.
+
 ## Open decisions (ask the owner)
 1. Scoring thresholds in `convex/lib/crops.ts` are placeholders until calibrated with lab data.
 2. The AI assistant needs `OPENROUTER_API_KEY` on Convex; without it, answers are rule-based.
@@ -59,7 +71,10 @@ GitHub: `https://github.com/autonomyowner/biorefmind`. `main` carries BiorefMind
 4. In Arabic the hero photo is mirrored, so the emblem in it is mirrored too. Alternative: keep it unmirrored on the left.
 5. Copy is BioGrena's with the brand renamed, plus new hero lines ("AI quality scoring for bio-waste", "Farmers, factories & labs on one platform") — Arabic should be reviewed by a native speaker.
 6. The logo is a 77 px cut from `theme.png`; a vector or high-resolution logo file from the owner would be sharper.
-7. Hosting: needs a Vercel project and a production Convex deployment before "ship it".
+7. Enterprise requests reach only the admin page: should they also go to an email or WhatsApp number?
+8. Which real emails should be admins on production (each must register before being added)?
+9. The lists of lab analyses and factory residues (`convex/lib/catalog.ts`) are our draft.
+10. Email verification is off: turn it on before real users (needs an email service).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
