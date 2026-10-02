@@ -5,15 +5,44 @@ import type { Id } from "../../convex/_generated/dataModel";
 export type Role = "owner" | "manager" | "inspector";
 export type Route = "A" | "B" | "C";
 export type Lab = { moisture?: number; mold?: number; oxidation?: number; punicalagin?: number };
-export type Viewer = { _id: string; email: string; name: string } | null;
+export type Viewer = { _id: string; email: string; name: string; isAdmin: boolean } | null;
+
+/** The three account types. Contract: docs/superpowers/specs/2026-10-02-three-account-types-design.md */
+export type Kind = "farm" | "lab" | "factory";
+export type Plan = "free" | "lab_trial" | "lab_paid" | "enterprise" | "trial" | "tier1" | "tier2";
 
 export type Workspace = {
   companyId: Id<"companies">;
   name: string;
-  kind: "factory" | "lab";
+  kind: Kind;
   role: Role;
-  plan: "trial" | "tier1" | "tier2";
-  trialEndsAt: number;
+  region: string;
+  phone: string;
+  services?: string[];
+  buys?: string[];
+  plan: Plan;
+  trialEndsAt?: number;
+  paidUntil?: number;
+  listed?: boolean;
+};
+
+export type DirectoryLab = { companyId: Id<"companies">; name: string; region: string; phone: string; services: string[] };
+
+export type AdminOverview = {
+  accounts: {
+    companyId: Id<"companies">;
+    name: string;
+    kind: Kind;
+    ownerEmail: string;
+    region: string;
+    phone: string;
+    plan: Plan;
+    trialEndsAt?: number;
+    paidUntil?: number;
+    listed?: boolean;
+    createdAt: number;
+  }[];
+  requests: { _id: string; company: string; email: string; phone: string; message: string; createdAt: number }[];
 };
 
 export type ScoreResult = { score: number; confidence: number; route: Route; reasons: string[] };
