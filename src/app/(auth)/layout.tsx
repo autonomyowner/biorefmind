@@ -10,19 +10,19 @@ export default async function AuthLayout({ children }: LayoutProps<"/">) {
   const t = await getMessages(authMessages);
   return (
     <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-clip bg-background">
-      {/* The hero's blue halo and the hand holding the emblem, faded into the page. */}
+      {/* A periwinkle glow and the hand holding the emblem (background removed) in the end-bottom corner. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_55%_at_85%_70%,#b6c8dc_0%,rgba(182,200,220,0.5)_45%,transparent_80%)] rtl:bg-[radial-gradient(ellipse_50%_55%_at_15%_70%,#b6c8dc_0%,rgba(182,200,220,0.5)_45%,transparent_80%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_35%_45%_at_82%_72%,rgba(120,150,255,0.3),transparent_75%)] rtl:bg-[radial-gradient(ellipse_35%_45%_at_18%_72%,rgba(120,150,255,0.3),transparent_75%)]"
       />
-      <div aria-hidden className="pointer-events-none absolute end-0 bottom-0 hidden aspect-[1546/1017] w-[40vw] max-w-[640px] lg:block">
+      <div aria-hidden className="pointer-events-none absolute end-0 bottom-0 hidden aspect-[1546/1017] w-[38vw] max-w-[620px] lg:block">
         <Image
-          src="/hero-hand.png"
+          src="/art/hand-emblem.png"
           alt=""
           fill
-          sizes="40vw"
-          // Mirrored in Arabic; the mask mirrors with it, so it needs no right-to-left variant.
-          className="object-cover rtl:-scale-x-100 [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent,black_35%),linear-gradient(to_bottom,transparent,black_25%)]"
+          sizes="38vw"
+          // The arm's cut edges sit on the window's end and bottom edges. Mirrored in Arabic.
+          className="object-contain object-[100%_100%] rtl:-scale-x-100"
         />
       </div>
 

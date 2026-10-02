@@ -69,7 +69,7 @@ function ItemIcon({ icon: Icon, className }: { icon: LucideIcon; className?: str
   return (
     <span
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-full bg-[#dcebf3] text-teal transition-colors",
+        "flex size-10 shrink-0 items-center justify-center rounded-full bg-[#dcebf3] text-azure transition-colors",
         className,
       )}
     >
@@ -105,7 +105,7 @@ function DesktopMenu({ label, items }: { label: string; items: NavItem[] }) {
           "data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:duration-150",
         )}
       >
-        <p className="px-3 pt-2 pb-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-teal">{label}</p>
+        <p className="px-3 pt-2 pb-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-azure">{label}</p>
         {items.map((item) => (
           <DropdownMenuItem
             key={item.label}
@@ -114,7 +114,7 @@ function DesktopMenu({ label, items }: { label: string; items: NavItem[] }) {
           >
             <ItemIcon
               icon={item.icon}
-              className="duration-150 group-data-[highlighted]/item:bg-primary group-data-[highlighted]/item:text-cyan"
+              className="duration-150 group-data-[highlighted]/item:bg-primary group-data-[highlighted]/item:text-[#a9bcff]"
             />
             <span className="min-w-0 flex-1">
               <span className="block leading-tight font-medium text-foreground">{item.label}</span>
@@ -182,7 +182,7 @@ function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof me
       </motion.div>
       {menus.map((menu) => (
         <motion.div key={menu.label} variants={group} className="mb-6">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-teal">{menu.label}</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-azure">{menu.label}</p>
           <ul className="mt-2 overflow-hidden rounded-[22px] border border-white/80 bg-card">
             {menu.items.map((item) => (
               <li key={item.label} className="border-b border-border last:border-0">

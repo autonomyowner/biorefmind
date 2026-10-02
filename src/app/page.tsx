@@ -17,14 +17,16 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Reveal } from "@/components/landing/reveal";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { RoutesSection } from "@/components/landing/routes-section";
+import { Headline, SectionBadge } from "@/components/landing/section-badge";
 import { SiteHeader, Wordmark } from "@/components/landing/site-header";
 import { cn } from "@/lib/utils";
 import { landingMessages, type LandingMessages } from "@/components/landing/messages";
-import { getMessages } from "@/i18n/server";
+import { getLocale, getMessages } from "@/i18n/server";
 
 /** Public landing page: the bio-waste marketplace with the AI quality score as its trust layer. */
 export default async function HomePage() {
   const t = await getMessages(landingMessages);
+  const locale = await getLocale();
   return (
     <div className="flex min-h-dvh flex-1 flex-col overflow-x-clip">
       <main className="flex-1">
@@ -33,7 +35,7 @@ export default async function HomePage() {
         <Marketplaces t={t.markets} />
         <Quality t={t.quality} />
         <HowItWorks t={t.how} />
-        <RoutesSection t={t.routes} />
+        <RoutesSection t={t.routes} locale={locale} />
         <Pricing t={t.pricing} />
         <Faq t={t.faq} />
         <ClosingCta t={t.closing} />
@@ -78,15 +80,6 @@ function GhostButton({ href, children }: { href: string; children: React.ReactNo
   );
 }
 
-function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <p className={cn("flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-teal", className)}>
-      <span className="size-1.5 rounded-full bg-gold" />
-      {children}
-    </p>
-  );
-}
-
 function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <h2
@@ -109,22 +102,19 @@ const TRUST_ICONS: LucideIcon[] = [Sprout, Factory, FlaskConical, Recycle];
 function Hero({ t }: { t: T["hero"] }) {
   return (
     <section className="relative">
-      {/* A soft blue halo behind the hand, in the photo's own background tones,
-          so the photo's faded edges melt into the page. */}
+      {/* A soft periwinkle glow behind the emblem. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 end-0 w-full bg-[radial-gradient(ellipse_55%_50%_at_72%_52%,#b6c8dc_0%,rgba(182,200,220,0.6)_45%,transparent_78%)] rtl:bg-[radial-gradient(ellipse_55%_50%_at_28%_52%,#b6c8dc_0%,rgba(182,200,220,0.6)_45%,transparent_78%)]"
+        className="pointer-events-none absolute inset-y-0 end-0 hidden w-full lg:block bg-[radial-gradient(ellipse_32%_42%_at_62%_48%,rgba(120,150,255,0.38),transparent_70%)] rtl:bg-[radial-gradient(ellipse_32%_42%_at_38%_48%,rgba(120,150,255,0.38),transparent_70%)]"
       />
       <SiteHeader />
 
       {/* Static on wide screens so the photo anchors to the full-width section, not this box. */}
       <div className="relative mx-auto grid max-w-[1440px] px-5 sm:px-10 lg:static lg:min-h-[calc(100dvh-7rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:px-16">
         <div className="relative z-10 flex flex-col pt-6 pb-10 sm:pt-10 lg:justify-center lg:pt-4 lg:pb-16">
-          <p className="self-start rounded-full border border-white/80 bg-white/55 px-5 py-2 text-[14px] font-medium text-[#0d2547] shadow-[0_8px_24px_-16px_rgba(7,23,51,0.4)] sm:text-[16px]">
-            {t.badge}
-          </p>
+          <SectionBadge className="self-start">{t.badge}</SectionBadge>
           <h1 className="mt-6 max-w-[640px] text-balance text-[46px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[68px] lg:text-[76px]">
-            {t.title}
+            <Headline lead={t.titleLead} accent={t.titleAccent} />
           </h1>
           <p className="mt-6 max-w-[520px] text-pretty text-[17px] leading-relaxed text-muted-foreground sm:text-[18px]">
             {t.body}
@@ -139,7 +129,7 @@ function Hero({ t }: { t: T["hero"] }) {
               {TRUST_ICONS.map((Icon, i) => (
                 <li
                   key={i}
-                  className="-ms-3 flex size-12 items-center justify-center rounded-full border-[3px] border-white bg-[#e9f2f9] text-teal shadow-[0_8px_18px_-10px_rgba(7,23,51,0.5)] first:ms-0 sm:size-14"
+                  className="-ms-3 flex size-12 items-center justify-center rounded-full border-[3px] border-white bg-[#e9f2f9] text-azure shadow-[0_8px_18px_-10px_rgba(7,23,51,0.5)] first:ms-0 sm:size-14"
                 >
                   <Icon className="size-5 sm:size-6" strokeWidth={1.6} />
                 </li>
@@ -153,18 +143,19 @@ function Hero({ t }: { t: T["hero"] }) {
         </div>
 
         {/* The robotic hand holding the emblem. On wide screens it bleeds off the page edge. */}
-        <div className="relative -mx-5 aspect-[1546/1017] sm:-mx-10 lg:absolute lg:top-8 lg:bottom-0 lg:end-0 lg:mx-0 lg:aspect-auto lg:w-[58%]">
+        <div className="relative -me-5 aspect-[1546/1017] sm:-me-10 lg:absolute lg:top-6 lg:bottom-6 lg:end-0 lg:me-0 lg:aspect-auto lg:w-[58%]">
           <Image
-            src="/hero-hand.png"
+            src="/art/hand-emblem.png"
             alt={t.imageAlt}
             fill
             sizes="(min-width: 1024px) 60vw, 100vw"
             loading="eager"
             fetchPriority="high"
             className={cn(
-              "object-cover object-[38%_50%] rtl:-scale-x-100",
-              // Fade the photo's left, top and bottom edges into the halo; the arm runs off the right edge.
-              "[mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent,black_24%),linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]",
+              // Background removed. The arm is cut at the picture's right edge, so that edge
+              // sits on the page edge; the wrist's cut at the bottom fades out.
+              "object-contain object-[100%_50%] rtl:-scale-x-100 drop-shadow-[0_40px_50px_rgba(40,70,170,0.25)]",
+              "[mask-image:linear-gradient(to_bottom,black_86%,transparent)]",
             )}
           />
         </div>
@@ -197,7 +188,7 @@ function Residues({ t }: { t: T["residues"] }) {
               className="flex items-center whitespace-nowrap text-[20px] font-medium tracking-[-0.02em] text-foreground/40 sm:text-[24px]"
             >
               {name}
-              <span className="mx-8 size-1.5 rounded-full bg-teal/60 sm:mx-12" />
+              <span className="mx-8 size-1.5 rounded-full bg-azure/60 sm:mx-12" />
             </li>
           ))}
         </ul>
@@ -216,13 +207,13 @@ const FACTORY_ICONS: LucideIcon[] = [Factory, Recycle, ShieldCheck];
 function PointList({ label, points, icons }: { label: string; points: readonly Point[]; icons: LucideIcon[] }) {
   return (
     <div>
-      <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-teal">{label}</p>
+      <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-azure">{label}</p>
       <ul className="mt-8 space-y-10 lg:space-y-12">
         {points.map((p, i) => {
           const Icon = icons[i];
           return (
             <li key={p.title} className="flex gap-5">
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/55 text-teal shadow-[0_12px_28px_-18px_rgba(7,23,51,0.5)]">
+              <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/55 text-azure shadow-[0_12px_28px_-18px_rgba(7,23,51,0.5)]">
                 <Icon className="size-6" strokeWidth={1.6} />
               </span>
               <div className="pt-0.5">
@@ -256,19 +247,19 @@ function Hub({ t }: { t: T["markets"] }) {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[480px]">
       {/* Still, drawn rings. */}
-      <div aria-hidden className="absolute inset-[6%] rounded-full border border-teal/20" />
-      <div aria-hidden className="absolute inset-[16%] rounded-full border border-dashed border-teal/30" />
-      <div className="absolute inset-[24%] overflow-hidden rounded-full border-[6px] border-white/80 shadow-[0_30px_70px_-30px_rgba(16,72,160,0.65)]">
-        <Image
-          src="/hero-hand.png"
-          alt={t.hubAlt}
-          fill
-          // A square crop shows 66% of the photo's width; 12% puts the emblem in the middle.
-          sizes="260px"
-          className="object-cover object-[12%_50%]"
-        />
-      </div>
-      <p className="btn-navy absolute bottom-[14%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-semibold">
+      <div aria-hidden className="absolute inset-[10%] rounded-full bg-[radial-gradient(closest-side,rgba(110,140,240,0.32),transparent)]" />
+      <div aria-hidden className="absolute inset-[2%] rounded-full border border-azure/15" />
+      <div aria-hidden className="absolute inset-[14%] rounded-full border border-dashed border-azure/25" />
+      {/* The globe with its orbits, background removed. */}
+      <Image
+        src="/art/globe.png"
+        alt={t.hubAlt}
+        width={1254}
+        height={1254}
+        sizes="(min-width: 640px) 420px, 80vw"
+        className="absolute inset-[6%] size-[88%] drop-shadow-[0_30px_40px_rgba(63,108,242,0.35)]"
+      />
+      <p className="btn-navy absolute bottom-[4%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-semibold">
         {t.hubLabel}
       </p>
 
@@ -290,7 +281,7 @@ function HubChip({ label, tone, pos }: { label: string; tone: "in" | "out"; pos:
       style={{ left: `${pos[0]}%`, top: `${pos[1]}%` }}
       className="absolute hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/80 bg-card/85 px-3.5 py-1.5 text-[13px] font-medium shadow-[0_10px_24px_-14px_rgba(7,23,51,0.5)] backdrop-blur sm:flex"
     >
-      <span className={cn("size-2 rounded-full", tone === "in" ? "bg-gold" : "bg-leaf")} />
+      <span className={cn("size-2 rounded-full", tone === "in" ? "bg-azure" : "bg-violet")} />
       {label}
     </span>
   );
@@ -300,8 +291,8 @@ function HubChipsPhone({ t }: { t: T["markets"] }) {
   return (
     <div className="mt-6 space-y-3 sm:hidden">
       {[
-        { items: t.hubIn, dot: "bg-gold" },
-        { items: t.hubOut, dot: "bg-leaf" },
+        { items: t.hubIn, dot: "bg-azure" },
+        { items: t.hubOut, dot: "bg-violet" },
       ].map((row, r) => (
         <ul key={r} className="flex flex-wrap justify-center gap-2">
           {row.items.map((label) => (
@@ -324,8 +315,10 @@ function Marketplaces({ t }: { t: T["markets"] }) {
     <section id="marketplaces" className="relative scroll-mt-6 overflow-hidden py-24 sm:py-28">
       <div className="relative mx-auto max-w-[1440px] px-5 sm:px-10 lg:px-16">
         <Reveal className="mx-auto max-w-[640px] text-center">
-          <Eyebrow className="justify-center">{t.eyebrow}</Eyebrow>
-          <SectionTitle className="mt-5">{t.title}</SectionTitle>
+          <SectionBadge>{t.eyebrow}</SectionBadge>
+          <SectionTitle className="mt-6">
+            <Headline lead={t.titleLead} accent={t.titleAccent} />
+          </SectionTitle>
           <p className="mx-auto mt-5 max-w-[470px] text-[17px] leading-relaxed text-muted-foreground">{t.body}</p>
         </Reveal>
 
@@ -366,18 +359,17 @@ function Quality({ t }: { t: T["quality"] }) {
       id="quality"
       className="relative scroll-mt-6 overflow-hidden bg-[linear-gradient(180deg,#06204a_0%,#04173a_45%,#020d24_100%)] py-24 text-primary-foreground sm:py-32"
     >
-      {/* A cyan glow behind the score card, like the joints of the robotic hand. */}
+      {/* A periwinkle glow behind the score card. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -end-40 top-1/2 size-[720px] -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(46,196,214,0.22),transparent)]"
+        className="pointer-events-none absolute -end-40 top-1/2 size-[720px] -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(110,120,255,0.26),transparent)]"
       />
       <div className={cn(container, "relative grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-20")}>
         <Reveal>
-          <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan">
-            <span className="size-1.5 rounded-full bg-gold" />
-            {t.eyebrow}
-          </p>
-          <SectionTitle className="mt-5">{t.title}</SectionTitle>
+          <SectionBadge tone="dark">{t.eyebrow}</SectionBadge>
+          <SectionTitle className="mt-6">
+            <Headline lead={t.titleLead} accent={t.titleAccent} tone="dark" />
+          </SectionTitle>
           <p className="mt-6 max-w-[480px] text-[17px] leading-relaxed text-primary-foreground/70">{t.body}</p>
 
           <div className="mt-10 grid gap-x-10 gap-y-7 sm:grid-cols-2">
@@ -391,11 +383,11 @@ function Quality({ t }: { t: T["quality"] }) {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <div className="rounded-[28px] border border-white/60 bg-card p-6 text-card-foreground shadow-[0_40px_90px_-40px_rgba(46,196,214,0.55)] sm:p-9">
+          <div className="rounded-[28px] border border-white/60 bg-card p-6 text-card-foreground shadow-[0_40px_90px_-40px_rgba(110,120,255,0.5)] sm:p-9">
             <div className="flex items-center justify-between gap-4 text-[14px] text-muted-foreground">
               <span>{t.card.shipment}</span>
               <span className="flex shrink-0 items-center gap-1.5">
-                <span className="size-2 rounded-full bg-leaf" /> {t.card.scored}
+                <span className="size-2 rounded-full bg-[#2fc58a]" /> {t.card.scored}
               </span>
             </div>
 
@@ -417,13 +409,13 @@ function Quality({ t }: { t: T["quality"] }) {
                     <span>
                       {t.card.readings[i]} <span className="text-muted-foreground">{r.value}</span>
                     </span>
-                    <span className="font-medium tabular-nums text-teal" dir="ltr">
+                    <span className="font-medium tabular-nums text-azure" dir="ltr">
                       {r.pts} {t.card.pts}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-teal to-cyan rtl:bg-gradient-to-l"
+                      className="h-full rounded-full bg-gradient-to-r from-azure to-violet rtl:bg-gradient-to-l"
                       style={{ width: r.width }}
                     />
                   </div>
@@ -452,8 +444,10 @@ function Pricing({ t }: { t: T["pricing"] }) {
     <section id="pricing" className="scroll-mt-6 py-24 sm:py-32">
       <div className={container}>
         <Reveal className="max-w-[640px]">
-          <Eyebrow>{t.eyebrow}</Eyebrow>
-          <SectionTitle className="mt-5">{t.title}</SectionTitle>
+          <SectionBadge>{t.eyebrow}</SectionBadge>
+          <SectionTitle className="mt-6">
+            <Headline lead={t.titleLead} accent={t.titleAccent} />
+          </SectionTitle>
           <p className="mt-5 text-[15px] text-muted-foreground">{t.draft}</p>
         </Reveal>
 
@@ -480,7 +474,7 @@ function Pricing({ t }: { t: T["pricing"] }) {
                 <ul className="mt-8 flex-1 space-y-3 text-[15px]">
                   {p.features.map((f) => (
                     <li key={f} className="flex gap-3">
-                      <Check className={cn("mt-0.5 size-4 shrink-0", featured ? "text-cyan" : "text-teal")} />
+                      <Check className={cn("mt-0.5 size-4 shrink-0", featured ? "text-[#a9bcff]" : "text-azure")} />
                       {f}
                     </li>
                   ))}
@@ -512,8 +506,10 @@ function Faq({ t }: { t: T["faq"] }) {
     <section id="faq" className="relative scroll-mt-6 py-24 sm:py-32">
       <div className={cn(container, "grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:gap-20")}>
         <Reveal>
-          <Eyebrow>{t.eyebrow}</Eyebrow>
-          <SectionTitle className="mt-5">{t.title}</SectionTitle>
+          <SectionBadge>{t.eyebrow}</SectionBadge>
+          <SectionTitle className="mt-6">
+            <Headline lead={t.titleLead} accent={t.titleAccent} />
+          </SectionTitle>
         </Reveal>
         <Reveal delay={0.08}>
           <Accordion className="glass rounded-[28px] px-6 sm:px-8">
@@ -539,10 +535,10 @@ function Faq({ t }: { t: T["faq"] }) {
 function ClosingCta({ t }: { t: T["closing"] }) {
   return (
     <section className="px-5 pb-10 sm:px-10 lg:px-16">
-      <div className="relative mx-auto grid max-w-[1280px] overflow-hidden rounded-[32px] border border-white/80 bg-[linear-gradient(120deg,#e8f1f9_0%,#d2e1ef_55%,#b9cbdf_100%)] lg:grid-cols-[1.1fr_1fr]">
+      <div className="relative mx-auto grid max-w-[1280px] overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(ellipse_60%_80%_at_80%_55%,rgba(120,140,255,0.35),transparent_70%),linear-gradient(120deg,#eef3fd_0%,#dde7fa_55%,#cbd6f5_100%)] lg:grid-cols-[1.1fr_1fr]">
         <div className="relative z-10 px-6 pt-16 pb-6 text-center sm:px-12 sm:pt-20 lg:py-24 lg:text-start">
           <h2 className="mx-auto max-w-[560px] text-balance text-[40px] font-semibold leading-[1.04] tracking-[-0.04em] sm:text-[58px] lg:mx-0">
-            {t.title}
+            <Headline lead={t.titleLead} accent={t.titleAccent} />
           </h2>
           <p className="mx-auto mt-5 max-w-[440px] text-[17px] text-muted-foreground lg:mx-0">{t.body}</p>
           <div className="mt-9 flex flex-col items-center gap-5 sm:flex-row sm:justify-center lg:justify-start">
@@ -554,12 +550,12 @@ function ClosingCta({ t }: { t: T["closing"] }) {
         </div>
         <div className="relative h-[clamp(220px,48vw,420px)] lg:h-auto">
           <Image
-            src="/hero-hand.png"
+            src="/art/hand-emblem-2.png"
             alt=""
             fill
             sizes="(min-width: 1024px) 600px, 100vw"
-            // Mirrored in Arabic; the mask mirrors with it.
-            className="object-cover object-[35%_50%] [mask-image:linear-gradient(to_bottom,transparent,black_25%)] rtl:-scale-x-100 lg:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
+            // Background removed; the arm's cut edges sit in the banner's end-bottom corner. Mirrored in Arabic.
+            className="object-contain object-[100%_100%] pt-6 rtl:-scale-x-100 drop-shadow-[0_30px_40px_rgba(40,70,170,0.25)]"
           />
         </div>
       </div>
@@ -606,7 +602,7 @@ function Footer({ t }: { t: T["footer"] }) {
           </div>
           {columns.map((col) => (
             <div key={col.title}>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-teal">{col.title}</p>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-azure">{col.title}</p>
               <ul className="mt-4 space-y-2.5 text-[15px]">
                 {col.links.map((l) => (
                   <li key={l.label}>
