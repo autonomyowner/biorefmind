@@ -14,6 +14,7 @@ import { Reveal } from "@/components/landing/reveal";
 import { Headline, SectionBadge } from "@/components/landing/section-badge";
 import { cn } from "@/lib/utils";
 import type { LandingMessages } from "@/components/landing/messages";
+import type { Go } from "@/components/landing/go";
 
 type How = LandingMessages["how"];
 
@@ -27,7 +28,7 @@ const STEPS: { src: string; width: number; height: number; icon: LucideIcon }[] 
 const CHIP_ICONS: LucideIcon[] = [Leaf, Recycle];
 
 /** How it works: gradient headline beside the hand-and-globe, then three cards with the app's screens. */
-export function HowItWorks({ t }: { t: How }) {
+export function HowItWorks({ t, go }: { t: How; go: Go }) {
   return (
     <section id="how-it-works" className="relative scroll-mt-6 overflow-hidden py-24 sm:py-32">
       <div className="relative mx-auto max-w-[1440px] px-5 sm:px-10 lg:px-16">
@@ -41,14 +42,14 @@ export function HowItWorks({ t }: { t: How }) {
               {t.body}
             </p>
             <Link
-              href="/signup"
+              href={go?.href ?? "/signup"}
               className="btn-navy group mt-9 inline-flex h-14 items-center gap-3.5 rounded-full ps-7 pe-9 text-[17px] font-semibold transition-[filter] hover:brightness-125 sm:h-[60px]"
             >
               <ArrowRight
                 className="size-5 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
                 strokeWidth={2.25}
               />
-              {t.cta}
+              {go?.label ?? t.cta}
             </Link>
           </Reveal>
 

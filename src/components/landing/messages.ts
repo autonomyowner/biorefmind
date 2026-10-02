@@ -3,6 +3,8 @@ import { defineMessages } from "@/i18n/messages";
 /** Every word on the landing page, in English and Arabic. */
 export const landingMessages = defineMessages({
   en: {
+    /** Shown instead of sign-up buttons to visitors who are signed in. */
+    account: { dashboard: "Go to dashboard", footerDashboard: "Dashboard" },
     nav: {
       home: "Home",
       marketplaces: "Accounts",
@@ -11,6 +13,7 @@ export const landingMessages = defineMessages({
       faq: "FAQ",
       signIn: "Sign in",
       createAccount: "Create a free account",
+      dashboard: "Dashboard",
       openMenu: "Open menu",
       closeMenu: "Close menu",
       farmers: { label: "Farmers", body: "Sell crop residues, free" },
@@ -269,6 +272,7 @@ export const landingMessages = defineMessages({
     },
   },
   ar: {
+    account: { dashboard: "انتقل إلى لوحة التحكم", footerDashboard: "لوحة التحكم" },
     nav: {
       home: "الرئيسية",
       marketplaces: "الحسابات",
@@ -277,6 +281,7 @@ export const landingMessages = defineMessages({
       faq: "الأسئلة الشائعة",
       signIn: "تسجيل الدخول",
       createAccount: "أنشئ حسابًا مجانيًا",
+      dashboard: "لوحة التحكم",
       openMenu: "فتح القائمة",
       closeMenu: "إغلاق القائمة",
       farmers: { label: "المزارعون", body: "بِع مخلفات محاصيلك مجانًا" },
