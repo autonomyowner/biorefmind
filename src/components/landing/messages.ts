@@ -21,7 +21,8 @@ export const landingMessages = defineMessages({
     },
     hero: {
       badge: "AI quality scoring for bio-waste",
-      title: "Your waste is someone's raw material",
+      titleLead: "Your waste is someone's",
+      titleAccent: "raw material",
       body: "BiorefMind connects farms and factories that throw away peels, pomace and residues with the factories that need them. Its AI scores every batch, so buyers know what they get.",
       cta: "Start now",
       secondary: "Preview as guest",
@@ -43,7 +44,8 @@ export const landingMessages = defineMessages({
     },
     markets: {
       eyebrow: "Two marketplaces",
-      title: "Two markets, one circular harvest",
+      titleLead: "Two markets, one",
+      titleAccent: "circular harvest",
       body: "Whether you grow it or process it, what you throw away has a buyer, and every batch is scored.",
       farmLabel: "Farmers → Factories",
       factoryLabel: "Factories → Factories",
@@ -75,7 +77,7 @@ export const landingMessages = defineMessages({
           body: "Each listing carries a 0–100 quality score and an A, B or C route, so buyers know what they get.",
         },
       ],
-      hubAlt: "The BiorefMind emblem, held by a robotic hand",
+      hubAlt: "A glowing globe with a young plant inside, circled by orbits",
       hubLabel: "Scored by AI",
       hubIn: ["Pomegranate peels", "Olive pomace", "Citrus peels"],
       hubOut: ["Extracts", "Pectin", "Bio-packaging", "Energy"],
@@ -83,7 +85,8 @@ export const landingMessages = defineMessages({
     },
     quality: {
       eyebrow: "Quality you can trust",
-      title: "Every batch is scored before it is sold.",
+      titleLead: "Every batch is scored",
+      titleAccent: "before it is sold.",
       body: "Lab readings go in, and a crop-specific model returns a 0–100 score with the reasons next to it. Sellers get paid for quality; buyers know what they are buying.",
       tools: [
         {
@@ -116,41 +119,41 @@ export const landingMessages = defineMessages({
       },
     },
     how: {
-      eyebrow: "How it works",
-      title: "From waste to sale in three steps.",
+      badge: "AI-powered for a circular harvest",
+      titleLead: "From waste to sale in",
+      titleAccent: "three steps.",
       body: "In three simple steps, BiorefMind turns crop and factory waste into a raw material someone buys.",
       cta: "List your waste",
+      chips: ["Natural resources", "Sustainable future"],
+      handAlt: "A robotic hand holding a glowing globe with a young plant inside",
       steps: [
         {
           title: "List it",
           body: "A farmer or factory adds the residue, quantity, location and photos from a phone. A partner lab can add the readings.",
+          alt: "The BiorefMind app on a phone, on the New listing screen",
+          pillTitle: "New listing",
+          pillBody: "Ready in a few minutes",
         },
         {
           title: "Get scored",
           body: "BiorefMind scores the batch 0–100 and gives it a route: A pharmaceutical, B food-grade or C recovery. Better score, better price.",
+          alt: "A quality score card: 92 out of 100, route A pharmaceutical",
+          pillTitle: "Scored by AI",
+          pillBody: "With the reasons shown",
         },
         {
           title: "Sell it",
           body: "Factories find the listing, make an offer and arrange pickup. The quality certificate travels with the batch.",
+          alt: "An accepted offer card above a quality certificate",
+          pillTitle: "Certificate included",
+          pillBody: "It travels with the batch",
         },
       ],
-      mock: {
-        listing: "New listing",
-        residue: "Residue",
-        residueValue: "Pomegranate peels",
-        quantity: "Quantity",
-        quantityValue: "2.4 t",
-        photos: "Photos",
-        score: "Quality score",
-        route: "Route A · Pharma",
-        certificate: "Quality certificate",
-        batch: "Batch #2481",
-        offer: "Offer accepted",
-      },
     },
     routes: {
       eyebrow: "Routes",
-      title: "Every batch finds its highest-value use",
+      titleLead: "Every batch finds its",
+      titleAccent: "highest-value use",
       body: "The score decides the route. The best batches go to medicines, good ones to food, and the rest to compost and energy, so nothing grown is thrown away.",
       checks: [
         "Route A, 80–100: pharmaceutical extracts and medicines",
@@ -162,6 +165,7 @@ export const landingMessages = defineMessages({
       facts: ["Route A · Pharmaceutical", "Route B · Food-grade", "Route C · Recovery", "Quality score per batch"],
       board: {
         label: "A preview of the BiorefMind dashboard",
+        imageAlt: "The BiorefMind dashboard: batches this month, average score, sales by day and the route split",
         title: "Batches this month",
         example: "Example data",
         average: "Average score",
@@ -173,7 +177,8 @@ export const landingMessages = defineMessages({
     },
     pricing: {
       eyebrow: "Pricing",
-      title: "Free to list. Pay when you sell.",
+      titleLead: "Free to list.",
+      titleAccent: "Pay when you sell.",
       draft: "Draft pricing, to be confirmed.",
       plans: [
         {
@@ -208,7 +213,8 @@ export const landingMessages = defineMessages({
     },
     faq: {
       eyebrow: "FAQ",
-      title: "Questions, answered.",
+      titleLead: "Questions,",
+      titleAccent: "answered.",
       items: [
         {
           q: "Who can sell on BiorefMind?",
@@ -233,7 +239,8 @@ export const landingMessages = defineMessages({
       ],
     },
     closing: {
-      title: "Nothing grown should be wasted",
+      titleLead: "Nothing grown should be",
+      titleAccent: "wasted",
       body: "List your waste for free, or find your next raw material.",
       cta: "Create a free account",
       guest: "Preview as guest",
@@ -275,7 +282,8 @@ export const landingMessages = defineMessages({
     },
     hero: {
       badge: "تقييم الجودة بالذكاء الاصطناعي للمخلفات الحيوية",
-      title: "مخلفاتك مادة خام لغيرك",
+      titleLead: "مخلفاتك",
+      titleAccent: "مادة خام لغيرك",
       body: "تربط BiorefMind المزارع والمصانع التي تتخلص من القشور والتفل والمخلفات بالمصانع التي تحتاجها. ويقيّم ذكاؤها الاصطناعي كل دفعة، فيعرف المشتري ما يشتريه.",
       cta: "ابدأ الآن",
       secondary: "جرّب كزائر",
@@ -297,7 +305,8 @@ export const landingMessages = defineMessages({
     },
     markets: {
       eyebrow: "سوقان",
-      title: "سوقان وحصاد دائري واحد",
+      titleLead: "سوقان،",
+      titleAccent: "وحصاد دائري واحد",
       body: "سواء كنت تزرع أو تصنّع، فما تتخلص منه له مشترٍ، وكل دفعة تحصل على تقييم.",
       farmLabel: "من المزارع إلى المصانع",
       factoryLabel: "من مصنع إلى مصنع",
@@ -329,7 +338,7 @@ export const landingMessages = defineMessages({
           body: "كل إدراج يحمل تقييم جودة من 0 إلى 100 ومسارًا A أو B أو C، فيعرف المشتري ما يشتريه.",
         },
       ],
-      hubAlt: "شعار BiorefMind تحمله يد آلية",
+      hubAlt: "كرة أرضية مضيئة بداخلها نبتة صغيرة تحيط بها مدارات",
       hubLabel: "تقييم بالذكاء الاصطناعي",
       hubIn: ["قشور الرمان", "تفل الزيتون", "قشور الحمضيات"],
       hubOut: ["مستخلصات", "بكتين", "تغليف حيوي", "طاقة"],
@@ -337,7 +346,8 @@ export const landingMessages = defineMessages({
     },
     quality: {
       eyebrow: "جودة تستحق الثقة",
-      title: "كل دفعة تُقيَّم قبل بيعها.",
+      titleLead: "كل دفعة تُقيَّم",
+      titleAccent: "قبل بيعها.",
       body: "تدخل نتائج المختبر، فيُرجع نموذج خاص بكل محصول تقييمًا من 0 إلى 100 مع أسبابه. البائع يُكافأ على الجودة، والمشتري يعرف ما يشتريه.",
       tools: [
         {
@@ -370,41 +380,41 @@ export const landingMessages = defineMessages({
       },
     },
     how: {
-      eyebrow: "كيف تعمل",
-      title: "من المخلفات إلى البيع في ثلاث خطوات.",
+      badge: "ذكاء اصطناعي لحصاد دائري",
+      titleLead: "من المخلفات إلى البيع في",
+      titleAccent: "ثلاث خطوات.",
       body: "في ثلاث خطوات بسيطة، تحوّل BiorefMind مخلفات المزارع والمصانع إلى مادة خام يشتريها غيرك.",
       cta: "أدرج مخلفاتك",
+      chips: ["موارد طبيعية", "مستقبل مستدام"],
+      handAlt: "يد آلية تحمل كرة مضيئة بداخلها نبتة صغيرة",
       steps: [
         {
           title: "أدرجها",
           body: "يضيف المزارع أو المصنع نوع المخلفات والكمية والموقع والصور من الهاتف. ويمكن لمختبر شريك إضافة النتائج.",
+          alt: "تطبيق BiorefMind على هاتف، في شاشة الإدراج الجديد",
+          pillTitle: "إدراج جديد",
+          pillBody: "جاهز في دقائق",
         },
         {
           title: "احصل على التقييم",
           body: "تقيّم BiorefMind الدفعة من 0 إلى 100 وتحدد مسارها: A صيدلاني أو B غذائي أو C استرجاع. تقييم أعلى، سعر أفضل.",
+          alt: "بطاقة تقييم الجودة: 92 من 100، المسار A صيدلاني",
+          pillTitle: "تقييم بالذكاء الاصطناعي",
+          pillBody: "مع عرض الأسباب",
         },
         {
           title: "بِعها",
           body: "تجد المصانع الإدراج، وتقدّم عرضًا وتنسّق الاستلام. وترافق شهادة الجودة الدفعة.",
+          alt: "بطاقة عرض مقبول فوق شهادة جودة",
+          pillTitle: "الشهادة مرفقة",
+          pillBody: "ترافق الدفعة",
         },
       ],
-      mock: {
-        listing: "إدراج جديد",
-        residue: "المخلفات",
-        residueValue: "قشور الرمان",
-        quantity: "الكمية",
-        quantityValue: "2.4 طن",
-        photos: "الصور",
-        score: "تقييم الجودة",
-        route: "المسار A · صيدلاني",
-        certificate: "شهادة الجودة",
-        batch: "الدفعة ‎#2481",
-        offer: "تم قبول العرض",
-      },
     },
     routes: {
       eyebrow: "المسارات",
-      title: "كل دفعة تجد استخدامها الأعلى قيمة",
+      titleLead: "كل دفعة تجد",
+      titleAccent: "استخدامها الأعلى قيمة",
       body: "التقييم يحدد المسار. أفضل الدفعات تذهب إلى الأدوية، والجيدة إلى الغذاء، والباقي إلى السماد والطاقة، فلا يُهدر شيء مما نزرعه.",
       checks: [
         "المسار A، من 80 إلى 100: مستخلصات صيدلانية وأدوية",
@@ -416,6 +426,7 @@ export const landingMessages = defineMessages({
       facts: ["المسار A · صيدلاني", "المسار B · غذائي", "المسار C · استرجاع", "تقييم الجودة لكل دفعة"],
       board: {
         label: "معاينة للوحة تحكم BiorefMind",
+        imageAlt: "لوحة تحكم BiorefMind: دفعات هذا الشهر ومتوسط التقييم وتوزيع المبيعات حسب اليوم وتوزيع المسارات",
         title: "دفعات هذا الشهر",
         example: "بيانات للتوضيح",
         average: "متوسط التقييم",
@@ -427,7 +438,8 @@ export const landingMessages = defineMessages({
     },
     pricing: {
       eyebrow: "الأسعار",
-      title: "الإدراج مجاني. تدفع عندما تبيع.",
+      titleLead: "الإدراج مجاني.",
+      titleAccent: "تدفع عندما تبيع.",
       draft: "أسعار مبدئية، قيد التأكيد.",
       plans: [
         {
@@ -458,7 +470,8 @@ export const landingMessages = defineMessages({
     },
     faq: {
       eyebrow: "الأسئلة الشائعة",
-      title: "أسئلة وأجوبة.",
+      titleLead: "أسئلة",
+      titleAccent: "وأجوبة.",
       items: [
         {
           q: "من يمكنه البيع على BiorefMind؟",
@@ -483,7 +496,8 @@ export const landingMessages = defineMessages({
       ],
     },
     closing: {
-      title: "لا شيء مما نزرعه يجب أن يُهدر",
+      titleLead: "لا شيء مما نزرعه",
+      titleAccent: "يجب أن يُهدر",
       body: "أدرج مخلفاتك مجانًا، أو اعثر على مادتك الخام القادمة.",
       cta: "أنشئ حسابًا مجانيًا",
       guest: "جرّب كزائر",

@@ -1,6 +1,6 @@
 # CLAUDE.md — BiorefMind Platform
 
-BiorefMind is a second version of the BioGrena platform (`D:\biogrenaplatform`, branch `blank-skeleton` @ `355cf0d`) with a new brand and a new look. Same product: a **bio-waste marketplace** where farmers and factories sell peels, pomace and residues to factories that need them, and every batch gets a 0–100 quality score and a route (A pharmaceutical / B food-grade / C recovery). Inspectors override routes with a logged reason; teams get analytics, an AI assistant and PDF reports. **Never modify the BioGrena project** — this repo is a separate copy.
+BiorefMind started as a copy of the BioGrena platform (`D:\biogrenaplatform`); the old green "nature" theme is archived at `github.com/autonomyowner/saasnaturebiogrena` and is **not** to be revived here — work only on the BiorefMind theme. Same product: a **bio-waste marketplace** where farmers and factories sell peels, pomace and residues to factories that need them, and every batch gets a 0–100 quality score and a route (A pharmaceutical / B food-grade / C recovery). Inspectors override routes with a logged reason; teams get analytics, an AI assistant and PDF reports. **Never modify the BioGrena project** — this repo is a separate copy.
 
 - Theme design: `docs/superpowers/specs/2026-10-01-biorefmind-theme-design.md`
 - Inherited from BioGrena (still accurate for the backend; brand names in them are BioGrena's): `docs/superpowers/specs/2026-09-28-phase-1-platform-design.md`, `docs/superpowers/contracts/phase-1-backend.md`
@@ -17,7 +17,14 @@ Next.js 16.3 App Router, React 19.2, TypeScript, Tailwind 4, shadcn `base-nova` 
 - Auth: Better Auth runs inside Convex (`convex/auth.ts`, `convex/http.ts`); the site proxies it at `/api/auth/*` so the cookie is first-party. The browser client (`src/lib/auth-client.ts`) has no `baseURL` on purpose. App profiles live in `users`, linked by lowercase email.
 - Clients call Convex through `api` in `src/lib/backend.ts` and type results with `src/lib/types.ts`.
 - **Theme (2026-10-01, from `theme.png`):** ice-blue background `#d9e7f3`, navy ink `#071733`, navy primary `#04173a`; the emblem's colours as tokens `teal` `#0b6676`, `leaf` `#14894c`, `gold` `#d69a35`, `cyan` `#2ec4d6`; font Figtree (Arabic: IBM Plex Sans Arabic). Tokens in `src/app/globals.css`, plus two utilities: `btn-navy` (the glowing navy pill/surface) and `glass` (frosted card). shadcn's `accent` is the quiet hover surface. No floating/bobbing motion (owner rule); the only loop is the residue marquee under the hero.
-- Landing page: `src/app/page.tsx` + `src/components/landing/*`. Images in `public/`: `hero-hand.png` (copy of the owner's `herohandandlogo.png`, edges faded into a blue halo with CSS masks — not cut out), `logo-mark.png` (emblem cut from `theme.png`'s header, 77 px, background keyed out; also `src/app/icon.png`). The other visuals (marketplace hub, step previews, dashboard preview) are built in code; their figures are labelled as examples.
+- **Section designs (2026-10-02):** the owner's references are in `dersignref/` (untracked). "How it works" follows `De la biomasse à la vente.png`: gradient headline word (`text-gradient`), glossy step numbers and arrows (`orb`), the hand-and-globe bleeding off the page edge (`bleed-end`), frosted cards with the app pictures and a pill at the bottom. Highlight colours `azure` `#3f6cf2` and `violet` `#7b5cf0`.
+- **One look everywhere (owner, 2026-10-02: "no backgrounds, in sync"):** every section opens with `SectionBadge` and a `Headline` whose last words are in the gradient (`src/components/landing/section-badge.tsx`; messages carry `titleLead` + `titleAccent`). Accents are azure/violet only; teal/gold/cyan/leaf tokens remain only for the logo's own colours and are not used in the UI.
+- Landing page: `src/app/page.tsx` + `src/components/landing/*`. **Every picture is a background-free PNG in `public/art/`** — never put a photo with its background on the page:
+  - `hand-emblem.png` (hero and sign-in pages), `hand-emblem-2.png` (closing banner), `globe.png` (marketplace hub), `hand-globe.png` + `step-*.png` (How it works), `dashboard-ar.png` (routes section, **Arabic pages only**; English pages show a coded preview in the same style).
+  - Cut out with `@imgly/background-removal-node` (model `medium`, run locally from a scratchpad script; free, nothing uploaded). It fails on flat UI screenshots (it made the frosted dashboard see-through): cut those along their own rounded rectangle instead (done for `dashboard-ar.png`).
+  - Arms cut by a picture's edge are placed so that edge sits on the page/banner edge (`object-[100%_…]`, `bleed-end`), with a short mask fade where needed.
+  - New file names when a picture changes (the image optimizer and browsers cache by URL).
+  - `logo-mark.png` (emblem cut from `theme.png`'s header, 77 px; also `src/app/icon.png`).
 - In Arabic, photos of the hand are mirrored (`rtl:-scale-x-100`) so the arm comes in from the outer edge. A mirrored element's CSS mask mirrors with it — don't add `rtl:` mask variants.
 
 ## Arabic
@@ -41,7 +48,7 @@ npm run typecheck; npm run typecheck:convex; npm run lint; npm run build
 On a fresh clone run `npx next typegen` (or a build) before `npm run typecheck`: `LayoutProps` is generated. Port 3000 is often taken by another project; local testing uses 3100, matching the dev `SITE_URL`. Deploys (Vercel, `npx convex deploy`) only when the owner says "ship it".
 
 ## Status (2026-10-01)
-GitHub: `https://github.com/autonomyowner/biorefmind` (pushed `main` and `biorefmind-theme`, 2026-10-01). Branch `biorefmind-theme` (from `main` = untouched BioGrena import). Rebrand + new theme done; backend unchanged.
+GitHub: `https://github.com/autonomyowner/biorefmind`. `main` carries BiorefMind (theme merged 2026-10-02); section polish on branch `polish-sections`, merged into `main`. Backend unchanged.
 - 33 tests, both type checks, lint and `next build` (8 routes) pass.
 - Real Chrome run: landing at 1536 px and 360 px with no sideways scroll, Arabic right-to-left, sign-up → dashboard, sign-out, wrong password message, sign-in → dashboard; no console errors.
 

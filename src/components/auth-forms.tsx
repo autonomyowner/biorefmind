@@ -181,7 +181,7 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
         <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[13px] text-muted-foreground">
           {t.perks.map((perk) => (
             <li key={perk} className="flex items-center gap-1.5">
-              <span className="flex size-4 items-center justify-center rounded-full bg-teal text-white">
+              <span className="flex size-4 items-center justify-center rounded-full bg-azure text-white">
                 <Check className="size-2.5" strokeWidth={3} />
               </span>
               {perk}
@@ -197,7 +197,7 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
 
 // Taller, softer fields than the app default; the teal ring matches the brand.
 const FIELD =
-  "h-12 rounded-2xl border-foreground/10 bg-white/90 px-4 text-[15px] placeholder:text-foreground/40 focus-visible:border-teal/60 focus-visible:ring-teal/20";
+  "h-12 rounded-2xl border-foreground/10 bg-white/90 px-4 text-[15px] placeholder:text-foreground/40 focus-visible:border-azure/60 focus-visible:ring-azure/20";
 
 function AuthCard({
   title,

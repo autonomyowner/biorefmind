@@ -5,6 +5,8 @@ import { ArrowRight, Check, FlaskConical, Gauge, Recycle, Wheat, type LucideIcon
 import { Reveal } from "@/components/landing/reveal";
 import { cn } from "@/lib/utils";
 import type { LandingMessages } from "@/components/landing/messages";
+import type { Locale } from "@/i18n/locale";
+import { Headline, SectionBadge } from "@/components/landing/section-badge";
 
 const FACTS: { icon: LucideIcon; value: string }[] = [
   { icon: FlaskConical, value: "80–100" },
@@ -13,24 +15,24 @@ const FACTS: { icon: LucideIcon; value: string }[] = [
   { icon: Gauge, value: "0–100" },
 ];
 
-/** Routes: text and checklist on the left; a preview of the dashboard on the right. */
-export function RoutesSection({ t }: { t: LandingMessages["routes"] }) {
+/**
+ * Routes: text and checklist on the left; a preview of the dashboard on the right.
+ * Arabic pages show the owner's Arabic dashboard picture; English pages a coded preview in the same style.
+ */
+export function RoutesSection({ t, locale }: { t: LandingMessages["routes"]; locale: Locale }) {
   return (
     <section id="routes" className="relative scroll-mt-6 overflow-hidden py-24 sm:py-32">
       <div className="relative mx-auto grid max-w-[1440px] items-center gap-16 px-5 sm:px-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14 lg:px-16">
         <Reveal>
-          <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-teal">
-            <span className="size-1.5 rounded-full bg-gold" />
-            {t.eyebrow}
-          </p>
-          <h2 className="mt-5 text-balance text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[54px]">
-            {t.title}
+          <SectionBadge>{t.eyebrow}</SectionBadge>
+          <h2 className="mt-6 text-balance text-[40px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[54px]">
+            <Headline lead={t.titleLead} accent={t.titleAccent} />
           </h2>
           <p className="mt-6 max-w-[500px] text-[17px] leading-relaxed text-muted-foreground">{t.body}</p>
           <ul className="mt-8 space-y-3.5">
             {t.checks.map((c) => (
               <li key={c} className="flex items-start gap-3 text-[16px]">
-                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-teal text-white">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-azure text-white">
                   <Check className="size-3" strokeWidth={3} />
                 </span>
                 {c}
@@ -50,7 +52,19 @@ export function RoutesSection({ t }: { t: LandingMessages["routes"] }) {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <DashboardPreview t={t.board} />
+          {locale === "ar" ? (
+            // The dashboard panel cut out along its own rounded edge.
+            <Image
+              src="/art/dashboard-ar.png"
+              alt={t.board.imageAlt}
+              width={1333}
+              height={829}
+              sizes="(min-width: 1024px) 55vw, 100vw"
+              className="h-auto w-full drop-shadow-[0_40px_50px_rgba(63,108,242,0.3)]"
+            />
+          ) : (
+            <DashboardPreview t={t.board} />
+          )}
         </Reveal>
       </div>
 
@@ -61,11 +75,11 @@ export function RoutesSection({ t }: { t: LandingMessages["routes"] }) {
               key={f.value}
               className={cn(
                 "flex flex-col items-center px-2 text-center",
-                i > 0 && "md:border-s md:border-teal/20",
-                i % 2 === 1 && "border-s border-teal/20",
+                i > 0 && "md:border-s md:border-azure/20",
+                i % 2 === 1 && "border-s border-azure/20",
               )}
             >
-              <f.icon className="size-6 text-teal" strokeWidth={1.5} />
+              <f.icon className="size-6 text-azure" strokeWidth={1.5} />
               {/* A range reads low to high in both languages. */}
               <dd dir="ltr" className="mt-3 text-[30px] font-semibold tracking-[-0.03em] tabular-nums sm:text-[34px]">
                 {f.value}
@@ -85,9 +99,9 @@ export function RoutesSection({ t }: { t: LandingMessages["routes"] }) {
 const BARS = [0.46, 0.58, 0.52, 0.71, 0.83, 1];
 // Route split A / B / C, in percent.
 const SPLIT = [
-  { pct: 48, className: "bg-teal" },
-  { pct: 34, className: "bg-leaf" },
-  { pct: 18, className: "bg-gold" },
+  { pct: 48, className: "bg-violet" },
+  { pct: 34, className: "bg-azure" },
+  { pct: 18, className: "bg-[#2fc58a]" },
 ];
 
 function DashboardPreview({ t }: { t: LandingMessages["routes"]["board"] }) {
@@ -134,7 +148,9 @@ function DashboardPreview({ t }: { t: LandingMessages["routes"]["board"] }) {
                 <div
                   className={cn(
                     "w-full max-w-9 rounded-t-lg",
-                    i === BARS.length - 1 ? "bg-gradient-to-t from-teal to-cyan" : "bg-[#b9cfe2]",
+                    i === BARS.length - 1
+                      ? "bg-gradient-to-t from-violet to-[#a58cff] shadow-[0_10px_24px_-10px_rgba(123,92,240,0.8)]"
+                      : "bg-gradient-to-t from-azure/80 to-[#9db6ff]",
                   )}
                   style={{ height: `${h * 100}%` }}
                 />
