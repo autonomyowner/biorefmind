@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Factory, FlaskConical, Sprout, type LucideIcon } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,7 +17,9 @@ import { errorMessage } from "@/lib/errors";
 import { authMessages } from "@/components/auth-messages";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
-import type { Workspace } from "@/lib/types";
+import { ANALYSIS_KEYS, RESIDUE_KEYS, catalogLabels, labelOf } from "@/lib/catalog-labels";
+import type { Kind, Workspace } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 /** Bare sign-in: email + password, then PostAuthRedirect picks the next page. */
 export function LoginForm() {
@@ -69,15 +71,33 @@ export function LoginForm() {
   );
 }
 
-type Setup = { name: string; company: string };
+type Setup = {
+  kind: Kind;
+  name: string;
+  org: string;
+  region: string;
+  phone: string;
+  services: string[];
+  buys: string[];
+};
+
+const KIND_ICONS: Record<Kind, LucideIcon> = { farm: Sprout, lab: FlaskConical, factory: Factory };
+const KINDS: Kind[] = ["farm", "lab", "factory"];
+
+/** 7–20 digits once spaces, "+", "-" and brackets are removed (same rule as the server). */
+function phoneOk(raw: string) {
+  return /^\d{7,20}$/.test(raw.trim().replace(/[\s+\-()]/g, ""));
+}
 
 /**
  * Sign-up (creates the login, then the workspace) and onboarding (a signed-in
- * login without a workspace creates one).
+ * login without a workspace creates one). Step 1 picks farmer, lab or factory;
+ * step 2 is that type's form.
  */
 export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
   const router = useRouter();
   const t = useMessages(authMessages);
+  const labels = useMessages(catalogLabels);
   const locale = useLocale();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const ensureUser = useMutation(api.users.ensureUser);
@@ -86,8 +106,13 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
     | Workspace[]
     | undefined;
 
+  const [kind, setKind] = useState<Kind | null>(null);
   const [name, setName] = useState("");
-  const [company, setCompany] = useState("");
+  const [org, setOrg] = useState("");
+  const [region, setRegion] = useState("");
+  const [phone, setPhone] = useState("");
+  const [services, setServices] = useState<string[]>([]);
+  const [buys, setBuys] = useState<string[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +132,14 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
     (async () => {
       try {
         await ensureUser({ name: pending.name });
-        await createCompany({ name: pending.company, kind: "factory" });
+        await createCompany({
+          kind: pending.kind,
+          name: pending.org,
+          region: pending.region,
+          phone: pending.phone,
+          services: pending.kind === "lab" ? pending.services : undefined,
+          buys: pending.kind === "factory" ? pending.buys : undefined,
+        });
         router.replace("/dashboard");
       } catch (e) {
         toast.error(localizeBackendError(errorMessage(e), locale));
@@ -121,11 +153,23 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const setup: Setup = { name: name.trim(), company: company.trim() };
+    if (!kind) return;
+    const setup: Setup = {
+      kind,
+      name: name.trim(),
+      org: org.trim(),
+      region: region.trim(),
+      phone: phone.trim(),
+      services,
+      buys,
+    };
     const needsLogin = mode === "signup" && !isAuthenticated;
     let problem: string | null = null;
     if (!setup.name) problem = t.errors.name;
-    else if (setup.company.length < 2 || setup.company.length > 80) problem = t.errors.company;
+    else if (setup.org.length < 2 || setup.org.length > 80) problem = t.errors.company;
+    else if (setup.region.length < 2) problem = t.errors.region;
+    else if (!phoneOk(setup.phone)) problem = t.errors.phone;
+    else if (kind === "lab" && services.length === 0) problem = t.errors.services;
     else if (needsLogin && !EMAIL_RE.test(email.trim())) problem = t.errors.email;
     else if (needsLogin && password.length < 8) problem = t.errors.passwordShort;
     setError(problem);
@@ -153,21 +197,83 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
     return <Spinner className="flex py-16" />;
   }
 
+  const footer =
+    mode === "signup" ? (
+      <>
+        {t.haveAccount} <FooterLink href="/login">{t.signIn}</FooterLink>
+      </>
+    ) : null;
+
+  // Step 1: who are you?
+  if (!kind) {
+    return (
+      <AuthCard title={mode === "signup" ? t.signUp : t.setUp} lead={mode === "signup" ? t.signUpLead : t.setUpLead} footer={footer}>
+        <p className="mb-3 text-[15px] font-semibold">{t.chooseTitle}</p>
+        <ul className="space-y-3">
+          {KINDS.map((k) => {
+            const Icon = KIND_ICONS[k];
+            const card = t.kinds[k];
+            return (
+              <li key={k}>
+                <button
+                  type="button"
+                  onClick={() => setKind(k)}
+                  className="group flex w-full items-center gap-4 rounded-2xl border border-white bg-white/75 p-4 text-start shadow-[0_10px_24px_-20px_rgba(20,30,120,0.6)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-20px_rgba(40,60,170,0.6)] focus-visible:ring-2 focus-visible:ring-azure/40 focus-visible:outline-none"
+                >
+                  <span className="orb flex size-12 shrink-0 items-center justify-center rounded-full">
+                    <Icon className="size-5" strokeWidth={1.8} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[17px] font-semibold">{card.title}</span>
+                    <span className="mt-0.5 block text-[14px] text-muted-foreground">{card.body}</span>
+                    <span className="mt-1.5 inline-block rounded-full bg-[#e6edff] px-2.5 py-0.5 text-[12px] font-medium text-azure">
+                      {card.price}
+                    </span>
+                  </span>
+                  <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {mode === "signup" ? <Perks perks={t.perks} /> : null}
+      </AuthCard>
+    );
+  }
+
+  // Step 2: that type's form.
+  const Icon = KIND_ICONS[kind];
   return (
-    <AuthCard
-      title={mode === "signup" ? t.signUp : t.setUp}
-      lead={mode === "signup" ? t.signUpLead : t.setUpLead}
-      footer={
-        mode === "signup" ? (
-          <>
-            {t.haveAccount} <FooterLink href="/login">{t.signIn}</FooterLink>
-          </>
-        ) : null
-      }
-    >
+    <AuthCard title={mode === "signup" ? t.signUp : t.setUp} lead={t.kinds[kind].body} footer={footer}>
+      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-[#e6edff]/70 px-3 py-2.5">
+        <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full">
+          <Icon className="size-4" strokeWidth={1.8} />
+        </span>
+        <span className="flex-1 text-[15px] font-semibold">{t.kinds[kind].title}</span>
+        <button
+          type="button"
+          onClick={() => {
+            setKind(null);
+            setError(null);
+          }}
+          className="text-[14px] font-medium text-azure underline-offset-4 hover:underline"
+        >
+          {t.change}
+        </button>
+      </div>
       <form onSubmit={onSubmit} noValidate className="space-y-3">
         <Input placeholder={t.name} aria-label={t.name} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={FIELD} />
-        <Input placeholder={t.company} aria-label={t.company} autoComplete="organization" value={company} onChange={(e) => setCompany(e.target.value)} className={FIELD} />
+        <Input placeholder={t.orgName[kind]} aria-label={t.orgName[kind]} autoComplete="organization" value={org} onChange={(e) => setOrg(e.target.value)} className={FIELD} />
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
+          <Input placeholder={t.region} aria-label={t.region} autoComplete="address-level1" value={region} onChange={(e) => setRegion(e.target.value)} className={FIELD} />
+          <Input type="tel" dir="ltr" placeholder={t.phone} aria-label={t.phone} autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={cn(FIELD, "rtl:text-end")} />
+        </div>
+        {kind === "lab" ? (
+          <ChipPicker label={t.servicesLabel} keys={ANALYSIS_KEYS} names={labels.analyses} value={services} onChange={setServices} />
+        ) : null}
+        {kind === "factory" ? (
+          <ChipPicker label={t.buysLabel} keys={RESIDUE_KEYS} names={labels.residues} value={buys} onChange={setBuys} />
+        ) : null}
         {mode === "signup" && !isAuthenticated ? (
           <>
             <Input type="email" placeholder={t.email} aria-label={t.email} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={FIELD} />
@@ -177,19 +283,63 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
         <FormError error={error} />
         <SubmitButton busy={busy}>{t.continue}</SubmitButton>
       </form>
-      {mode === "signup" ? (
-        <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[13px] text-muted-foreground">
-          {t.perks.map((perk) => (
-            <li key={perk} className="flex items-center gap-1.5">
-              <span className="flex size-4 items-center justify-center rounded-full bg-azure text-white">
-                <Check className="size-2.5" strokeWidth={3} />
-              </span>
-              {perk}
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </AuthCard>
+  );
+}
+
+/** Toggle chips for a fixed list (analyses or residues). */
+function ChipPicker({
+  label,
+  keys,
+  names,
+  value,
+  onChange,
+}: {
+  label: string;
+  keys: readonly string[];
+  names: Record<string, string>;
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  return (
+    <fieldset className="pt-1">
+      <legend className="mb-2 text-[14px] font-medium">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {keys.map((k) => {
+          const on = value.includes(k);
+          return (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(on ? value.filter((v) => v !== k) : [...value, k])}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                on ? "border-transparent bg-azure text-white" : "border-foreground/15 bg-white/80 hover:border-azure/50",
+              )}
+            >
+              {on ? <Check className="size-3.5" strokeWidth={3} /> : null}
+              {labelOf(names, k)}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function Perks({ perks }: { perks: readonly string[] }) {
+  return (
+    <ul className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[13px] text-muted-foreground">
+      {perks.map((perk) => (
+        <li key={perk} className="flex items-center gap-1.5">
+          <span className="flex size-4 items-center justify-center rounded-full bg-azure text-white">
+            <Check className="size-2.5" strokeWidth={3} />
+          </span>
+          {perk}
+        </li>
+      ))}
+    </ul>
   );
 }
 

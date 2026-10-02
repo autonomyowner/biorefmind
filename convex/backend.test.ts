@@ -51,7 +51,7 @@ async function member(t: Backend, email: string, name = "Test User") {
 /** An owner with a fresh company. */
 async function ownerWithCompany(t: Backend, email = "owner@factory.dz") {
   const o = await member(t, email, "Olga Owner");
-  const companyId = await o.as.mutation(api.companies.create, { name: "Peel Factory", kind: "factory" });
+  const companyId = await o.as.mutation(api.companies.create, { name: "Peel Factory", kind: "factory", region: "Sétif", phone: "0555123456" });
   return { ...o, companyId };
 }
 
@@ -80,7 +80,7 @@ describe("users", () => {
     const id1 = await as.mutation(api.users.ensureUser, { name: "  Ada  " });
     const id2 = await as.mutation(api.users.ensureUser, { name: "Other" });
     expect(id2).toBe(id1);
-    expect(await as.query(api.users.viewer, {})).toEqual({ _id: id1, email: "ada@lab.dz", name: "Ada" });
+    expect(await as.query(api.users.viewer, {})).toEqual({ _id: id1, email: "ada@lab.dz", name: "Ada", isAdmin: false });
   });
 
   test("ensureUser refuses an empty name and a signed-out caller", async () => {
@@ -93,25 +93,24 @@ describe("users", () => {
 });
 
 describe("companies", () => {
-  test("create makes the caller owner of a 14-day trial", async () => {
+  test("create makes the caller owner of a factory on enterprise pricing", async () => {
     const t = newBackend();
     const { as, companyId } = await ownerWithCompany(t);
     const mine = await as.query(api.companies.mine, {});
     expect(mine).toHaveLength(1);
-    expect(mine[0]).toMatchObject({ companyId, name: "Peel Factory", kind: "factory", role: "owner", plan: "trial" });
-    expect(mine[0].trialEndsAt - Date.now()).toBeGreaterThan(13.9 * 86_400_000);
+    expect(mine[0]).toMatchObject({ companyId, name: "Peel Factory", kind: "factory", role: "owner", plan: "enterprise" });
     expect(await t.query(api.companies.mine, {})).toEqual([]);
   });
 
   test("create refusals", async () => {
     const t = newBackend();
     const noProfile = await login(t, "new@x.dz");
-    await expect(noProfile.mutation(api.companies.create, { name: "Good name", kind: "lab" })).rejects.toThrow(
+    await expect(noProfile.mutation(api.companies.create, { name: "Good name", kind: "lab", region: "Sétif", phone: "0555123456", services: ["mold"] })).rejects.toThrow(
       "Please finish creating your account first.",
     );
     const { as } = await member(t, "m@x.dz");
-    await expect(as.mutation(api.companies.create, { name: "A", kind: "lab" })).rejects.toThrow(
-      "Company name must be 2–80 characters.",
+    await expect(as.mutation(api.companies.create, { name: "A", kind: "lab", region: "Sétif", phone: "0555123456", services: ["mold"] })).rejects.toThrow(
+      "Name must be 2–80 characters.",
     );
   });
 
