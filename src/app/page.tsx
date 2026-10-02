@@ -338,6 +338,28 @@ function Marketplaces({ t }: { t: T["markets"] }) {
           </Reveal>
         </div>
 
+        {/* Labs: the third account type, under the farmers and factories. */}
+        <Reveal className="mx-auto mt-16 max-w-[980px]">
+          <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#1b2f94_0%,#26208a_60%,#3d2bb0_100%)] p-6 text-white shadow-[0_30px_60px_-30px_rgba(40,40,170,0.9)] sm:flex sm:items-center sm:gap-6 sm:p-8">
+            <span aria-hidden className="absolute -bottom-12 -end-10 size-40 rounded-full border-[16px] border-[#6f7dff]/30" />
+            <span className="relative flex size-16 shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_25%,#a5b4ff,#5b6cf0_55%,#4a39c8)] shadow-[0_10px_24px_-8px_rgba(130,140,255,0.9),inset_0_1px_0_rgba(255,255,255,0.4)]">
+              <FlaskConical className="size-7" strokeWidth={1.7} />
+            </span>
+            <div className="relative mt-4 flex-1 sm:mt-0">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#a9bcff]">{t.lab.label}</p>
+              <h3 className="mt-1.5 text-[22px] font-semibold tracking-[-0.02em]">{t.lab.title}</h3>
+              <p className="mt-1.5 text-[15px] leading-relaxed text-white/75">{t.lab.body}</p>
+            </div>
+            <Link
+              href="/signup"
+              className="relative mt-5 inline-flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white px-6 text-[15px] font-semibold text-primary transition-colors hover:bg-[#e3eef8] sm:mt-0"
+            >
+              {t.lab.cta}
+              <ArrowRight className="size-4 rtl:-scale-x-100" strokeWidth={2.25} />
+            </Link>
+          </div>
+        </Reveal>
+
         <div className="mt-14 flex justify-center">
           <CtaButton href="/signup">{t.cta}</CtaButton>
         </div>

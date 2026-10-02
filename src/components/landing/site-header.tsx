@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ChevronDown,
   Factory,
+  FlaskConical,
   Gauge,
   ListChecks,
   Signpost,
@@ -31,6 +32,7 @@ function menusOf(t: Nav): { label: string; items: NavItem[] }[] {
       label: t.marketplaces,
       items: [
         { ...t.farmers, href: "/#marketplaces", icon: Sprout },
+        { ...t.labs, href: "/#marketplaces", icon: FlaskConical },
         { ...t.factories, href: "/#marketplaces", icon: Factory },
       ],
     },
