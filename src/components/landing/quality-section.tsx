@@ -19,6 +19,7 @@ import {
 import { Reveal } from "@/components/landing/reveal";
 import { Headline, SectionBadge } from "@/components/landing/section-badge";
 import type { LandingMessages } from "@/components/landing/messages";
+import type { Go } from "@/components/landing/go";
 
 type Quality = LandingMessages["quality"];
 
@@ -33,7 +34,7 @@ const READINGS: { icon: LucideIcon; value: string; pts: string; width: string }[
 const TOOL_ICONS: LucideIcon[] = [ClipboardCheck, ShieldCheck, Bot, Users];
 
 /** Quality you can trust: deep royal-blue section, feature cards beside a frosted score card. */
-export function QualitySection({ t }: { t: Quality }) {
+export function QualitySection({ t, go }: { t: Quality; go: Go }) {
   return (
     <section
       id="quality"
@@ -82,14 +83,14 @@ export function QualitySection({ t }: { t: Quality }) {
           </div>
 
           <Link
-            href="/signup"
+            href={go?.href ?? "/signup"}
             className="group mt-9 inline-flex h-14 items-center gap-3.5 rounded-full bg-gradient-to-r from-[#5b7cff] to-violet ps-7 pe-9 text-[17px] font-semibold text-white shadow-[0_16px_36px_-14px_rgba(110,100,255,0.9),inset_0_1px_0_rgba(255,255,255,0.3)] transition-[filter] hover:brightness-110 rtl:bg-gradient-to-l"
           >
             <ArrowRight
               className="size-5 transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
               strokeWidth={2.25}
             />
-            {t.cta}
+            {go?.label ?? t.cta}
           </Link>
         </Reveal>
 

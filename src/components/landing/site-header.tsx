@@ -164,7 +164,17 @@ const group = {
   exit: { opacity: 0, transition: { duration: 0.1 } },
 };
 
-function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof menusOf>; onClose: () => void }) {
+function MobileMenu({
+  t,
+  menus,
+  signedIn,
+  onClose,
+}: {
+  t: Nav;
+  menus: ReturnType<typeof menusOf>;
+  signedIn: boolean;
+  onClose: () => void;
+}) {
   const links = [
     { label: t.pricing, href: "/#pricing" },
     { label: t.faq, href: "/#faq" },
@@ -219,24 +229,27 @@ function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof me
 
       <motion.div variants={group} className="mt-auto grid gap-3 pt-8">
         <Link
-          href="/signup"
+          href={signedIn ? "/dashboard" : "/signup"}
           className="btn-navy flex h-14 items-center justify-center gap-3 rounded-full text-[17px] font-semibold"
         >
           <ArrowRight className="size-5 rtl:-scale-x-100" strokeWidth={2.25} />
-          {t.createAccount}
+          {signedIn ? t.dashboard : t.createAccount}
         </Link>
-        <Link
-          href="/login"
-          className="flex h-14 items-center justify-center rounded-full border border-foreground/20 bg-white/40 text-[17px] font-medium"
-        >
-          {t.signIn}
-        </Link>
+        {signedIn ? null : (
+          <Link
+            href="/login"
+            className="flex h-14 items-center justify-center rounded-full border border-foreground/20 bg-white/40 text-[17px] font-medium"
+          >
+            {t.signIn}
+          </Link>
+        )}
       </motion.div>
     </motion.div>
   );
 }
 
-export function SiteHeader() {
+/** When signedIn (from the session cookie), "Sign in" becomes "Dashboard". */
+export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
   const t = useMessages(landingMessages).nav;
   const menus = menusOf(t);
   const [open, setOpen] = useState(false);
@@ -280,10 +293,10 @@ export function SiteHeader() {
         <div className="flex items-center gap-2.5">
           <LanguageSwitch className="hidden sm:inline-flex" />
           <Link
-            href="/login"
+            href={signedIn ? "/dashboard" : "/login"}
             className="btn-navy group hidden h-12 items-center gap-3 rounded-full ps-7 pe-6 text-[16px] font-semibold transition-[filter] hover:brightness-125 sm:inline-flex"
           >
-            {t.signIn}
+            {signedIn ? t.dashboard : t.signIn}
             <ArrowRight
               className="size-[18px] transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
               strokeWidth={2.25}
@@ -305,7 +318,7 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <AnimatePresence>{open && <MobileMenu t={t} menus={menus} onClose={() => setOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{open && <MobileMenu t={t} menus={menus} signedIn={signedIn} onClose={() => setOpen(false)} />}</AnimatePresence>
     </header>
   );
 }

@@ -23,25 +23,28 @@ import { SiteHeader, Wordmark } from "@/components/landing/site-header";
 import { cn } from "@/lib/utils";
 import { landingMessages, type LandingMessages } from "@/components/landing/messages";
 import { getLocale, getMessages } from "@/i18n/server";
+import { hasSession } from "@/lib/session";
+import type { Go } from "@/components/landing/go";
 
 /** Public landing page: the bio-waste marketplace with the AI quality score as its trust layer. */
 export default async function HomePage() {
-  const t = await getMessages(landingMessages);
-  const locale = await getLocale();
+  const [t, locale, signedIn] = await Promise.all([getMessages(landingMessages), getLocale(), hasSession()]);
+  // Signed-in visitors get "Go to dashboard" wherever others are asked to sign up.
+  const go: Go = signedIn ? { href: "/dashboard", label: t.account.dashboard } : null;
   return (
     <div className="flex min-h-dvh flex-1 flex-col overflow-x-clip">
       <main className="flex-1">
-        <Hero t={t.hero} />
+        <Hero t={t.hero} go={go} />
         <Residues t={t.residues} />
-        <Marketplaces t={t.markets} />
-        <QualitySection t={t.quality} />
-        <HowItWorks t={t.how} />
+        <Marketplaces t={t.markets} go={go} />
+        <QualitySection t={t.quality} go={go} />
+        <HowItWorks t={t.how} go={go} />
         <RoutesSection t={t.routes} locale={locale} />
-        <Pricing t={t.pricing} />
+        <Pricing t={t.pricing} go={go} />
         <Faq t={t.faq} />
-        <ClosingCta t={t.closing} />
+        <ClosingCta t={t.closing} go={go} />
       </main>
-      <Footer t={t.footer} />
+      <Footer t={t.footer} go={go} account={t.account} />
     </div>
   );
 }
@@ -100,7 +103,7 @@ const container = "mx-auto max-w-[1280px] px-5 sm:px-10 lg:px-16";
 
 const TRUST_ICONS: LucideIcon[] = [Sprout, Factory, FlaskConical, Recycle];
 
-function Hero({ t }: { t: T["hero"] }) {
+function Hero({ t, go }: { t: T["hero"]; go: Go }) {
   return (
     <section className="relative">
       {/* A soft periwinkle glow behind the emblem. */}
@@ -108,7 +111,7 @@ function Hero({ t }: { t: T["hero"] }) {
         aria-hidden
         className="pointer-events-none absolute inset-y-0 end-0 hidden w-full lg:block bg-[radial-gradient(ellipse_32%_42%_at_62%_48%,rgba(120,150,255,0.38),transparent_70%)] rtl:bg-[radial-gradient(ellipse_32%_42%_at_38%_48%,rgba(120,150,255,0.38),transparent_70%)]"
       />
-      <SiteHeader />
+      <SiteHeader signedIn={go !== null} />
 
       {/* Static on wide screens so the photo anchors to the full-width section, not this box. */}
       <div className="relative mx-auto grid max-w-[1440px] px-5 sm:px-10 lg:static lg:min-h-[calc(100dvh-7rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:px-16">
@@ -121,8 +124,8 @@ function Hero({ t }: { t: T["hero"] }) {
             {t.body}
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <CtaButton href="/signup">{t.cta}</CtaButton>
-            <GhostButton href="/dashboard?guest=1">{t.secondary}</GhostButton>
+            <CtaButton href={go?.href ?? "/signup"}>{go?.label ?? t.cta}</CtaButton>
+            {go ? null : <GhostButton href="/dashboard?guest=1">{t.secondary}</GhostButton>}
           </div>
 
           <div className="mt-12 flex items-center gap-5 lg:mt-20">
@@ -311,7 +314,7 @@ function HubChipsPhone({ t }: { t: T["markets"] }) {
   );
 }
 
-function Marketplaces({ t }: { t: T["markets"] }) {
+function Marketplaces({ t, go }: { t: T["markets"]; go: Go }) {
   return (
     <section id="marketplaces" className="relative scroll-mt-6 overflow-hidden py-24 sm:py-28">
       <div className="relative mx-auto max-w-[1440px] px-5 sm:px-10 lg:px-16">
@@ -351,17 +354,17 @@ function Marketplaces({ t }: { t: T["markets"] }) {
               <p className="mt-1.5 text-[15px] leading-relaxed text-white/75">{t.lab.body}</p>
             </div>
             <Link
-              href="/signup"
+              href={go?.href ?? "/signup"}
               className="relative mt-5 inline-flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white px-6 text-[15px] font-semibold text-primary transition-colors hover:bg-[#e3eef8] sm:mt-0"
             >
-              {t.lab.cta}
+              {go?.label ?? t.lab.cta}
               <ArrowRight className="size-4 rtl:-scale-x-100" strokeWidth={2.25} />
             </Link>
           </div>
         </Reveal>
 
         <div className="mt-14 flex justify-center">
-          <CtaButton href="/signup">{t.cta}</CtaButton>
+          <CtaButton href={go?.href ?? "/signup"}>{go?.label ?? t.cta}</CtaButton>
         </div>
       </div>
     </section>
@@ -373,7 +376,7 @@ function Marketplaces({ t }: { t: T["markets"] }) {
 // The middle plan is the highlighted one.
 const FEATURED_PLAN = 1;
 
-function Pricing({ t }: { t: T["pricing"] }) {
+function Pricing({ t, go }: { t: T["pricing"]; go: Go }) {
   return (
     <section id="pricing" className="scroll-mt-6 py-24 sm:py-32">
       <div className={container}>
@@ -414,7 +417,7 @@ function Pricing({ t }: { t: T["pricing"] }) {
                   ))}
                 </ul>
                 <Link
-                  href="/signup"
+                  href={go?.href ?? "/signup"}
                   className={cn(
                     "mt-10 flex h-12 items-center justify-center rounded-full text-[16px] font-semibold transition-colors",
                     featured
@@ -422,7 +425,7 @@ function Pricing({ t }: { t: T["pricing"] }) {
                       : "border border-foreground/25 hover:border-transparent hover:bg-primary hover:text-primary-foreground",
                   )}
                 >
-                  {p.cta}
+                  {go?.label ?? p.cta}
                 </Link>
               </Reveal>
             );
@@ -466,7 +469,7 @@ function Faq({ t }: { t: T["faq"] }) {
 
 /* ---------- Closing call to action ---------- */
 
-function ClosingCta({ t }: { t: T["closing"] }) {
+function ClosingCta({ t, go }: { t: T["closing"]; go: Go }) {
   return (
     <section className="px-5 pb-10 sm:px-10 lg:px-16">
       <div className="relative mx-auto grid max-w-[1280px] overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(ellipse_60%_80%_at_80%_55%,rgba(120,140,255,0.35),transparent_70%),linear-gradient(120deg,#eef3fd_0%,#dde7fa_55%,#cbd6f5_100%)] lg:grid-cols-[1.1fr_1fr]">
@@ -476,10 +479,12 @@ function ClosingCta({ t }: { t: T["closing"] }) {
           </h2>
           <p className="mx-auto mt-5 max-w-[440px] text-[17px] text-muted-foreground lg:mx-0">{t.body}</p>
           <div className="mt-9 flex flex-col items-center gap-5 sm:flex-row sm:justify-center lg:justify-start">
-            <CtaButton href="/signup">{t.cta}</CtaButton>
-            <Link href="/dashboard?guest=1" className="text-[16px] font-medium underline-offset-4 hover:underline">
-              {t.guest}
-            </Link>
+            <CtaButton href={go?.href ?? "/signup"}>{go?.label ?? t.cta}</CtaButton>
+            {go ? null : (
+              <Link href="/dashboard?guest=1" className="text-[16px] font-medium underline-offset-4 hover:underline">
+                {t.guest}
+              </Link>
+            )}
           </div>
         </div>
         <div className="relative h-[clamp(220px,48vw,420px)] lg:h-auto">
@@ -499,7 +504,7 @@ function ClosingCta({ t }: { t: T["closing"] }) {
 
 /* ---------- Footer ---------- */
 
-function Footer({ t }: { t: T["footer"] }) {
+function Footer({ t, go, account }: { t: T["footer"]; go: Go; account: T["account"] }) {
   const columns = [
     {
       title: t.product,
@@ -512,11 +517,13 @@ function Footer({ t }: { t: T["footer"] }) {
     },
     {
       title: t.account,
-      links: [
-        { label: t.signIn, href: "/login" },
-        { label: t.createAccount, href: "/signup" },
-        { label: t.guest, href: "/dashboard?guest=1" },
-      ],
+      links: go
+        ? [{ label: account.footerDashboard, href: "/dashboard" }]
+        : [
+            { label: t.signIn, href: "/login" },
+            { label: t.createAccount, href: "/signup" },
+            { label: t.guest, href: "/dashboard?guest=1" },
+          ],
     },
     {
       title: t.help,
