@@ -16,6 +16,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Reveal } from "@/components/landing/reveal";
 import { HowItWorks } from "@/components/landing/how-it-works";
+import { QualitySection } from "@/components/landing/quality-section";
 import { RoutesSection } from "@/components/landing/routes-section";
 import { Headline, SectionBadge } from "@/components/landing/section-badge";
 import { SiteHeader, Wordmark } from "@/components/landing/site-header";
@@ -33,7 +34,7 @@ export default async function HomePage() {
         <Hero t={t.hero} />
         <Residues t={t.residues} />
         <Marketplaces t={t.markets} />
-        <Quality t={t.quality} />
+        <QualitySection t={t.quality} />
         <HowItWorks t={t.how} />
         <RoutesSection t={t.routes} locale={locale} />
         <Pricing t={t.pricing} />
@@ -340,95 +341,6 @@ function Marketplaces({ t }: { t: T["markets"] }) {
         <div className="mt-14 flex justify-center">
           <CtaButton href="/signup">{t.cta}</CtaButton>
         </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Quality score ---------- */
-
-const READINGS = [
-  { value: "19.4 %", pts: "+34", width: "85%" },
-  { value: "10.8 %", pts: "+28", width: "70%" },
-  { value: "0.3 %", pts: "+30", width: "75%" },
-];
-
-function Quality({ t }: { t: T["quality"] }) {
-  return (
-    <section
-      id="quality"
-      className="relative scroll-mt-6 overflow-hidden bg-[linear-gradient(180deg,#06204a_0%,#04173a_45%,#020d24_100%)] py-24 text-primary-foreground sm:py-32"
-    >
-      {/* A periwinkle glow behind the score card. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -end-40 top-1/2 size-[720px] -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(110,120,255,0.26),transparent)]"
-      />
-      <div className={cn(container, "relative grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-20")}>
-        <Reveal>
-          <SectionBadge tone="dark">{t.eyebrow}</SectionBadge>
-          <SectionTitle className="mt-6">
-            <Headline lead={t.titleLead} accent={t.titleAccent} tone="dark" />
-          </SectionTitle>
-          <p className="mt-6 max-w-[480px] text-[17px] leading-relaxed text-primary-foreground/70">{t.body}</p>
-
-          <div className="mt-10 grid gap-x-10 gap-y-7 sm:grid-cols-2">
-            {t.tools.map((tool) => (
-              <div key={tool.title} className="border-t border-primary-foreground/15 pt-5">
-                <h3 className="text-[18px] font-semibold">{tool.title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-primary-foreground/65">{tool.body}</p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <div className="rounded-[28px] border border-white/60 bg-card p-6 text-card-foreground shadow-[0_40px_90px_-40px_rgba(110,120,255,0.5)] sm:p-9">
-            <div className="flex items-center justify-between gap-4 text-[14px] text-muted-foreground">
-              <span>{t.card.shipment}</span>
-              <span className="flex shrink-0 items-center gap-1.5">
-                <span className="size-2 rounded-full bg-[#2fc58a]" /> {t.card.scored}
-              </span>
-            </div>
-
-            <div className="mt-8 flex items-end justify-between gap-6">
-              <div>
-                <p className="text-[88px] font-semibold leading-none tracking-[-0.05em] tabular-nums sm:text-[112px]">92</p>
-                <p className="mt-2 text-[15px] text-muted-foreground">{t.card.scoreLabel}</p>
-              </div>
-              <div className="btn-navy rounded-2xl px-5 py-4">
-                <p className="text-[13px] opacity-75">{t.card.route}</p>
-                <p className="text-[24px] font-semibold leading-tight">{t.card.routeValue}</p>
-              </div>
-            </div>
-
-            <ul className="mt-9 space-y-5">
-              {READINGS.map((r, i) => (
-                <li key={t.card.readings[i]}>
-                  <div className="flex items-baseline justify-between text-[15px]">
-                    <span>
-                      {t.card.readings[i]} <span className="text-muted-foreground">{r.value}</span>
-                    </span>
-                    <span className="font-medium tabular-nums text-azure" dir="ltr">
-                      {r.pts} {t.card.pts}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-azure to-violet rtl:bg-gradient-to-l"
-                      style={{ width: r.width }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-9 flex items-center justify-between border-t border-border pt-5 text-[14px]">
-              <span className="text-muted-foreground">{t.card.signed}</span>
-              <span className="text-muted-foreground">{t.card.example}</span>
-            </div>
-          </div>
-        </Reveal>
       </div>
     </section>
   );
