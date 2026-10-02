@@ -2,12 +2,13 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAppUser, getLoginEmail } from "./auth";
 import { SIGN_IN } from "./lib/access";
+import { isAdmin } from "./lib/accounts";
 
 export const viewer = query({
   args: {},
   handler: async (ctx) => {
     const user = await getAppUser(ctx);
-    return user ? { _id: user._id, email: user.email, name: user.name } : null;
+    return user ? { _id: user._id, email: user.email, name: user.name, isAdmin: isAdmin(user.email) } : null;
   },
 });
 

@@ -23,17 +23,44 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
-  /** One workspace per factory or lab. */
+  /**
+   * One workspace per farm, lab or factory. Profile fields are optional in storage
+   * (rows from before 2026-10-02) but required by companies.create.
+   */
   companies: defineTable({
     name: v.string(),
-    kind: v.union(v.literal("factory"), v.literal("lab")),
+    kind: v.union(v.literal("farm"), v.literal("lab"), v.literal("factory")),
     country: v.optional(v.string()),
+    region: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    services: v.optional(v.array(v.string())), // labs: keys from lib/catalog ANALYSES
+    buys: v.optional(v.array(v.string())), // factories: keys from lib/catalog RESIDUES
     ownerId: v.id("users"),
-    plan: v.union(v.literal("trial"), v.literal("tier1"), v.literal("tier2")),
-    trialEndsAt: v.number(),
+    // free: farms · lab_trial / lab_paid: labs · enterprise: factories · trial/tier1/tier2: before 2026-10-02
+    plan: v.union(
+      v.literal("free"),
+      v.literal("lab_trial"),
+      v.literal("lab_paid"),
+      v.literal("enterprise"),
+      v.literal("trial"),
+      v.literal("tier1"),
+      v.literal("tier2"),
+    ),
+    trialEndsAt: v.optional(v.number()),
+    paidUntil: v.optional(v.number()),
     shipmentSeq: v.number(), // last number used for shipment codes
     createdAt: v.number(),
-  }).index("by_owner", ["ownerId"]),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_kind", ["kind"]),
+
+  /** A factory asking for enterprise pricing; read on the admin page. */
+  enterpriseRequests: defineTable({
+    companyId: v.id("companies"),
+    userId: v.id("users"),
+    message: v.string(),
+    createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
 
   memberships: defineTable({
     companyId: v.id("companies"),
