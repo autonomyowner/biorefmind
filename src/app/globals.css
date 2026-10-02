@@ -9,7 +9,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Latin glyphs from Inter Tight, Arabic glyphs from IBM Plex Sans Arabic. */
+  /* Latin glyphs from Figtree, Arabic glyphs from IBM Plex Sans Arabic. */
   --font-sans: var(--font-brand), var(--font-arabic), system-ui, sans-serif;
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
@@ -31,10 +31,13 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* iOS grouped background (the light grey behind white cards). */
+  /* Grouped background (the cooler blue behind dashboard cards). */
   --color-grouped: var(--grouped);
-  --color-moss: var(--moss);
-  --color-honey: var(--honey);
+  /* The emblem's colours: teal and green gear-arrows, gold circuit brain, cyan joint glow. */
+  --color-teal: var(--teal);
+  --color-leaf: var(--leaf);
+  --color-gold: var(--gold);
+  --color-cyan: var(--cyan);
 
   --animate-marquee: marquee 40s linear infinite;
   @keyframes marquee {
@@ -55,32 +58,52 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* BioGrena brand: warm paper background, deep forest ink, amber accent, moss green. */
+/* BiorefMind brand: ice-blue background, deep navy ink, glowing navy buttons,
+   and the emblem's teal, leaf green and gold as accents. */
 :root {
-  --background: #ecebe2;
-  --foreground: #0c241e;
-  --grouped: #e3e1d5;
-  --card: #f6f5ef;
-  --card-foreground: #0c241e;
-  --popover: #f6f5ef;
-  --popover-foreground: #0c241e;
-  --primary: #061714;
-  --primary-foreground: #f6f5ef;
-  --secondary: #dfddd0;
-  --secondary-foreground: #0c241e;
-  --muted: #e3e1d5;
-  --muted-foreground: rgba(12, 36, 30, 0.66);
+  --background: #d9e7f3;
+  --foreground: #071733;
+  --grouped: #cddcea;
+  --card: #f3f8fc;
+  --card-foreground: #071733;
+  --popover: #f3f8fc;
+  --popover-foreground: #071733;
+  --primary: #04173a;
+  --primary-foreground: #f3f8fc;
+  --secondary: #e2ecf5;
+  --secondary-foreground: #071733;
+  --muted: #dfe9f3;
+  --muted-foreground: #4b5d79;
   /* shadcn "accent" = the quiet hover surface in menus and lists. */
-  --accent: #e8e6da;
-  --accent-foreground: #0c241e;
-  /* Brand colours: amber (arrow circles, dots) and moss green. */
-  --honey: #e8a21e;
-  --moss: #5f8f22;
-  --destructive: #c2410c;
-  --border: rgba(12, 36, 30, 0.14);
-  --input: rgba(12, 36, 30, 0.2);
-  --ring: #5f8f22;
+  --accent: #e6eff8;
+  --accent-foreground: #071733;
+  --teal: #0b6676;
+  --leaf: #14894c;
+  --gold: #d69a35;
+  --cyan: #2ec4d6;
+  --destructive: #c0392b;
+  --border: rgba(7, 23, 51, 0.12);
+  --input: rgba(7, 23, 51, 0.18);
+  --ring: #0b6676;
   --radius: 0.75rem;
+}
+
+/* The theme's navy pill: a deep gradient with a soft blue glow under it. */
+@utility btn-navy {
+  background-image: linear-gradient(180deg, #0b2a57 0%, #04173a 55%, #020d24 100%);
+  color: var(--primary-foreground);
+  box-shadow:
+    0 14px 32px -14px rgba(16, 72, 160, 0.75),
+    0 0 0 1px rgba(80, 140, 230, 0.18) inset,
+    0 1px 0 rgba(150, 200, 255, 0.25) inset;
+}
+
+/* Frosted card on the ice-blue page. */
+@utility glass {
+  background-color: rgba(243, 248, 252, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 28px 60px -40px rgba(7, 23, 51, 0.45);
+  backdrop-filter: blur(14px);
 }
 
 @layer base {
@@ -90,8 +113,8 @@
   html {
     font-family: var(--font-brand), var(--font-arabic), system-ui, sans-serif;
   }
-  /* Arabic pages lead with IBM Plex Sans Arabic. (After Inter Tight it never
-     loads: Inter's metric fallback is Arial, which already has Arabic glyphs.) */
+  /* Arabic pages lead with IBM Plex Sans Arabic. (After Figtree it never
+     loads: the Latin font's metric fallback is Arial, which already has Arabic glyphs.) */
   :lang(ar) body {
     font-family: var(--font-arabic), var(--font-brand), system-ui, sans-serif !important;
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -44,8 +45,8 @@ function menusOf(t: Nav): { label: string; items: NavItem[] }[] {
   ];
 }
 
-/** The BioGrena wordmark, linking home. `label` names the link (e.g. "Back to home"). */
-export function Wordmark({ label }: { label?: string }) {
+/** The BiorefMind emblem and wordmark, linking home. `label` names the link (e.g. "Back to home"). */
+export function Wordmark({ label, className }: { label?: string; className?: string }) {
   return (
     <Link
       href="/"
@@ -53,9 +54,13 @@ export function Wordmark({ label }: { label?: string }) {
       lang="en"
       aria-label={label}
       title={label}
-      className="font-[family-name:var(--font-brand)] text-[22px] font-medium tracking-[-0.03em] sm:text-[26px]"
+      className={cn(
+        "inline-flex items-center gap-2.5 font-[family-name:var(--font-brand)] text-[24px] font-bold tracking-[-0.03em] text-[#08263f] sm:text-[28px]",
+        className,
+      )}
     >
-      BioGrena<sup className="ml-px align-super text-[11px] font-normal sm:text-[13px]">®</sup>
+      <Image src="/logo-mark.png" alt="" width={77} height={77} priority className="size-9 sm:size-11" />
+      BiorefMind
     </Link>
   );
 }
@@ -64,7 +69,7 @@ function ItemIcon({ icon: Icon, className }: { icon: LucideIcon; className?: str
   return (
     <span
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-full bg-[#dfe3c9] text-foreground transition-colors",
+        "flex size-10 shrink-0 items-center justify-center rounded-full bg-[#dcebf3] text-teal transition-colors",
         className,
       )}
     >
@@ -80,7 +85,7 @@ function DesktopMenu({ label, items }: { label: string; items: NavItem[] }) {
         openOnHover
         delay={0}
         closeDelay={90}
-        className="group flex items-center gap-1.5 rounded-full px-3 py-2 outline-none transition-colors hover:bg-foreground/[0.05] focus-visible:ring-2 focus-visible:ring-ring/50 data-[popup-open]:bg-foreground/[0.05]"
+        className="group flex items-center gap-1.5 px-1 py-2 text-foreground/70 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 data-[popup-open]:text-foreground"
       >
         {label}
         <ChevronDown
@@ -92,7 +97,7 @@ function DesktopMenu({ label, items }: { label: string; items: NavItem[] }) {
         align="center"
         sideOffset={14}
         className={cn(
-          "w-[344px] rounded-[22px] border border-border bg-card p-2 shadow-[0_28px_60px_-24px_rgba(12,36,30,0.35)] ring-0",
+          "w-[344px] rounded-[22px] border border-white/80 bg-card p-2 shadow-[0_28px_60px_-24px_rgba(7,23,51,0.35)] ring-0",
           // One smooth fade-and-drop instead of the stock zoom/slide keyframes.
           "data-open:animate-none data-closed:animate-none",
           "transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
@@ -100,7 +105,7 @@ function DesktopMenu({ label, items }: { label: string; items: NavItem[] }) {
           "data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:duration-150",
         )}
       >
-        <p className="px-3 pt-2 pb-1.5 text-[12px] font-medium uppercase tracking-[0.16em] text-moss">{label}</p>
+        <p className="px-3 pt-2 pb-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-teal">{label}</p>
         {items.map((item) => (
           <DropdownMenuItem
             key={item.label}
@@ -109,10 +114,10 @@ function DesktopMenu({ label, items }: { label: string; items: NavItem[] }) {
           >
             <ItemIcon
               icon={item.icon}
-              className="duration-150 group-data-[highlighted]/item:bg-moss group-data-[highlighted]/item:text-white"
+              className="duration-150 group-data-[highlighted]/item:bg-primary group-data-[highlighted]/item:text-cyan"
             />
             <span className="min-w-0 flex-1">
-              <span className="block leading-tight text-foreground">{item.label}</span>
+              <span className="block leading-tight font-medium text-foreground">{item.label}</span>
               <span className="mt-1 block text-[13px] leading-snug text-muted-foreground">{item.body}</span>
             </span>
             <ArrowRight className="size-4 -translate-x-1 text-foreground rtl:translate-x-1 rtl:-scale-x-100 opacity-0 transition-[opacity,transform] duration-150 group-data-[highlighted]/item:translate-x-0 group-data-[highlighted]/item:opacity-100" />
@@ -171,10 +176,14 @@ function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof me
       exit="exit"
       className="absolute inset-x-0 top-full flex h-[calc(100dvh-5rem)] flex-col overflow-y-auto border-t border-border bg-background px-5 pt-6 pb-8 lg:hidden"
     >
+      {/* Phones have no room for the language switch in the header bar. */}
+      <motion.div variants={group} className="mb-6 sm:hidden">
+        <LanguageSwitch />
+      </motion.div>
       {menus.map((menu) => (
         <motion.div key={menu.label} variants={group} className="mb-6">
-          <p className="px-1 text-[12px] font-medium uppercase tracking-[0.16em] text-moss">{menu.label}</p>
-          <ul className="mt-2 overflow-hidden rounded-[22px] border border-border bg-card">
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-teal">{menu.label}</p>
+          <ul className="mt-2 overflow-hidden rounded-[22px] border border-white/80 bg-card">
             {menu.items.map((item) => (
               <li key={item.label} className="border-b border-border last:border-0">
                 <Link
@@ -184,7 +193,7 @@ function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof me
                 >
                   <ItemIcon icon={item.icon} />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[16px] leading-tight">{item.label}</span>
+                    <span className="block text-[16px] leading-tight font-medium">{item.label}</span>
                     <span className="mt-1 block text-[13px] text-muted-foreground">{item.body}</span>
                   </span>
                   <ArrowRight className="size-4 text-muted-foreground rtl:-scale-x-100" />
@@ -198,7 +207,7 @@ function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof me
       <motion.ul variants={group} className="px-1">
         {links.map((l) => (
           <li key={l.label} className="border-b border-border">
-            <Link href={l.href} onClick={onClose} className="flex items-center justify-between py-4 text-[20px] tracking-[-0.02em]">
+            <Link href={l.href} onClick={onClose} className="flex items-center justify-between py-4 text-[20px] font-medium tracking-[-0.02em]">
               {l.label}
               <ArrowRight className="size-4 text-muted-foreground rtl:-scale-x-100" />
             </Link>
@@ -209,16 +218,14 @@ function MobileMenu({ t, menus, onClose }: { t: Nav; menus: ReturnType<typeof me
       <motion.div variants={group} className="mt-auto grid gap-3 pt-8">
         <Link
           href="/signup"
-          className="flex h-14 items-center justify-between rounded-full bg-primary ps-6 pe-3 text-[17px] text-primary-foreground"
+          className="btn-navy flex h-14 items-center justify-center gap-3 rounded-full text-[17px] font-semibold"
         >
+          <ArrowRight className="size-5 rtl:-scale-x-100" strokeWidth={2.25} />
           {t.createAccount}
-          <span className="flex size-8 items-center justify-center rounded-full bg-honey text-primary">
-            <ArrowRight className="size-4 rtl:-scale-x-100" strokeWidth={2.5} />
-          </span>
         </Link>
         <Link
           href="/login"
-          className="flex h-14 items-center justify-center rounded-full border border-foreground/80 text-[17px]"
+          className="flex h-14 items-center justify-center rounded-full border border-foreground/20 bg-white/40 text-[17px] font-medium"
         >
           {t.signIn}
         </Link>
@@ -251,29 +258,34 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="relative z-30">
-      <div className="mx-auto flex h-20 max-w-[1680px] items-center justify-between px-5 sm:h-24 sm:px-10 lg:px-[70px]">
+    <header className={cn("relative z-30", open && "bg-background")}>
+      <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-5 sm:h-28 sm:px-10 lg:px-16">
         <Wordmark />
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-4 text-[16px] lg:flex">
+        <nav className="hidden items-center gap-9 text-[17px] lg:flex">
+          <Link href="/" aria-current="page" className="relative py-2 font-medium text-foreground">
+            {t.home}
+            <span aria-hidden className="absolute inset-x-0 -bottom-1 h-[2px] rounded-full bg-foreground" />
+          </Link>
           {menus.map((menu) => (
             <DesktopMenu key={menu.label} {...menu} />
           ))}
-          <Link
-            href="/#pricing"
-            className="rounded-full px-3 py-2 transition-colors hover:bg-foreground/[0.05]"
-          >
+          <Link href="/#pricing" className="py-2 text-foreground/70 transition-colors hover:text-foreground">
             {t.pricing}
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2">
-          <LanguageSwitch />
+        <div className="flex items-center gap-2.5">
+          <LanguageSwitch className="hidden sm:inline-flex" />
           <Link
             href="/login"
-            className="hidden h-11 items-center rounded-full border border-foreground/80 px-6 text-[16px] transition-colors hover:bg-foreground hover:text-background sm:inline-flex"
+            className="btn-navy group hidden h-12 items-center gap-3 rounded-full ps-7 pe-6 text-[16px] font-semibold transition-[filter] hover:brightness-125 sm:inline-flex"
           >
             {t.signIn}
+            <ArrowRight
+              className="size-[18px] transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
+              strokeWidth={2.25}
+            />
           </Link>
           <button
             type="button"
@@ -282,8 +294,8 @@ export function SiteHeader() {
             aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
             className={cn(
-              "inline-flex size-11 items-center justify-center rounded-full border border-foreground/80 transition-colors lg:hidden",
-              open && "bg-foreground text-background",
+              "inline-flex size-11 items-center justify-center rounded-full border border-foreground/20 bg-white/40 transition-colors lg:hidden",
+              open && "btn-navy border-transparent",
             )}
           >
             <MenuIcon open={open} />

@@ -5,7 +5,7 @@ export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 
 /** Cookie that remembers the visitor's language (no cookie = English). */
-export const LOCALE_COOKIE = "biogrena.lang";
+export const LOCALE_COOKIE = "biorefmind.lang";
 
 export function parseLocale(value: string | null | undefined): Locale {
   return value === "ar" ? "ar" : DEFAULT_LOCALE;

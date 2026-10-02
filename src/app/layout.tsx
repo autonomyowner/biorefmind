@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, IBM_Plex_Sans_Arabic, Inter_Tight } from "next/font/google";
+import { Figtree, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { preconnect } from "react-dom";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -9,7 +9,7 @@ import { defineMessages } from "@/i18n/messages";
 import { I18nProvider } from "@/i18n/provider";
 import { getLocale, getMessages } from "@/i18n/server";
 
-const brand = Inter_Tight({ variable: "--font-brand", subsets: ["latin"], display: "swap" });
+const brand = Figtree({ variable: "--font-brand", subsets: ["latin"], display: "swap" });
 // Arabic glyphs; only fetched when a page actually shows Arabic text.
 const arabic = IBM_Plex_Sans_Arabic({
   variable: "--font-arabic",
@@ -22,12 +22,12 @@ const geistMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"], disp
 
 const meta = defineMessages({
   en: {
-    title: "BioGrena — the bio-waste marketplace",
+    title: "BiorefMind — the bio-waste marketplace",
     description:
-      "Farmers and factories sell peels, pomace and residues to factories that need them. Every batch is scored, so buyers know what they get.",
+      "Farmers and factories sell peels, pomace and residues to factories that need them. Every batch is scored by AI, so buyers know what they get.",
   },
   ar: {
-    title: "BioGrena — سوق المخلفات الحيوية",
+    title: "BiorefMind — سوق المخلفات الحيوية",
     description:
       "يبيع المزارعون والمصانع القشور والتفل والمخلفات للمصانع التي تحتاجها. كل دفعة تحصل على تقييم، فيعرف المشتري ما يشتريه.",
   },

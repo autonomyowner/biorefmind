@@ -4,6 +4,7 @@ import { defineMessages } from "@/i18n/messages";
 export const landingMessages = defineMessages({
   en: {
     nav: {
+      home: "Home",
       marketplaces: "Marketplaces",
       platform: "Platform",
       pricing: "Pricing",
@@ -19,13 +20,17 @@ export const landingMessages = defineMessages({
       routes: { label: "Routes A · B · C", body: "Pharma, food-grade or recovery" },
     },
     hero: {
+      badge: "AI quality scoring for bio-waste",
       title: "Your waste is someone's raw material",
-      body: "BioGrena connects farms and factories that throw away peels, pomace and residues with the factories that need them — every batch scored.",
+      body: "BiorefMind connects farms and factories that throw away peels, pomace and residues with the factories that need them. Its AI scores every batch, so buyers know what they get.",
       cta: "Start now",
-      imageAlt: "A monarch butterfly resting on a moss-covered branch",
+      secondary: "Preview as guest",
+      trustStrong: "Farmers, factories & labs",
+      trustRest: "on one platform",
+      imageAlt: "A robotic hand holding the BiorefMind emblem: a circuit brain beside recycling gear-arrows",
     },
     residues: {
-      label: "Traded on BioGrena",
+      label: "Traded on BiorefMind",
       items: [
         "Pomegranate peels",
         "Citrus peels",
@@ -70,7 +75,10 @@ export const landingMessages = defineMessages({
           body: "Each listing carries a 0–100 quality score and an A, B or C route, so buyers know what they get.",
         },
       ],
-      globeAlt: "A globe of moss and bark circled by a green ring",
+      hubAlt: "The BiorefMind emblem, held by a robotic hand",
+      hubLabel: "Scored by AI",
+      hubIn: ["Pomegranate peels", "Olive pomace", "Citrus peels"],
+      hubOut: ["Extracts", "Pectin", "Bio-packaging", "Energy"],
       cta: "Explore the marketplace",
     },
     quality: {
@@ -110,25 +118,35 @@ export const landingMessages = defineMessages({
     how: {
       eyebrow: "How it works",
       title: "From waste to sale in three steps.",
-      body: "In three simple steps, BioGrena turns crop and factory waste into a raw material someone buys.",
+      body: "In three simple steps, BiorefMind turns crop and factory waste into a raw material someone buys.",
       cta: "List your waste",
       steps: [
         {
           title: "List it",
           body: "A farmer or factory adds the residue, quantity, location and photos from a phone. A partner lab can add the readings.",
-          alt: "The BioGrena app on a phone, listing a residue",
         },
         {
           title: "Get scored",
-          body: "BioGrena scores the batch 0–100 and gives it a route: A pharmaceutical, B food-grade or C recovery. Better score, better price.",
-          alt: "A batch score of 86 out of 100 with its three routes",
+          body: "BiorefMind scores the batch 0–100 and gives it a route: A pharmaceutical, B food-grade or C recovery. Better score, better price.",
         },
         {
           title: "Sell it",
           body: "Factories find the listing, make an offer and arrange pickup. The quality certificate travels with the batch.",
-          alt: "A quality certificate for a batch, resting on moss",
         },
       ],
+      mock: {
+        listing: "New listing",
+        residue: "Residue",
+        residueValue: "Pomegranate peels",
+        quantity: "Quantity",
+        quantityValue: "2.4 t",
+        photos: "Photos",
+        score: "Quality score",
+        route: "Route A · Pharma",
+        certificate: "Quality certificate",
+        batch: "Batch #2481",
+        offer: "Offer accepted",
+      },
     },
     routes: {
       eyebrow: "Routes",
@@ -141,8 +159,17 @@ export const landingMessages = defineMessages({
         "Inspectors can override a route, with a logged reason",
       ],
       cta: "See how scoring works",
-      imageAlt: "The BioGrena dashboard on a laptop resting on a mossy branch",
       facts: ["Route A · Pharmaceutical", "Route B · Food-grade", "Route C · Recovery", "Quality score per batch"],
+      board: {
+        label: "A preview of the BiorefMind dashboard",
+        title: "Batches this month",
+        example: "Example data",
+        average: "Average score",
+        scored: "Batches scored",
+        split: "Route split",
+        routes: ["Route A", "Route B", "Route C"],
+        months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+      },
     },
     pricing: {
       eyebrow: "Pricing",
@@ -159,7 +186,7 @@ export const landingMessages = defineMessages({
         },
         {
           name: "Marketplace",
-          lead: "For every sale on BioGrena.",
+          lead: "For every sale on BiorefMind.",
           price: "5%",
           unit: "per sale",
           features: ["Paid only when a deal closes", "Buy from farmers and factories", "Quality certificate per batch"],
@@ -184,7 +211,7 @@ export const landingMessages = defineMessages({
       title: "Questions, answered.",
       items: [
         {
-          q: "Who can sell on BioGrena?",
+          q: "Who can sell on BiorefMind?",
           a: "Farmers, cooperatives and factories. Farmers sell crop residues like peels and husks; factories sell by-products like pomace. Pomegranate peels are scored today, and more crops are added one by one.",
         },
         {
@@ -197,7 +224,7 @@ export const landingMessages = defineMessages({
         },
         {
           q: "How do buyer and seller close a deal?",
-          a: "The buyer makes an offer on a listing, the seller accepts, and both agree on pickup. BioGrena takes a small commission only when the sale is done.",
+          a: "The buyer makes an offer on a listing, the seller accepts, and both agree on pickup. BiorefMind takes a small commission only when the sale is done.",
         },
         {
           q: "Where is our data stored?",
@@ -225,12 +252,13 @@ export const landingMessages = defineMessages({
       guest: "Preview as guest",
       faq: "FAQ",
       routes: "Routes",
-      rights: "© 2026 BioGrena. All rights reserved.",
+      rights: "© 2026 BiorefMind. All rights reserved.",
       madeFor: "Made for the Mediterranean harvest.",
     },
   },
   ar: {
     nav: {
+      home: "الرئيسية",
       marketplaces: "الأسواق",
       platform: "المنصة",
       pricing: "الأسعار",
@@ -246,13 +274,17 @@ export const landingMessages = defineMessages({
       routes: { label: "المسارات A · B · C", body: "صيدلاني أو غذائي أو استرجاع" },
     },
     hero: {
+      badge: "تقييم الجودة بالذكاء الاصطناعي للمخلفات الحيوية",
       title: "مخلفاتك مادة خام لغيرك",
-      body: "تربط BioGrena المزارع والمصانع التي تتخلص من القشور والتفل والمخلفات بالمصانع التي تحتاجها، مع تقييم كل دفعة.",
+      body: "تربط BiorefMind المزارع والمصانع التي تتخلص من القشور والتفل والمخلفات بالمصانع التي تحتاجها. ويقيّم ذكاؤها الاصطناعي كل دفعة، فيعرف المشتري ما يشتريه.",
       cta: "ابدأ الآن",
-      imageAlt: "فراشة ملكية تستريح على غصن مكسو بالطحالب",
+      secondary: "جرّب كزائر",
+      trustStrong: "مزارعون ومصانع ومختبرات",
+      trustRest: "على منصة واحدة",
+      imageAlt: "يد آلية تحمل شعار BiorefMind: دماغ من الدوائر بجانب أسهم تدوير على شكل تروس",
     },
     residues: {
-      label: "يُتداول على BioGrena",
+      label: "يُتداول على BiorefMind",
       items: [
         "قشور الرمان",
         "قشور الحمضيات",
@@ -297,7 +329,10 @@ export const landingMessages = defineMessages({
           body: "كل إدراج يحمل تقييم جودة من 0 إلى 100 ومسارًا A أو B أو C، فيعرف المشتري ما يشتريه.",
         },
       ],
-      globeAlt: "كرة من الطحالب واللحاء تحيط بها حلقة خضراء",
+      hubAlt: "شعار BiorefMind تحمله يد آلية",
+      hubLabel: "تقييم بالذكاء الاصطناعي",
+      hubIn: ["قشور الرمان", "تفل الزيتون", "قشور الحمضيات"],
+      hubOut: ["مستخلصات", "بكتين", "تغليف حيوي", "طاقة"],
       cta: "استكشف السوق",
     },
     quality: {
@@ -337,25 +372,35 @@ export const landingMessages = defineMessages({
     how: {
       eyebrow: "كيف تعمل",
       title: "من المخلفات إلى البيع في ثلاث خطوات.",
-      body: "في ثلاث خطوات بسيطة، تحوّل BioGrena مخلفات المزارع والمصانع إلى مادة خام يشتريها غيرك.",
+      body: "في ثلاث خطوات بسيطة، تحوّل BiorefMind مخلفات المزارع والمصانع إلى مادة خام يشتريها غيرك.",
       cta: "أدرج مخلفاتك",
       steps: [
         {
           title: "أدرجها",
           body: "يضيف المزارع أو المصنع نوع المخلفات والكمية والموقع والصور من الهاتف. ويمكن لمختبر شريك إضافة النتائج.",
-          alt: "تطبيق BioGrena على هاتف أثناء إدراج مخلفات",
         },
         {
           title: "احصل على التقييم",
-          body: "تقيّم BioGrena الدفعة من 0 إلى 100 وتحدد مسارها: A صيدلاني أو B غذائي أو C استرجاع. تقييم أعلى، سعر أفضل.",
-          alt: "تقييم دفعة 86 من 100 مع مساراتها الثلاثة",
+          body: "تقيّم BiorefMind الدفعة من 0 إلى 100 وتحدد مسارها: A صيدلاني أو B غذائي أو C استرجاع. تقييم أعلى، سعر أفضل.",
         },
         {
           title: "بِعها",
           body: "تجد المصانع الإدراج، وتقدّم عرضًا وتنسّق الاستلام. وترافق شهادة الجودة الدفعة.",
-          alt: "شهادة جودة لدفعة موضوعة على الطحالب",
         },
       ],
+      mock: {
+        listing: "إدراج جديد",
+        residue: "المخلفات",
+        residueValue: "قشور الرمان",
+        quantity: "الكمية",
+        quantityValue: "2.4 طن",
+        photos: "الصور",
+        score: "تقييم الجودة",
+        route: "المسار A · صيدلاني",
+        certificate: "شهادة الجودة",
+        batch: "الدفعة ‎#2481",
+        offer: "تم قبول العرض",
+      },
     },
     routes: {
       eyebrow: "المسارات",
@@ -368,8 +413,17 @@ export const landingMessages = defineMessages({
         "يمكن للمفتش تغيير المسار، مع تسجيل السبب",
       ],
       cta: "اكتشف كيف يعمل التقييم",
-      imageAlt: "لوحة تحكم BioGrena على حاسوب محمول فوق غصن مكسو بالطحالب",
       facts: ["المسار A · صيدلاني", "المسار B · غذائي", "المسار C · استرجاع", "تقييم الجودة لكل دفعة"],
+      board: {
+        label: "معاينة للوحة تحكم BiorefMind",
+        title: "دفعات هذا الشهر",
+        example: "بيانات للتوضيح",
+        average: "متوسط التقييم",
+        scored: "دفعات مُقيّمة",
+        split: "توزيع المسارات",
+        routes: ["المسار A", "المسار B", "المسار C"],
+        months: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"],
+      },
     },
     pricing: {
       eyebrow: "الأسعار",
@@ -386,7 +440,7 @@ export const landingMessages = defineMessages({
         },
         {
           name: "السوق",
-          lead: "لكل عملية بيع على BioGrena.",
+          lead: "لكل عملية بيع على BiorefMind.",
           price: "5%",
           unit: "لكل عملية بيع",
           features: ["تُدفع فقط عند إتمام الصفقة", "اشترِ من المزارعين والمصانع", "شهادة جودة لكل دفعة"],
@@ -407,7 +461,7 @@ export const landingMessages = defineMessages({
       title: "أسئلة وأجوبة.",
       items: [
         {
-          q: "من يمكنه البيع على BioGrena؟",
+          q: "من يمكنه البيع على BiorefMind؟",
           a: "المزارعون والتعاونيات والمصانع. يبيع المزارعون مخلفات المحاصيل مثل القشور والأغلفة، وتبيع المصانع المنتجات الثانوية مثل التفل. قشور الرمان تُقيَّم اليوم، وتُضاف محاصيل أخرى تباعًا.",
         },
         {
@@ -420,7 +474,7 @@ export const landingMessages = defineMessages({
         },
         {
           q: "كيف يُتم البائع والمشتري الصفقة؟",
-          a: "يقدّم المشتري عرضًا على الإدراج، ويقبله البائع، ويتفقان على الاستلام. وتأخذ BioGrena عمولة صغيرة فقط عند إتمام البيع.",
+          a: "يقدّم المشتري عرضًا على الإدراج، ويقبله البائع، ويتفقان على الاستلام. وتأخذ BiorefMind عمولة صغيرة فقط عند إتمام البيع.",
         },
         {
           q: "أين تُخزَّن بياناتنا؟",
@@ -448,7 +502,7 @@ export const landingMessages = defineMessages({
       guest: "جرّب كزائر",
       faq: "الأسئلة الشائعة",
       routes: "المسارات",
-      rights: "© 2026 BioGrena. جميع الحقوق محفوظة.",
+      rights: "© 2026 BiorefMind. جميع الحقوق محفوظة.",
       madeFor: "صُنعت لحصاد البحر المتوسط.",
     },
   },

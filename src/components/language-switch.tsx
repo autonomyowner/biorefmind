@@ -46,7 +46,7 @@ export function LanguageSwitch({ className }: { className?: string }) {
     <div
       role="group"
       aria-label={locale === "ar" ? "اللغة" : "Language"}
-      className={cn("inline-flex h-11 items-center rounded-full border border-foreground/25 p-1 text-[14px]", className)}
+      className={cn("inline-flex h-11 items-center rounded-full border border-foreground/15 bg-white/40 p-1 text-[14px]", className)}
     >
       {OPTIONS.map((o) => (
         <button
