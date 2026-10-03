@@ -58,7 +58,7 @@ Three kinds of workspace: `farm` (free), `lab` (**$100/month = 25,000 DA**, 14-d
 - Website: two-step sign-up (`src/components/auth-forms.tsx`), per-kind dashboards (`src/components/dashboard/*`, bilingual), admin page `/admin` (`src/components/admin/admin-page.tsx`).
 - **Admins** = Convex env `ADMIN_EMAILS`. Sign-up does **not** verify emails, so only list addresses whose account already exists (whoever registers an address first owns it). Prod lists only `admin@biorefmind-preview.app` (account created at launch; password given to the owner).
 
-## Dashboards polish (2026-10-03, branch `dashboards-polish`, not shipped)
+## Dashboards polish (shipped 2026-10-03, merged `0366c0d`)
 Design `docs/superpowers/specs/2026-10-03-dashboards-polish-design.md`, plan `docs/superpowers/plans/2026-10-03-dashboards-polish.md`.
 - **Prices:** `convex/lib/pricing.ts` is the only place for the lab price ($100) and the fixed rate (1 USD = 250 DZD). `src/lib/pricing.ts` formats ("$100" / "25,000 DA" / "100$" / "25,000 دج"). `src/components/currency.tsx`: `useCurrency`, `Price`, `usePrice`, `CurrencySwitch` (choice in localStorage `biorefmind.currency`; default USD in English, DZD in Arabic). Message text that cannot switch shows both ("$100 (25,000 DA)"); text that can uses a `{price}` slot.
 - **Frame:** `src/components/app-frame.tsx` (sidebar with the section in view highlighted, animated phone drawer, `FrameSkeleton`) frames both the user dashboards and `/admin`. Motion helpers in `src/components/motion.tsx` (`FadeIn`, `CountUp`); one-shot only, `MotionConfig reducedMotion="user"`.
@@ -72,6 +72,7 @@ Design `docs/superpowers/specs/2026-10-03-dashboards-polish-design.md`, plan `do
 - Convex prod: `adventurous-hornet-38` (`https://adventurous-hornet-38.eu-west-1.convex.cloud`); env `SITE_URL=https://biorefmind.vercel.app`, `BETTER_AUTH_SECRET`, `ADMIN_EMAILS`. Deploy functions with `npx convex deploy -y`.
 - Vercel env (production): `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`. **Add Vercel env values from Git Bash with `printf '%s' value | vercel env add …`** — piping from PowerShell prepends a BOM and breaks every request ("Invalid URL").
 - Rollback: code `5f68dd5` is the first shipped `main`; no earlier production existed.
+- 2026-10-03 release (dashboards polish, lab $100 = 25,000 DA): `main` `0366c0d` + `1d780ac`, Convex prod deployed first. Rollback: code `aa1531f` (redeploy it to Vercel and `npx convex deploy` from it; the new `admin.extendLab/endLabPlan` are only called by the new admin page). Read-only prod checks passed: headers, pricing switch, robots, sign-up price, guest dashboard at 360 px, admin hidden.
 
 ## Open decisions (ask the owner)
 1. Scoring thresholds in `convex/lib/crops.ts` are placeholders until calibrated with lab data.
