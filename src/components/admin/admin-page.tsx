@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 type Account = AdminOverview["accounts"][number];
 
 const KIND: Record<Kind, string> = { farm: "Farmer", lab: "Lab", factory: "Factory" };
+const KINDS: Record<Kind, string> = { farm: "Farmers", lab: "Labs", factory: "Factories" };
 const KIND_ICON: Record<Kind, LucideIcon> = { farm: Sprout, lab: FlaskConical, factory: Building2 };
 const DAY = 86_400_000;
 
@@ -292,7 +293,7 @@ function SignupsChart({ accounts, now }: { accounts: Account[]; now: number }) {
               </p>
               {(["farm", "lab", "factory"] as const).map((k) => (
                 <p key={k} className="flex justify-between">
-                  <span className="text-muted-foreground">{KIND[k]}s</span> <span className="tabular-nums">{shown[k]}</span>
+                  <span className="text-muted-foreground">{KINDS[k]}</span> <span className="tabular-nums">{shown[k]}</span>
                 </p>
               ))}
             </motion.div>
@@ -350,7 +351,7 @@ function AccountsSection({ accounts, now }: { accounts: Account[]; now: number }
               kind === k ? "border-transparent bg-primary text-primary-foreground" : "border-foreground/15 bg-white/70 hover:border-azure/50",
             )}
           >
-            {k ? `${KIND[k]}s` : "All"}
+            {k ? KINDS[k] : "All"}
           </button>
         ))}
       </div>
