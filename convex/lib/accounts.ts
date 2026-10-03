@@ -12,6 +12,7 @@ export const REFUSE = {
   farmInvite: "Farm accounts are for one person.",
   admin: "Only BiorefMind admins can do this.",
   notLab: "That account is not a lab.",
+  months: "Choose between 1 and 12 months.",
   enterpriseKind: "Only factory accounts can request enterprise pricing.",
   enterpriseMessage: "Please write a short message (up to 1000 characters).",
 } as const;

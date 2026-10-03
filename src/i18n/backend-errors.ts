@@ -16,6 +16,7 @@ const AR: Record<string, string> = {
   "Farm accounts are for one person.": "حسابات المزارع مخصّصة لشخص واحد.",
   "Only BiorefMind admins can do this.": "هذا الإجراء متاح لمسؤولي BiorefMind فقط.",
   "That account is not a lab.": "هذا الحساب ليس مختبرًا.",
+  "Choose between 1 and 12 months.": "اختر بين شهر واحد و12 شهرًا.",
   "Only factory accounts can request enterprise pricing.": "طلب تسعير المؤسسات متاح لحسابات المصانع فقط.",
   "Please write a short message (up to 1000 characters).": "يرجى كتابة رسالة قصيرة (حتى 1000 حرف).",
   "You don't have access to this workspace.": "ليس لديك صلاحية الوصول إلى مساحة العمل هذه.",
