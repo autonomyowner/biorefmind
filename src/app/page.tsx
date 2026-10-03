@@ -13,6 +13,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { CurrencySwitch, Price } from "@/components/currency";
+import { LAB_PRICE_USD } from "@/lib/pricing";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Reveal } from "@/components/landing/reveal";
 import { HowItWorks } from "@/components/landing/how-it-works";
@@ -386,6 +388,7 @@ function Pricing({ t, go }: { t: T["pricing"]; go: Go }) {
             <Headline lead={t.titleLead} accent={t.titleAccent} />
           </SectionTitle>
           <p className="mt-5 text-[15px] text-muted-foreground">{t.draft}</p>
+          <CurrencySwitch className="mt-6" />
         </Reveal>
 
         <div className="mt-14 grid gap-5 lg:grid-cols-3">
@@ -404,7 +407,9 @@ function Pricing({ t, go }: { t: T["pricing"]; go: Go }) {
                 <p className={cn("mt-1 text-[15px]", featured ? "text-primary-foreground/65" : "text-muted-foreground")}>
                   {p.lead}
                 </p>
-                <p className="mt-10 text-[56px] font-semibold leading-none tracking-[-0.04em]">{p.price}</p>
+                <p className="mt-10 text-[56px] font-semibold leading-none tracking-[-0.04em]">
+                  {p.price === "{price}" ? <Price usd={LAB_PRICE_USD} /> : p.price}
+                </p>
                 <p className={cn("mt-2 text-[15px]", featured ? "text-primary-foreground/65" : "text-muted-foreground")}>
                   {p.unit}
                 </p>

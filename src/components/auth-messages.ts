@@ -22,7 +22,7 @@ export const authMessages = defineMessages({
     change: "Change",
     kinds: {
       farm: { title: "Farmer", body: "Sell what's left of your harvest.", price: "Free · buyers pay the 5% fee" },
-      lab: { title: "Lab", body: "List your analyses for farmers and factories.", price: "$30/month after a 14-day free trial" },
+      lab: { title: "Lab", body: "List your analyses for farmers and factories.", price: "{price}/month after a 14-day free trial" },
       factory: { title: "Factory", body: "Buy residues and book lab analyses.", price: "Custom pricing" },
     },
     orgName: { farm: "Farm name", lab: "Lab name", factory: "Company name" },
@@ -67,7 +67,7 @@ export const authMessages = defineMessages({
     change: "تغيير",
     kinds: {
       farm: { title: "مزارع", body: "بِع ما تبقّى من محصولك.", price: "مجاني · يدفع المشتري عمولة 5%" },
-      lab: { title: "مختبر", body: "اعرض تحاليلك للمزارعين والمصانع.", price: "30$ شهريًا بعد تجربة مجانية 14 يومًا" },
+      lab: { title: "مختبر", body: "اعرض تحاليلك للمزارعين والمصانع.", price: "{price} شهريًا بعد تجربة مجانية 14 يومًا" },
       factory: { title: "مصنع", body: "اشترِ المخلفات واحجز تحاليل المختبرات.", price: "تسعير حسب الطلب" },
     },
     orgName: { farm: "اسم المزرعة", lab: "اسم المختبر", factory: "اسم الشركة" },

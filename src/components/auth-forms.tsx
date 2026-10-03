@@ -15,6 +15,8 @@ import { EMAIL_RE, PasswordInput, PostAuthRedirect, authErrorMessage } from "@/l
 import { api } from "@/lib/backend";
 import { errorMessage } from "@/lib/errors";
 import { authMessages } from "@/components/auth-messages";
+import { CurrencySwitch, usePrice } from "@/components/currency";
+import { LAB_PRICE_USD } from "@/lib/pricing";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
 import { ANALYSIS_KEYS, RESIDUE_KEYS, catalogLabels, labelOf } from "@/lib/catalog-labels";
@@ -98,6 +100,7 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
   const router = useRouter();
   const t = useMessages(authMessages);
   const labels = useMessages(catalogLabels);
+  const labPrice = usePrice(LAB_PRICE_USD);
   const locale = useLocale();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const ensureUser = useMutation(api.users.ensureUser);
@@ -208,7 +211,10 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
   if (!kind) {
     return (
       <AuthCard title={mode === "signup" ? t.signUp : t.setUp} lead={mode === "signup" ? t.signUpLead : t.setUpLead} footer={footer}>
-        <p className="mb-3 text-[15px] font-semibold">{t.chooseTitle}</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[15px] font-semibold">{t.chooseTitle}</p>
+          <CurrencySwitch />
+        </div>
         <ul className="space-y-3">
           {KINDS.map((k) => {
             const Icon = KIND_ICONS[k];
@@ -227,7 +233,7 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
                     <span className="block text-[17px] font-semibold">{card.title}</span>
                     <span className="mt-0.5 block text-[14px] text-muted-foreground">{card.body}</span>
                     <span className="mt-1.5 inline-block rounded-full bg-[#e6edff] px-2.5 py-0.5 text-[12px] font-medium text-azure">
-                      {card.price}
+                      {card.price.replace("{price}", labPrice)}
                     </span>
                   </span>
                   <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5" />

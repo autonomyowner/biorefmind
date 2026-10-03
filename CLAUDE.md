@@ -53,10 +53,19 @@ GitHub: `https://github.com/autonomyowner/biorefmind`. `main` carries BiorefMind
 - Real Chrome run: landing at 1536 px and 360 px with no sideways scroll, Arabic right-to-left, sign-up → dashboard, sign-out, wrong password message, sign-in → dashboard; no console errors.
 
 ## Account types (2026-10-02, live)
-Three kinds of workspace: `farm` (free), `lab` ($30/month, 14-day trial, listed in the directory while trial or paid), `factory` (enterprise, custom). Design: `docs/superpowers/specs/2026-10-02-three-account-types-design.md`; plan: `docs/superpowers/plans/2026-10-02-three-account-types.md`. Pieces 2–4 (marketplace, lab requests, billing) are not built yet.
+Three kinds of workspace: `farm` (free), `lab` (**$100/month = 25,000 DA**, 14-day trial, listed in the directory while trial or paid), `factory` (enterprise, custom). Design: `docs/superpowers/specs/2026-10-02-three-account-types-design.md`; plan: `docs/superpowers/plans/2026-10-02-three-account-types.md`. Pieces 2–4 (marketplace, lab requests, billing) are not built yet.
 - Backend: rules in `convex/lib/accounts.ts` (+ catalog in `convex/lib/catalog.ts`); `companies.create/mine/updateProfile`, `labs.directory`, `enterprise.request`, `admin.overview/setLabPaidUntil`. 44 tests.
 - Website: two-step sign-up (`src/components/auth-forms.tsx`), per-kind dashboards (`src/components/dashboard/*`, bilingual), admin page `/admin` (`src/components/admin/admin-page.tsx`).
 - **Admins** = Convex env `ADMIN_EMAILS`. Sign-up does **not** verify emails, so only list addresses whose account already exists (whoever registers an address first owns it). Prod lists only `admin@biorefmind-preview.app` (account created at launch; password given to the owner).
+
+## Dashboards polish (2026-10-03, branch `dashboards-polish`, not shipped)
+Design `docs/superpowers/specs/2026-10-03-dashboards-polish-design.md`, plan `docs/superpowers/plans/2026-10-03-dashboards-polish.md`.
+- **Prices:** `convex/lib/pricing.ts` is the only place for the lab price ($100) and the fixed rate (1 USD = 250 DZD). `src/lib/pricing.ts` formats ("$100" / "25,000 DA" / "100$" / "25,000 دج"). `src/components/currency.tsx`: `useCurrency`, `Price`, `usePrice`, `CurrencySwitch` (choice in localStorage `biorefmind.currency`; default USD in English, DZD in Arabic). Message text that cannot switch shows both ("$100 (25,000 DA)"); text that can uses a `{price}` slot.
+- **Frame:** `src/components/app-frame.tsx` (sidebar with the section in view highlighted, animated phone drawer, `FrameSkeleton`) frames both the user dashboards and `/admin`. Motion helpers in `src/components/motion.tsx` (`FadeIn`, `CountUp`); one-shot only, `MotionConfig reducedMotion="user"`.
+- **Admin:** overview tiles, sign-ups chart (last 30 days), monthly lab revenue, labs needing attention, searchable accounts, lab billing (`admin.extendLab` +1/+3/+12 months from the later of now and the current end; `admin.endLabPlan`; custom date), enterprise requests.
+- **Production:** security headers + no `x-powered-by` (`next.config.ts`), `robots.txt`, `global-error.tsx`. Next 16.3 error pages take `retry()` (not `reset`).
+- Vitest also runs `src/**/*.test.ts`. 50 tests.
+- Dev Convex `ADMIN_EMAILS` also lists `admin-smoke-1003@example.com` (Chrome smoke test). There is no delete function, so smoke accounts ("Smoke Lab …", "Smoke Admin Farm") stay on dev.
 
 ## Production (shipped 2026-10-02)
 - Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
@@ -75,6 +84,8 @@ Three kinds of workspace: `farm` (free), `lab` ($30/month, 14-day trial, listed 
 8. Which real emails should be admins on production (each must register before being added)?
 9. The lists of lab analyses and factory residues (`convex/lib/catalog.ts`) are our draft.
 10. Email verification is off: turn it on before real users (needs an email service).
+11. The 250 DA/USD rate is fixed in code. Should the admin be able to change it, or should dinar prices be set separately?
+12. How do labs pay (bank transfer, CCP, BaridiMob, cash)? The lab page says "pay BiorefMind" without saying how; add the payment details when chosen.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

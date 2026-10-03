@@ -4,6 +4,7 @@ import betterAuthTest from "@convex-dev/better-auth/test";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { api, components } from "./_generated/api";
 import schema from "./schema";
+import { addMonths } from "./lib/pricing";
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -170,5 +171,46 @@ describe("directory, enterprise, admin", () => {
     await expect(boss.mutation(api.admin.setLabPaidUntil, { companyId: fid, paidUntil: until })).rejects.toThrow(
       "That account is not a lab.",
     );
+  });
+
+  test("admin: extend a lab by months, end its plan", async () => {
+    vi.stubEnv("ADMIN_EMAILS", "boss@biorefmind.com");
+    const t = newBackend();
+    const lab = await member(t, "lab@x.dz");
+    const labId = await lab.mutation(api.companies.create, { kind: "lab", name: "Labo Nour", ...base, services: ["mold"] });
+    const boss = await member(t, "boss@biorefmind.com");
+
+    await expect(lab.mutation(api.admin.extendLab, { companyId: labId, months: 1 })).rejects.toThrow(
+      "Only BiorefMind admins can do this.",
+    );
+    for (const months of [0, 13, 1.5]) {
+      await expect(boss.mutation(api.admin.extendLab, { companyId: labId, months })).rejects.toThrow(
+        "Choose between 1 and 12 months.",
+      );
+    }
+
+    // Paying during the trial adds the month after the trial ends.
+    const trialEnd = (await lab.query(api.companies.mine, {}))[0].trialEndsAt!;
+    const { paidUntil } = await boss.mutation(api.admin.extendLab, { companyId: labId, months: 1 });
+    expect(paidUntil).toBe(addMonths(trialEnd, 1));
+    expect((await lab.query(api.companies.mine, {}))[0]).toMatchObject({ plan: "lab_paid", paidUntil, listed: true });
+
+    // A second payment stacks on the paid period.
+    const again = await boss.mutation(api.admin.extendLab, { companyId: labId, months: 3 });
+    expect(again.paidUntil).toBe(addMonths(paidUntil, 3));
+
+    await boss.mutation(api.admin.endLabPlan, { companyId: labId });
+    expect((await lab.query(api.companies.mine, {}))[0]).toMatchObject({ plan: "lab_paid", listed: false });
+
+    // After it ended, extending starts from today.
+    const before = Date.now();
+    const fresh = await boss.mutation(api.admin.extendLab, { companyId: labId, months: 1 });
+    expect(fresh.paidUntil).toBeGreaterThanOrEqual(addMonths(before, 1));
+    expect(fresh.paidUntil).toBeLessThanOrEqual(addMonths(Date.now(), 1));
+
+    const f = await member(t, "f@x.dz");
+    const fid = await f.mutation(api.companies.create, { kind: "factory", name: "Peel Factory", ...base });
+    await expect(boss.mutation(api.admin.extendLab, { companyId: fid, months: 1 })).rejects.toThrow("That account is not a lab.");
+    await expect(boss.mutation(api.admin.endLabPlan, { companyId: fid })).rejects.toThrow("That account is not a lab.");
   });
 });

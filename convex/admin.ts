@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireUser } from "./lib/access";
 import { isAdmin, labListed, REFUSE } from "./lib/accounts";
+import { addMonths, extendBase } from "./lib/pricing";
 
 /** The signed-in profile if its email is in ADMIN_EMAILS, otherwise the admin refusal. */
 async function requireAdmin(ctx: QueryCtx | MutationCtx) {
@@ -59,6 +60,32 @@ export const setLabPaidUntil = mutation({
     const company = await ctx.db.get(companyId);
     if (!company || company.kind !== "lab") throw new ConvexError(REFUSE.notLab);
     await ctx.db.patch(companyId, { plan: "lab_paid", paidUntil });
+    return null;
+  },
+});
+
+/** Records a payment of whole months: the paid period runs from the later of now and the current end. */
+export const extendLab = mutation({
+  args: { companyId: v.id("companies"), months: v.number() },
+  handler: async (ctx, { companyId, months }) => {
+    await requireAdmin(ctx);
+    if (!Number.isInteger(months) || months < 1 || months > 12) throw new ConvexError(REFUSE.months);
+    const company = await ctx.db.get(companyId);
+    if (!company || company.kind !== "lab") throw new ConvexError(REFUSE.notLab);
+    const paidUntil = addMonths(extendBase(company, Date.now()), months);
+    await ctx.db.patch(companyId, { plan: "lab_paid", paidUntil });
+    return { paidUntil };
+  },
+});
+
+/** Ends a lab's plan now: it leaves the directory until it is extended again. */
+export const endLabPlan = mutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, { companyId }) => {
+    await requireAdmin(ctx);
+    const company = await ctx.db.get(companyId);
+    if (!company || company.kind !== "lab") throw new ConvexError(REFUSE.notLab);
+    await ctx.db.patch(companyId, { plan: "lab_paid", paidUntil: Date.now() });
     return null;
   },
 });

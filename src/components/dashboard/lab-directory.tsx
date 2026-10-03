@@ -15,7 +15,7 @@ import type { DirectoryLab } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** What the guest preview shows instead of live labs. */
-const SAMPLE_LABS: DirectoryLab[] = [
+export const SAMPLE_LABS: DirectoryLab[] = [
   { companyId: "s1" as DirectoryLab["companyId"], name: "Labo Nour", region: "Sétif", phone: "+213 36 00 00 00", services: ["moisture", "polyphenols", "mold"] },
   { companyId: "s2" as DirectoryLab["companyId"], name: "BioAnalyse El Eulma", region: "El Eulma", phone: "+213 36 11 11 11", services: ["punicalagin", "oxidation", "contamination"] },
 ];
