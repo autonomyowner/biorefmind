@@ -1,4 +1,9 @@
 import { defineMessages } from "@/i18n/messages";
+import { formatPrice, LAB_PRICE_USD } from "@/lib/pricing";
+
+/** The lab price in both currencies, for text that cannot switch: "$100 (25,000 DA)". */
+const LAB_EN = `${formatPrice(LAB_PRICE_USD, "usd", "en")} (${formatPrice(LAB_PRICE_USD, "dzd", "en")})`;
+const LAB_AR = `${formatPrice(LAB_PRICE_USD, "usd", "ar")} (${formatPrice(LAB_PRICE_USD, "dzd", "ar")})`;
 
 /** Every word on the landing page, in English and Arabic. */
 export const landingMessages = defineMessages({
@@ -17,7 +22,7 @@ export const landingMessages = defineMessages({
       openMenu: "Open menu",
       closeMenu: "Close menu",
       farmers: { label: "Farmers", body: "Sell crop residues, free" },
-      labs: { label: "Labs", body: "List your analyses, $30/month" },
+      labs: { label: "Labs", body: `List your analyses, ${LAB_EN}/month` },
       factories: { label: "Factories", body: "Buy scored raw material" },
       quality: { label: "Quality score", body: "A 0–100 score on every batch" },
       how: { label: "How it works", body: "From listing to sale in three steps" },
@@ -82,7 +87,7 @@ export const landingMessages = defineMessages({
         },
       ],
       lab: {
-        label: "Labs · $30/month",
+        label: `Labs · ${LAB_EN}/month`,
         title: "Run the analyses behind every score",
         body: "List your analyses and get found by farmers and factories near you. Start with a 14-day free trial.",
         cta: "List my lab",
@@ -204,7 +209,7 @@ export const landingMessages = defineMessages({
         {
           name: "Labs",
           lead: "List your analyses on BiorefMind.",
-          price: "$30",
+          price: "{price}",
           unit: "per month · 14-day free trial",
           features: ["Your lab in the directory", "Found by farmers and factories", "Requests from both sides", "Results that feed the score"],
           cta: "Start my free trial",
@@ -230,7 +235,7 @@ export const landingMessages = defineMessages({
         },
         {
           q: "What does it cost?",
-          a: "Farmers pay nothing. Labs pay $30 a month after a 14-day free trial. Factories get custom enterprise pricing, and pay a 5% platform fee on top of each accepted deal.",
+          a: `Farmers pay nothing. Labs pay ${LAB_EN} a month after a 14-day free trial. Factories get custom enterprise pricing, and pay a 5% platform fee on top of each accepted deal.`,
         },
         {
           q: "How do buyer and seller close a deal?",
@@ -285,7 +290,7 @@ export const landingMessages = defineMessages({
       openMenu: "فتح القائمة",
       closeMenu: "إغلاق القائمة",
       farmers: { label: "المزارعون", body: "بِع مخلفات محاصيلك مجانًا" },
-      labs: { label: "المختبرات", body: "اعرض تحاليلك مقابل 30$ شهريًا" },
+      labs: { label: "المختبرات", body: `اعرض تحاليلك مقابل ${LAB_AR} شهريًا` },
       factories: { label: "المصانع", body: "اشترِ مادة خام مُقيّمة" },
       quality: { label: "تقييم الجودة", body: "تقييم من 0 إلى 100 لكل دفعة" },
       how: { label: "كيف تعمل", body: "من الإدراج إلى البيع في ثلاث خطوات" },
@@ -350,7 +355,7 @@ export const landingMessages = defineMessages({
         },
       ],
       lab: {
-        label: "المختبرات · 30$ شهريًا",
+        label: `المختبرات · ${LAB_AR} شهريًا`,
         title: "أجرِ التحاليل التي يقوم عليها كل تقييم",
         body: "اعرض تحاليلك ليجدك المزارعون والمصانع القريبون منك. ابدأ بتجربة مجانية لمدة 14 يومًا.",
         cta: "أدرج مختبري",
@@ -472,7 +477,7 @@ export const landingMessages = defineMessages({
         {
           name: "المختبرات",
           lead: "اعرض تحاليلك على BiorefMind.",
-          price: "30$",
+          price: "{price}",
           unit: "شهريًا · تجربة مجانية 14 يومًا",
           features: ["مختبرك في الدليل", "يجدك المزارعون والمصانع", "طلبات من الطرفين", "نتائج تغذّي التقييم"],
           cta: "ابدأ تجربتي المجانية",
@@ -498,7 +503,7 @@ export const landingMessages = defineMessages({
         },
         {
           q: "كم التكلفة؟",
-          a: "المزارعون لا يدفعون شيئًا. المختبرات تدفع 30$ شهريًا بعد تجربة مجانية لمدة 14 يومًا. والمصانع تحصل على تسعير مؤسسات خاص، وتدفع عمولة منصة 5% فوق كل صفقة مقبولة.",
+          a: `المزارعون لا يدفعون شيئًا. المختبرات تدفع ${LAB_AR} شهريًا بعد تجربة مجانية لمدة 14 يومًا. والمصانع تحصل على تسعير مؤسسات خاص، وتدفع عمولة منصة 5% فوق كل صفقة مقبولة.`,
         },
         {
           q: "كيف يُتم البائع والمشتري الصفقة؟",

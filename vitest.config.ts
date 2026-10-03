@@ -8,7 +8,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "edge-runtime",
-    include: ["convex/**/*.test.ts"],
+    include: ["convex/**/*.test.ts", "src/**/*.test.ts"],
     // The first call into the backend loads every Convex module through Vite (slow on Windows).
     testTimeout: 30_000,
     // `convex/auth.ts` refuses to build Better Auth without it; tests never use its HTTP side.
