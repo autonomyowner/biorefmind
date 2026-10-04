@@ -53,7 +53,7 @@ GitHub: `https://github.com/autonomyowner/biorefmind`. `main` carries BiorefMind
 - Real Chrome run: landing at 1536 px and 360 px with no sideways scroll, Arabic right-to-left, sign-up → dashboard, sign-out, wrong password message, sign-in → dashboard; no console errors.
 
 ## Account types (2026-10-02, live)
-Three kinds of workspace: `farm` (free), `lab` (**$100/month = 25,000 DA**, 14-day trial, listed in the directory while trial or paid), `factory` (enterprise, custom). Design: `docs/superpowers/specs/2026-10-02-three-account-types-design.md`; plan: `docs/superpowers/plans/2026-10-02-three-account-types.md`. Piece 2 (marketplace) is built on branch `marketplace` (see below); pieces 3–4 (lab requests, billing) are not built yet.
+Three kinds of workspace: `farm` (free), `lab` (**$100/month = 25,000 DA**, 14-day trial, listed in the directory while trial or paid), `factory` (enterprise, custom). Design: `docs/superpowers/specs/2026-10-02-three-account-types-design.md`; plan: `docs/superpowers/plans/2026-10-02-three-account-types.md`. Piece 2 (marketplace) is live (see below); pieces 3–4 (lab requests, billing) are not built yet.
 - Backend: rules in `convex/lib/accounts.ts` (+ catalog in `convex/lib/catalog.ts`); `companies.create/mine/updateProfile`, `labs.directory`, `enterprise.request`, `admin.overview/setLabPaidUntil`. 44 tests.
 - Website: two-step sign-up (`src/components/auth-forms.tsx`), per-kind dashboards (`src/components/dashboard/*`, bilingual), admin page `/admin` (`src/components/admin/admin-page.tsx`).
 - **Admins** = Convex env `ADMIN_EMAILS`. Sign-up does **not** verify emails, so only list addresses whose account already exists (whoever registers an address first owns it). Prod lists only `admin@biorefmind-preview.app` (account created at launch; password given to the owner).
@@ -67,13 +67,13 @@ Design `docs/superpowers/specs/2026-10-03-dashboards-polish-design.md`, plan `do
 - Vitest also runs `src/**/*.test.ts`. 50 tests.
 - Dev Convex `ADMIN_EMAILS` also lists `admin-smoke-1003@example.com` (Chrome smoke test). There is no delete function, so smoke accounts ("Smoke Lab …", "Smoke Admin Farm") stay on dev.
 
-## Marketplace (piece 2, built 2026-10-04 on branch `marketplace`, not merged or shipped)
+## Marketplace (piece 2, shipped 2026-10-04, merge `1cc03db`)
 Design + contract `docs/superpowers/specs/2026-10-04-marketplace-design.md`, plan `docs/superpowers/plans/2026-10-04-marketplace.md`.
 - Farms post lots (residue, kg, **DA per kg**, region, note, up to 4 photos); factories browse (no phone shown) and offer on all or part; the farm accepts or declines. Accepting records a `sales` row (total + 5% buyer fee), lowers `remainingKg` (0 → sold) and declines pending offers that no longer fit. Phones are shared only through sales.
 - Backend: `convex/market.ts` (rules + refusal texts in `convex/lib/market.ts`, fee rate `MARKET_FEE_RATE` in `convex/lib/pricing.ts`), `admin.sales`. Tables `listings`, `offers`, `sales`; listing photos reuse `photoClaims`.
 - Website: `src/components/dashboard/market.tsx` + `market-messages.ts` (farmer: My listings, Sales; factory: Browse, My offers, Sales), admin "Marketplace" section. Photos are shrunk to 1600 px JPEG in the browser before upload.
 - 68 tests (incl. a test that every backend refusal has Arabic). Functions pushed to dev Convex. Chrome run on dev passed 24/24 checks (post with photo → offer → accept → sales and phones on both sides, Arabic RTL, 360 px, admin, guest preview), no console errors. Smoke accounts "Smoke Farm …"/"Smoke Factory …" stay on dev.
-- To ship: merge `marketplace` into `main`, `npx convex deploy -y` first (new tables are additive), then push `main`. Rollback: `206bd6b`.
+- Shipped 2026-10-04: Convex prod deployed first (tables `listings`/`offers`/`sales` added), then `main` `1cc03db` pushed; Vercel deploy succeeded. Read-only prod checks passed: home, headers, robots, guest marketplace at 1440/360 px in English and Arabic, admin hidden, `market.browse` live on prod. Rollback: redeploy code `206bd6b` to Vercel (the new tables can stay; nothing old reads them).
 
 ## Production (shipped 2026-10-02)
 - Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
