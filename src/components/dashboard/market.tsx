@@ -541,7 +541,7 @@ function OfferRow({ offer: o, canAct }: { offer: MyListing["offers"][number]; ca
         <Chip tone={pending ? "amber" : o.status === "accepted" ? "green" : "grey"}>{t.listings.offerStatus[o.status]}</Chip>
       </div>
       <p className="mt-1.5 text-[14px] rtl:text-end" dir="ltr">
-        {f.kg(o.quantityKg)} × {f.dzdKg(o.priceDzdPerKg)} = <span className="font-semibold">{f.dzd(o.totalDzd)}</span>
+        <bdi>{f.kg(o.quantityKg)}</bdi> × <bdi>{f.dzdKg(o.priceDzdPerKg)}</bdi> = <span className="font-semibold"><bdi>{f.dzd(o.totalDzd)}</bdi></span>
       </p>
       {o.message ? <p className="mt-1.5 text-[14px] leading-relaxed text-foreground/80">“{o.message}”</p> : null}
       {pending && canAct ? (
@@ -763,7 +763,7 @@ export function MyOffers({ id }: { id?: string }) {
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[14px]" dir="ltr">
-                  {f.kg(o.quantityKg)} · {f.dzdKg(o.priceDzdPerKg)} · <span className="font-semibold">{f.dzd(o.totalDzd)}</span>
+                  <bdi>{f.kg(o.quantityKg)}</bdi> · <bdi>{f.dzdKg(o.priceDzdPerKg)}</bdi> · <span className="font-semibold"><bdi>{f.dzd(o.totalDzd)}</bdi></span>
                 </p>
                 {o.status === "pending" && canAct ? (
                   <button type="button" disabled={busy === o.offerId} onClick={() => doWithdraw(o.offerId)} className={cn(QUIET, "h-8 px-3 text-[13px]")}>
@@ -815,7 +815,7 @@ export function SalesPanel({ id }: { id?: string }) {
               </div>
               <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="text-[14px]" dir="ltr">
-                  {f.kg(s.quantityKg)} · {f.dzdKg(s.priceDzdPerKg)} · <span className="font-semibold">{f.dzd(s.totalDzd)}</span>
+                  <bdi>{f.kg(s.quantityKg)}</bdi> · <bdi>{f.dzdKg(s.priceDzdPerKg)}</bdi> · <span className="font-semibold"><bdi>{f.dzd(s.totalDzd)}</bdi></span>
                 </p>
                 <p className="text-[13px] text-muted-foreground">{f.date(s.createdAt)}</p>
               </div>
