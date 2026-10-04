@@ -89,3 +89,32 @@ export const endLabPlan = mutation({
     return null;
   },
 });
+
+/** Every marketplace sale: totals, the fees buyers owe BiorefMind, and the latest 50. */
+export const sales = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rows = await ctx.db.query("sales").withIndex("by_created").order("desc").collect();
+    const recent = [];
+    for (const s of rows.slice(0, 50)) {
+      const [seller, buyer] = await Promise.all([ctx.db.get(s.sellerId), ctx.db.get(s.buyerId)]);
+      recent.push({
+        saleId: s._id,
+        residue: s.residue,
+        quantityKg: s.quantityKg,
+        totalDzd: s.totalDzd,
+        feeDzd: s.feeDzd,
+        seller: seller?.name ?? "",
+        buyer: buyer?.name ?? "",
+        createdAt: s.createdAt,
+      });
+    }
+    return {
+      count: rows.length,
+      totalDzd: Math.round(rows.reduce((sum, s) => sum + s.totalDzd, 0) * 100) / 100,
+      feeDzd: rows.reduce((sum, s) => sum + s.feeDzd, 0),
+      recent,
+    };
+  },
+});

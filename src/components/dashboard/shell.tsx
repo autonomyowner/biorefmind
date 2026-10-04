@@ -8,11 +8,13 @@ import {
   Building2,
   CreditCard,
   FlaskConical,
+  HandCoins,
   Home,
   ListChecks,
   LogOut,
   MapPin,
   PackageSearch,
+  Receipt,
   ShieldCheck,
   Sprout,
   UserRound,
@@ -59,6 +61,7 @@ const NAV: Record<Kind, NavItem[]> = {
   farm: [
     { href: "#top", label: "home", icon: Home },
     { href: "#listings", label: "listings", icon: Sprout },
+    { href: "#sales", label: "sales", icon: Receipt },
     { href: "#labs", label: "labs", icon: FlaskConical },
   ],
   lab: [
@@ -70,6 +73,8 @@ const NAV: Record<Kind, NavItem[]> = {
   factory: [
     { href: "#top", label: "home", icon: Home },
     { href: "#browse", label: "browse", icon: PackageSearch },
+    { href: "#offers", label: "offers", icon: HandCoins },
+    { href: "#sales", label: "sales", icon: Receipt },
     { href: "#labs", label: "labs", icon: FlaskConical },
     { href: "#enterprise", label: "enterprise", icon: Building2 },
   ],

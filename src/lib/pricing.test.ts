@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatPrice, parseCurrency } from "./pricing";
+import { formatDzd, formatKg, formatPrice, parseCurrency } from "./pricing";
 
 describe("formatPrice", () => {
   test("dollars and dinars in English and Arabic (Latin digits, grouped)", () => {
@@ -18,5 +18,15 @@ describe("parseCurrency", () => {
     expect(parseCurrency("dzd", "en")).toBe("dzd");
     expect(parseCurrency(null, "en")).toBe("usd");
     expect(parseCurrency("eur", "ar")).toBe("dzd");
+  });
+});
+
+describe("formatDzd / formatKg", () => {
+  test("dinars and kilograms, grouped, up to 2 decimals", () => {
+    expect(formatDzd(30000, "en")).toBe("30,000 DA");
+    expect(formatDzd(15.5, "ar")).toBe("15.5 دج");
+    expect(formatDzd(499.5, "en")).toBe("499.5 DA");
+    expect(formatKg(2000, "en")).toBe("2,000 kg");
+    expect(formatKg(2000, "ar")).toBe("2,000 كغ");
   });
 });

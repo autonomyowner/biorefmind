@@ -26,6 +26,7 @@ import { CurrencySwitch, Price } from "@/components/currency";
 import { useDashboard } from "@/components/dashboard/shell";
 import { dashboardMessages, fill } from "@/components/dashboard/messages";
 import { LabDirectory, SAMPLE_LABS } from "@/components/dashboard/lab-directory";
+import { BrowseListings, MyListings, MyOffers, SalesPanel, useMyListings, useMyOffers, useOpenListings } from "@/components/dashboard/market";
 import { Panel, ProfileCard } from "@/components/dashboard/profile-card";
 import { Spinner } from "@/components/ui/spinner";
 import { localizeBackendError } from "@/i18n/backend-errors";
@@ -163,12 +164,11 @@ function useListedLabs(): DirectoryLab[] | undefined {
 
 function LabCount() {
   const labs = useListedLabs();
-  return labs ? <CountUp value={labs.length} /> : <span className="text-muted-foreground">–</span>;
+  return labs ? <CountUp value={labs.length} /> : <Dash />;
 }
 
-function AnalysesCount() {
-  const labs = useListedLabs();
-  return labs ? <CountUp value={new Set(labs.flatMap((l) => l.services)).size} /> : <span className="text-muted-foreground">–</span>;
+function Dash() {
+  return <span className="text-muted-foreground">–</span>;
 }
 
 /* ---------- Farmer ---------- */
@@ -176,30 +176,30 @@ function AnalysesCount() {
 function FarmHome() {
   const { workspace } = useDashboard();
   const t = useMessages(dashboardMessages);
+  const listings = useMyListings();
+  const open = listings?.filter((l) => l.status === "open").length;
   return (
     <>
       <Greeting />
       <StatStrip
         stats={[
           { icon: FlaskConical, label: t.stats.labsListed, value: <LabCount /> },
-          { icon: BadgeCheck, label: t.stats.analysesAvailable, value: <AnalysesCount /> },
+          { icon: Sprout, label: t.stats.yourOpen, value: open === undefined ? <Dash /> : <CountUp value={open} /> },
           { icon: Percent, label: t.stats.yourFee, value: <span dir="ltr">0%</span> },
           { icon: MapPin, label: t.stats.region, value: <span className="text-[20px] sm:text-[22px]">{workspace.region || "–"}</span> },
         ]}
       />
       <div className={TWO_COLS}>
-        <FadeIn index={5} className="space-y-5">
-          <Panel id="listings" title={t.farm.listingsTitle}>
-            <Empty icon={Sprout} title={t.farm.listingsEmpty} body={t.farm.listingsBody} />
-          </Panel>
+        <FadeIn index={5}>
+          <MyListings id="listings" />
         </FadeIn>
         <FadeIn index={6} className="space-y-5">
           <Steps
             steps={[
               { label: t.steps.account, done: true },
               { label: t.steps.profile, done: Boolean(workspace.region && workspace.phone) },
+              { label: t.steps.list, done: (listings?.length ?? 0) > 0, href: "#listings" },
               { label: t.steps.findLab, href: "#labs" },
-              { label: t.steps.list, soon: true },
             ]}
           />
           <div className={NAVY_CARD}>
@@ -210,9 +210,12 @@ function FarmHome() {
           </div>
         </FadeIn>
       </div>
-      <FadeIn index={7} className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <LabDirectory id="labs" title={t.directory.title} />
+      <FadeIn index={7} className={cn(TWO_COLS, "mt-5")}>
+        <SalesPanel id="sales" />
         <ProfileCard title={t.profile.title} />
+      </FadeIn>
+      <FadeIn index={8} className="mt-5">
+        <LabDirectory id="labs" title={t.directory.title} />
       </FadeIn>
     </>
   );
@@ -346,36 +349,39 @@ function LabPlanCard({ paid, trial, end, daysLeft }: { paid: boolean; trial: boo
 function FactoryHome() {
   const { workspace } = useDashboard();
   const t = useMessages(dashboardMessages);
+  const offers = useMyOffers();
+  const lots = useOpenListings();
   return (
     <>
       <Greeting />
       <StatStrip
         stats={[
+          { icon: PackageSearch, label: t.stats.openLots, value: lots === undefined ? <Dash /> : <CountUp value={lots.length} /> },
           { icon: FlaskConical, label: t.stats.labsListed, value: <LabCount /> },
-          { icon: BadgeCheck, label: t.stats.analysesAvailable, value: <AnalysesCount /> },
           { icon: Sprout, label: t.stats.buys, value: <CountUp value={workspace.buys?.length ?? 0} /> },
           { icon: Percent, label: t.stats.platformFee, value: <span dir="ltr">5%</span> },
         ]}
       />
-      <div className={TWO_COLS}>
-        <FadeIn index={5}>
-          <Panel id="browse" title={t.factory.browseTitle}>
-            <Empty icon={PackageSearch} title={t.factory.browseEmpty} body={t.factory.browseBody} />
-          </Panel>
-        </FadeIn>
-        <FadeIn index={6} className="space-y-5">
-          <Steps
-            steps={[
-              { label: t.steps.account, done: true },
-              { label: t.steps.buys, done: (workspace.buys?.length ?? 0) > 0 },
-              { label: t.steps.browseLabs, href: "#labs" },
-              { label: t.steps.enterprise, href: "#enterprise" },
-            ]}
-          />
-          <ProfileCard title={t.profile.title} />
-        </FadeIn>
-      </div>
+      <FadeIn index={5}>
+        <BrowseListings id="browse" />
+      </FadeIn>
+      <FadeIn index={6} className={cn(TWO_COLS, "mt-5")}>
+        <MyOffers id="offers" />
+        <Steps
+          steps={[
+            { label: t.steps.account, done: true },
+            { label: t.steps.buys, done: (workspace.buys?.length ?? 0) > 0 },
+            { label: t.steps.firstOffer, done: (offers?.length ?? 0) > 0, href: "#browse" },
+            { label: t.steps.browseLabs, href: "#labs" },
+            { label: t.steps.enterprise, href: "#enterprise" },
+          ]}
+        />
+      </FadeIn>
       <FadeIn index={7} className={cn(TWO_COLS, "mt-5")}>
+        <SalesPanel id="sales" />
+        <ProfileCard title={t.profile.title} />
+      </FadeIn>
+      <FadeIn index={8} className={cn(TWO_COLS, "mt-5")}>
         <LabDirectory id="labs" title={t.directory.titleFactory} />
         <EnterpriseCard />
       </FadeIn>

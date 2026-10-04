@@ -1,7 +1,7 @@
 import type { Locale } from "@/i18n/locale";
-import { LAB_PRICE_DZD, LAB_PRICE_USD, toDzd, USD_TO_DZD } from "../../convex/lib/pricing";
+import { LAB_PRICE_DZD, LAB_PRICE_USD, MARKET_FEE_RATE, toDzd, USD_TO_DZD } from "../../convex/lib/pricing";
 
-export { LAB_PRICE_DZD, LAB_PRICE_USD, USD_TO_DZD };
+export { LAB_PRICE_DZD, LAB_PRICE_USD, MARKET_FEE_RATE, USD_TO_DZD };
 
 /** Prices are set in dollars and shown in dollars or Algerian dinars. */
 export type Currency = "usd" | "dzd";
@@ -21,4 +21,16 @@ export function formatPrice(usd: number, currency: Currency, locale: Locale): st
 export function parseCurrency(saved: string | null | undefined, locale: Locale): Currency {
   if (saved === "usd" || saved === "dzd") return saved;
   return locale === "ar" ? "dzd" : "usd";
+}
+
+const dinars = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
+/** Marketplace amounts are set in dinars: "30,000 DA" / "30,000 دج", "15.5 DA". */
+export function formatDzd(dzd: number, locale: Locale): string {
+  return `${dinars.format(dzd)} ${locale === "ar" ? "دج" : "DA"}`;
+}
+
+/** "2,000 kg" / "2,000 كغ". */
+export function formatKg(kg: number, locale: Locale): string {
+  return `${dinars.format(kg)} ${locale === "ar" ? "كغ" : "kg"}`;
 }

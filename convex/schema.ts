@@ -62,6 +62,56 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_created", ["createdAt"]),
 
+  /** A lot a farm puts up for sale. Prices in DA per kg. Design: specs/2026-10-04-marketplace-design.md */
+  listings: defineTable({
+    companyId: v.id("companies"), // the farm selling
+    residue: v.string(), // key from lib/catalog RESIDUES
+    quantityKg: v.number(), // as listed
+    remainingKg: v.number(), // goes down with each sale; 0 → sold
+    priceDzdPerKg: v.number(),
+    region: v.string(),
+    note: v.optional(v.string()),
+    photoIds: v.array(v.id("_storage")),
+    status: v.union(v.literal("open"), v.literal("sold"), v.literal("withdrawn")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_status", ["status", "createdAt"])
+    .index("by_company", ["companyId", "createdAt"]),
+
+  /** A factory's offer on a lot; the farm accepts or declines it. */
+  offers: defineTable({
+    listingId: v.id("listings"),
+    sellerId: v.id("companies"),
+    buyerId: v.id("companies"),
+    quantityKg: v.number(),
+    priceDzdPerKg: v.number(),
+    message: v.optional(v.string()),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("declined"), v.literal("withdrawn")),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+  })
+    .index("by_listing", ["listingId"])
+    .index("by_buyer", ["buyerId", "createdAt"]),
+
+  /** An accepted offer. The buyer owes BiorefMind `feeDzd` on top of `totalDzd`. */
+  sales: defineTable({
+    listingId: v.id("listings"),
+    offerId: v.id("offers"),
+    sellerId: v.id("companies"),
+    buyerId: v.id("companies"),
+    residue: v.string(),
+    quantityKg: v.number(),
+    priceDzdPerKg: v.number(),
+    totalDzd: v.number(),
+    feeDzd: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_seller", ["sellerId", "createdAt"])
+    .index("by_buyer", ["buyerId", "createdAt"])
+    .index("by_created", ["createdAt"]),
+
   memberships: defineTable({
     companyId: v.id("companies"),
     userId: v.id("users"),
