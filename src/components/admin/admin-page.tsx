@@ -11,6 +11,7 @@ import {
   CircleDollarSign,
   CreditCard,
   FlaskConical,
+  HandCoins,
   Inbox,
   LayoutDashboard,
   Mail,
@@ -28,8 +29,9 @@ import { CountUp, FadeIn } from "@/components/motion";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/backend";
 import { errorMessage } from "@/lib/errors";
-import { formatPrice, LAB_PRICE_USD } from "@/lib/pricing";
-import type { AdminOverview, Kind, Viewer } from "@/lib/types";
+import { catalogLabels, labelOf } from "@/lib/catalog-labels";
+import { formatDzd, formatKg, formatPrice, LAB_PRICE_USD } from "@/lib/pricing";
+import type { AdminOverview, AdminSales, Kind, Viewer } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Account = AdminOverview["accounts"][number];
@@ -61,6 +63,7 @@ const NAV = [
   { href: "#top", label: "Overview", icon: LayoutDashboard },
   { href: "#accounts", label: "Accounts", icon: Users },
   { href: "#billing", label: "Lab billing", icon: CreditCard },
+  { href: "#market", label: "Marketplace", icon: HandCoins },
   { href: "#requests", label: "Enterprise requests", icon: Inbox },
 ];
 
@@ -208,6 +211,7 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
 
       <AccountsSection accounts={accounts} now={now} />
       <BillingSection labs={labs} now={now} />
+      <MarketSection />
       <RequestsSection requests={requests} />
     </>
   );
@@ -591,6 +595,72 @@ function EndPlan({ companyId, name }: { companyId: Account["companyId"]; name: s
     >
       {busy ? "…" : armed ? "Confirm: end plan" : "End plan"}
     </button>
+  );
+}
+
+/* ---------- Marketplace ---------- */
+
+const RESIDUE_EN: Record<string, string> = catalogLabels.en.residues;
+
+/** Every sale and the 5% fees buyers owe; billing them is piece 4. Amounts in dinars. */
+function MarketSection() {
+  const sales = useQuery(api.admin.sales, {}) as AdminSales | undefined;
+  const figures = sales
+    ? [
+        { label: "Sales", value: <CountUp value={sales.count} /> },
+        { label: "Value traded", value: formatDzd(sales.totalDzd, "en") },
+        { label: "Fees owed by buyers (5%)", value: formatDzd(sales.feeDzd, "en") },
+      ]
+    : [];
+  return (
+    <section id="market" className="glass mt-5 scroll-mt-24 rounded-[28px] p-5 sm:p-7">
+      <h2 className="text-[19px] font-semibold">Marketplace</h2>
+      <p className="mt-1 text-[14px] text-muted-foreground">Accepted offers between farmers and factories. Fees are not billed yet.</p>
+      {!sales ? (
+        <Spinner className="flex py-8" />
+      ) : (
+        <>
+          <dl className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
+            {figures.map((f) => (
+              <div key={f.label} className="min-w-0 rounded-2xl border border-white bg-white/70 p-4">
+                <dt className="text-[13px] text-muted-foreground">{f.label}</dt>
+                <dd className="mt-1 truncate text-[24px] font-semibold tracking-[-0.02em] tabular-nums">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {sales.recent.length === 0 ? (
+            <p className="mt-4 rounded-2xl bg-white/50 px-4 py-6 text-center text-[15px] text-muted-foreground">No sales yet.</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-white bg-white/60">
+              <table className="w-full min-w-[640px] text-start text-[14px]">
+                <thead className="text-[13px] text-muted-foreground">
+                  <tr className="border-b border-foreground/10">
+                    {["Date", "Residue", "Seller", "Buyer", "Quantity", "Total", "Fee"].map((h) => (
+                      <th key={h} className="px-4 py-2.5 text-start font-medium">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sales.recent.map((s) => (
+                    <tr key={s.saleId} className="border-b border-foreground/5 last:border-0">
+                      <td className="whitespace-nowrap px-4 py-2.5">{fmt(s.createdAt)}</td>
+                      <td className="px-4 py-2.5">{labelOf(RESIDUE_EN, s.residue)}</td>
+                      <td className="px-4 py-2.5">{s.seller}</td>
+                      <td className="px-4 py-2.5">{s.buyer}</td>
+                      <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatKg(s.quantityKg, "en")}</td>
+                      <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatDzd(s.totalDzd, "en")}</td>
+                      <td className="whitespace-nowrap px-4 py-2.5 font-medium tabular-nums">{formatDzd(s.feeDzd, "en")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

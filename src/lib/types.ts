@@ -1,4 +1,6 @@
 import type { Id } from "../../convex/_generated/dataModel";
+import type { FunctionReturnType } from "convex/server";
+import type { api } from "../../convex/_generated/api";
 
 // Shapes returned by the backend. Source: docs/superpowers/contracts/phase-1-backend.md
 
@@ -102,3 +104,11 @@ export const ROUTE_META: Record<Route, { label: string; use: string; color: stri
   B: { label: "Route B · Food-grade", use: "Pectin, volatile oils, bio-packaging", color: "var(--route-b)" },
   C: { label: "Route C · Low-grade", use: "Paper, bio-fermentation, animal feed", color: "var(--route-c)" },
 };
+
+/** Marketplace shapes, straight from the backend (contract: specs/2026-10-04-marketplace-design.md). */
+export type MyListing = FunctionReturnType<typeof api.market.myListings>[number];
+export type ListingOffer = MyListing["offers"][number];
+export type MarketListing = FunctionReturnType<typeof api.market.browse>[number];
+export type MyOffer = FunctionReturnType<typeof api.market.myOffers>[number];
+export type Sale = FunctionReturnType<typeof api.market.mySales>[number];
+export type AdminSales = FunctionReturnType<typeof api.admin.sales>;
