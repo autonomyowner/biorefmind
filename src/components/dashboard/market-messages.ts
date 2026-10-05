@@ -7,6 +7,7 @@ export const marketMessages = defineMessages({
     listings: {
       title: "My listings",
       new: "New listing",
+      public: "View on the marketplace",
       emptyTitle: "No listings yet",
       emptyBody: "List peels, pomace or pits with a price and photos. Factories send you offers, and you choose.",
       status: { open: "Open", sold: "Sold", withdrawn: "Withdrawn" },
@@ -90,6 +91,7 @@ export const marketMessages = defineMessages({
     listings: {
       title: "إدراجاتي",
       new: "إدراج جديد",
+      public: "عرض في السوق",
       emptyTitle: "لا توجد إدراجات بعد",
       emptyBody: "أدرج القشور أو التفل أو النوى مع السعر والصور. ترسل لك المصانع عروضها، وأنت تختار.",
       status: { open: "مفتوح", sold: "مُباع", withdrawn: "مسحوب" },

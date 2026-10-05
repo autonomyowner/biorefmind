@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, HandCoins, ImagePlus, MapPin, PackageSearch, Phone, Plus, Receipt, Sprout, X } from "lucide-react";
+import { Check, HandCoins, ImagePlus, MapPin, PackageSearch, Phone, Plus, Receipt, Sprout, Store, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -225,11 +226,16 @@ export function MyListings({ id }: { id?: string }) {
       id={id}
       title={t.listings.title}
       action={
-        canSell && !adding ? (
-          <button type="button" onClick={() => setAdding(true)} className={cn(PRIMARY, "h-9 px-4")}>
-            <Plus className="size-4" /> {t.listings.new}
-          </button>
-        ) : null
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Link href="/marketplace" className={cn(QUIET, "h-9 px-3.5 text-[13px]")}>
+            <Store className="size-4" /> {t.listings.public}
+          </Link>
+          {canSell && !adding ? (
+            <button type="button" onClick={() => setAdding(true)} className={cn(PRIMARY, "h-9 px-4")}>
+              <Plus className="size-4" /> {t.listings.new}
+            </button>
+          ) : null}
+        </div>
       }
     >
       <AnimatePresence initial={false}>

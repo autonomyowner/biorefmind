@@ -75,6 +75,15 @@ Design + contract `docs/superpowers/specs/2026-10-04-marketplace-design.md`, pla
 - 68 tests (incl. a test that every backend refusal has Arabic). Functions pushed to dev Convex. Chrome run on dev passed 24/24 checks (post with photo → offer → accept → sales and phones on both sides, Arabic RTL, 360 px, admin, guest preview), no console errors. Smoke accounts "Smoke Farm …"/"Smoke Factory …" stay on dev.
 - Shipped 2026-10-04: Convex prod deployed first (tables `listings`/`offers`/`sales` added), then `main` `1cc03db` pushed; Vercel deploy succeeded. Read-only prod checks passed: home, headers, robots, guest marketplace at 1440/360 px in English and Arabic, admin hidden, `market.browse` live on prod. Rollback: redeploy code `206bd6b` to Vercel (the new tables can stay; nothing old reads them).
 
+## Public marketplace page (2026-10-05, branch `public-marketplace`, not shipped)
+Design `docs/superpowers/specs/2026-10-05-public-marketplace-design.md`.
+- `/marketplace` (`src/app/marketplace/page.tsx`, `src/components/marketplace/*`): every open lot for anyone, no sign-in; phones never shown. Server renders the first answer (`fetchQuery`), the browser keeps it live. Residue filter, sort, detail dialog; English + Arabic.
+- Backend: `market.publicLots` (no auth) shares one helper with `market.browse` (auth), so both return the same rows. 70 tests.
+- `/signup?as=farm|lab|factory` opens sign-up on that account type. Guests' "Sign up to make an offer" → `?as=factory`; signed-in "Make an offer" → `/dashboard#browse`.
+- Header: new "Marketplace" link; the full desktop menu now starts at 1280 px (`xl`), below that the menu button (1024 px collided). Footer moved to `src/components/landing/site-footer.tsx` (shared by home and marketplace).
+- `publicLots` is pushed to dev Convex only. To ship: `npx convex deploy -y` first, then push `main` (the page calls `publicLots`).
+- Chrome run on dev passed: 1440/1280/1024/360 px, Arabic RTL, filters/sort/dialog/Escape, `?as=factory`, signed-in factory → Browse; no sideways scroll; no console errors. Smoke account "Smoke Factory mkt1005" stays on dev.
+
 ## Production (shipped 2026-10-02)
 - Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
 - Convex prod: `adventurous-hornet-38` (`https://adventurous-hornet-38.eu-west-1.convex.cloud`); env `SITE_URL=https://biorefmind.vercel.app`, `BETTER_AUTH_SECRET`, `ADMIN_EMAILS`. Deploy functions with `npx convex deploy -y`.
@@ -97,6 +106,7 @@ Design + contract `docs/superpowers/specs/2026-10-04-marketplace-design.md`, pla
 12. How do labs pay (bank transfer, CCP, BaridiMob, cash)? The lab page says "pay BiorefMind" without saying how; add the payment details when chosen.
 13. Marketplace defaults chosen without the owner: prices in DA per kg only (no USD switch); partial offers allowed; phones shared only after a sale; the 5% fee is still the draft rate and is not billed (piece 4); lots have no quality score until lab results exist (piece 3).
 14. Should farmers/factories be told about new offers and sales by SMS, WhatsApp or email? Right now they see them only when they open the dashboard.
+15. The public marketplace shows each lot's seller name, region and the farmer's note to everyone (phones stay hidden). A farmer could type a phone number into the note; should notes be checked or hidden from guests?
 
 <!-- BEGIN:nextjs-agent-rules -->
 

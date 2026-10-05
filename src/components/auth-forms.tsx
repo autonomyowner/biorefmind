@@ -96,7 +96,7 @@ function phoneOk(raw: string) {
  * login without a workspace creates one). Step 1 picks farmer, lab or factory;
  * step 2 is that type's form.
  */
-export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
+export function WorkspaceForm({ mode, initialKind = null }: { mode: "signup" | "onboarding"; initialKind?: Kind | null }) {
   const router = useRouter();
   const t = useMessages(authMessages);
   const labels = useMessages(catalogLabels);
@@ -109,7 +109,7 @@ export function WorkspaceForm({ mode }: { mode: "signup" | "onboarding" }) {
     | Workspace[]
     | undefined;
 
-  const [kind, setKind] = useState<Kind | null>(null);
+  const [kind, setKind] = useState<Kind | null>(initialKind);
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
   const [region, setRegion] = useState("");
