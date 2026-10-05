@@ -12,6 +12,7 @@ export const landingMessages = defineMessages({
     account: { dashboard: "Go to dashboard", footerDashboard: "Dashboard" },
     nav: {
       home: "Home",
+      market: "Marketplace",
       marketplaces: "Accounts",
       platform: "Platform",
       pricing: "Pricing",
@@ -97,6 +98,7 @@ export const landingMessages = defineMessages({
       hubIn: ["Pomegranate peels", "Olive pomace", "Citrus peels"],
       hubOut: ["Extracts", "Pectin", "Bio-packaging", "Energy"],
       cta: "Create a free account",
+      browse: "See lots for sale",
     },
     quality: {
       eyebrow: "Quality you can trust",
@@ -264,6 +266,7 @@ export const landingMessages = defineMessages({
       account: "Account",
       help: "Help",
       marketplaces: "Marketplaces",
+      market: "Lots for sale",
       quality: "Quality score",
       how: "How it works",
       pricing: "Pricing",
@@ -280,6 +283,7 @@ export const landingMessages = defineMessages({
     account: { dashboard: "انتقل إلى لوحة التحكم", footerDashboard: "لوحة التحكم" },
     nav: {
       home: "الرئيسية",
+      market: "السوق",
       marketplaces: "الحسابات",
       platform: "المنصة",
       pricing: "الأسعار",
@@ -365,6 +369,7 @@ export const landingMessages = defineMessages({
       hubIn: ["قشور الرمان", "تفل الزيتون", "قشور الحمضيات"],
       hubOut: ["مستخلصات", "بكتين", "تغليف حيوي", "طاقة"],
       cta: "أنشئ حسابًا مجانيًا",
+      browse: "تصفّح الدفعات المعروضة",
     },
     quality: {
       eyebrow: "جودة تستحق الثقة",
@@ -529,6 +534,7 @@ export const landingMessages = defineMessages({
     footer: {
       tagline: "سوق المخلفات الحيوية للمزارعين والمختبرات والمصانع.",
       product: "المنتج",
+      market: "عروض البيع",
       account: "الحساب",
       help: "المساعدة",
       marketplaces: "الأسواق",

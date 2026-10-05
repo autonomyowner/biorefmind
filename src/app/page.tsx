@@ -21,7 +21,8 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { QualitySection } from "@/components/landing/quality-section";
 import { RoutesSection } from "@/components/landing/routes-section";
 import { Headline, SectionBadge } from "@/components/landing/section-badge";
-import { SiteHeader, Wordmark } from "@/components/landing/site-header";
+import { SiteHeader } from "@/components/landing/site-header";
+import { SiteFooter } from "@/components/landing/site-footer";
 import { cn } from "@/lib/utils";
 import { landingMessages, type LandingMessages } from "@/components/landing/messages";
 import { getLocale, getMessages } from "@/i18n/server";
@@ -46,7 +47,7 @@ export default async function HomePage() {
         <Faq t={t.faq} />
         <ClosingCta t={t.closing} go={go} />
       </main>
-      <Footer t={t.footer} go={go} account={t.account} />
+      <SiteFooter t={t.footer} go={go} account={t.account} />
     </div>
   );
 }
@@ -365,8 +366,9 @@ function Marketplaces({ t, go }: { t: T["markets"]; go: Go }) {
           </div>
         </Reveal>
 
-        <div className="mt-14 flex justify-center">
+        <div className="mt-14 flex flex-wrap justify-center gap-4">
           <CtaButton href={go?.href ?? "/signup"}>{go?.label ?? t.cta}</CtaButton>
+          <GhostButton href="/marketplace">{t.browse}</GhostButton>
         </div>
       </div>
     </section>
@@ -504,68 +506,5 @@ function ClosingCta({ t, go }: { t: T["closing"]; go: Go }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/* ---------- Footer ---------- */
-
-function Footer({ t, go, account }: { t: T["footer"]; go: Go; account: T["account"] }) {
-  const columns = [
-    {
-      title: t.product,
-      links: [
-        { label: t.marketplaces, href: "#marketplaces" },
-        { label: t.quality, href: "#quality" },
-        { label: t.how, href: "#how-it-works" },
-        { label: t.pricing, href: "#pricing" },
-      ],
-    },
-    {
-      title: t.account,
-      links: go
-        ? [{ label: account.footerDashboard, href: "/dashboard" }]
-        : [
-            { label: t.signIn, href: "/login" },
-            { label: t.createAccount, href: "/signup" },
-            { label: t.guest, href: "/dashboard?guest=1" },
-          ],
-    },
-    {
-      title: t.help,
-      links: [
-        { label: t.faq, href: "#faq" },
-        { label: t.routes, href: "#routes" },
-      ],
-    },
-  ];
-  return (
-    <footer className="pt-16 pb-10">
-      <div className={container}>
-        <div className="grid gap-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-          <div>
-            <Wordmark />
-            <p className="mt-4 max-w-[280px] text-[15px] text-muted-foreground">{t.tagline}</p>
-          </div>
-          {columns.map((col) => (
-            <div key={col.title}>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-azure">{col.title}</p>
-              <ul className="mt-4 space-y-2.5 text-[15px]">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <Link href={l.href} className="transition-opacity hover:opacity-70">
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="mt-16 flex flex-col justify-between gap-3 border-t border-border pt-6 text-[13px] text-muted-foreground sm:flex-row">
-          <span>{t.rights}</span>
-          <span>{t.madeFor}</span>
-        </div>
-      </div>
-    </footer>
   );
 }

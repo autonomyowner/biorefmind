@@ -176,6 +176,7 @@ function MobileMenu({
   onClose: () => void;
 }) {
   const links = [
+    { label: t.market, href: "/marketplace" },
     { label: t.pricing, href: "/#pricing" },
     { label: t.faq, href: "/#faq" },
   ];
@@ -186,7 +187,7 @@ function MobileMenu({
       initial="hidden"
       animate="show"
       exit="exit"
-      className="absolute inset-x-0 top-full flex h-[calc(100dvh-5rem)] flex-col overflow-y-auto border-t border-border bg-background px-5 pt-6 pb-8 lg:hidden"
+      className="absolute inset-x-0 top-full flex h-[calc(100dvh-5rem)] flex-col sm:h-[calc(100dvh-7rem)] overflow-y-auto border-t border-border bg-background px-5 pt-6 pb-8 xl:hidden"
     >
       {/* Phones have no room for the language switch in the header bar. */}
       <motion.div variants={group} className="mb-6 sm:hidden">
@@ -248,8 +249,22 @@ function MobileMenu({
   );
 }
 
-/** When signedIn (from the session cookie), "Sign in" becomes "Dashboard". */
-export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
+/** A top-level header link; the current page's link is underlined. */
+function NavLink({ href, current, children }: { href: string; current: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={current ? "page" : undefined}
+      className={cn("relative py-2 transition-colors", current ? "font-medium text-foreground" : "text-foreground/70 hover:text-foreground")}
+    >
+      {children}
+      {current ? <span aria-hidden className="absolute inset-x-0 -bottom-1 h-[2px] rounded-full bg-foreground" /> : null}
+    </Link>
+  );
+}
+
+/** When signedIn (from the session cookie), "Sign in" becomes "Dashboard". `current` underlines that page's link. */
+export function SiteHeader({ signedIn = false, current = "home" }: { signedIn?: boolean; current?: "home" | "market" }) {
   const t = useMessages(landingMessages).nav;
   const menus = menusOf(t);
   const [open, setOpen] = useState(false);
@@ -261,7 +276,7 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    const mq = window.matchMedia("(min-width: 1024px)");
+    const mq = window.matchMedia("(min-width: 1280px)");
     const onMq = () => mq.matches && setOpen(false);
     window.addEventListener("keydown", onKey);
     mq.addEventListener("change", onMq);
@@ -277,11 +292,13 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
       <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-5 sm:h-28 sm:px-10 lg:px-16">
         <Wordmark />
 
-        <nav className="hidden items-center gap-9 text-[17px] lg:flex">
-          <Link href="/" aria-current="page" className="relative py-2 font-medium text-foreground">
+        <nav className="hidden items-center gap-9 text-[17px] xl:flex">
+          <NavLink href="/" current={current === "home"}>
             {t.home}
-            <span aria-hidden className="absolute inset-x-0 -bottom-1 h-[2px] rounded-full bg-foreground" />
-          </Link>
+          </NavLink>
+          <NavLink href="/marketplace" current={current === "market"}>
+            {t.market}
+          </NavLink>
           {menus.map((menu) => (
             <DesktopMenu key={menu.label} {...menu} />
           ))}
@@ -294,7 +311,7 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
           <LanguageSwitch className="hidden sm:inline-flex" />
           <Link
             href={signedIn ? "/dashboard" : "/login"}
-            className="btn-navy group hidden h-12 items-center gap-3 rounded-full ps-7 pe-6 text-[16px] font-semibold transition-[filter] hover:brightness-125 sm:inline-flex"
+            className="btn-navy group hidden h-12 items-center gap-3 whitespace-nowrap rounded-full ps-7 pe-6 text-[16px] font-semibold transition-[filter] hover:brightness-125 sm:inline-flex"
           >
             {signedIn ? t.dashboard : t.signIn}
             <ArrowRight
@@ -309,7 +326,7 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean }) {
             aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
             className={cn(
-              "inline-flex size-11 items-center justify-center rounded-full border border-foreground/20 bg-white/40 transition-colors lg:hidden",
+              "inline-flex size-11 items-center justify-center rounded-full border border-foreground/20 bg-white/40 transition-colors xl:hidden",
               open && "btn-navy border-transparent",
             )}
           >
