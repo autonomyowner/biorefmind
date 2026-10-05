@@ -75,13 +75,13 @@ Design + contract `docs/superpowers/specs/2026-10-04-marketplace-design.md`, pla
 - 68 tests (incl. a test that every backend refusal has Arabic). Functions pushed to dev Convex. Chrome run on dev passed 24/24 checks (post with photo → offer → accept → sales and phones on both sides, Arabic RTL, 360 px, admin, guest preview), no console errors. Smoke accounts "Smoke Farm …"/"Smoke Factory …" stay on dev.
 - Shipped 2026-10-04: Convex prod deployed first (tables `listings`/`offers`/`sales` added), then `main` `1cc03db` pushed; Vercel deploy succeeded. Read-only prod checks passed: home, headers, robots, guest marketplace at 1440/360 px in English and Arabic, admin hidden, `market.browse` live on prod. Rollback: redeploy code `206bd6b` to Vercel (the new tables can stay; nothing old reads them).
 
-## Public marketplace page (2026-10-05, branch `public-marketplace`, not shipped)
+## Public marketplace page (shipped 2026-10-05, merge `4537fb7`)
 Design `docs/superpowers/specs/2026-10-05-public-marketplace-design.md`.
 - `/marketplace` (`src/app/marketplace/page.tsx`, `src/components/marketplace/*`): every open lot for anyone, no sign-in; phones never shown. Server renders the first answer (`fetchQuery`), the browser keeps it live. Residue filter, sort, detail dialog; English + Arabic.
 - Backend: `market.publicLots` (no auth) shares one helper with `market.browse` (auth), so both return the same rows. 70 tests.
 - `/signup?as=farm|lab|factory` opens sign-up on that account type. Guests' "Sign up to make an offer" → `?as=factory`; signed-in "Make an offer" → `/dashboard#browse`.
 - Header: new "Marketplace" link; the full desktop menu now starts at 1280 px (`xl`), below that the menu button (1024 px collided). Footer moved to `src/components/landing/site-footer.tsx` (shared by home and marketplace).
-- `publicLots` is pushed to dev Convex only. To ship: `npx convex deploy -y` first, then push `main` (the page calls `publicLots`).
+- Shipped 2026-10-05: Convex prod deployed first (`market.publicLots` answers anonymously), then `main` `4537fb7` pushed; Vercel served it in ~50 s. Read-only prod checks passed: `/marketplace` 200 with security headers, English 1440 px and Arabic 360 px (RTL, no sideways scroll, empty state: prod has no open lots yet), home links to it, `/signup?as=factory`, robots, no console errors. Rollback: redeploy code `b1bb219` to Vercel (`publicLots` can stay; nothing old calls it).
 - Chrome run on dev passed: 1440/1280/1024/360 px, Arabic RTL, filters/sort/dialog/Escape, `?as=factory`, signed-in factory → Browse; no sideways scroll; no console errors. Smoke account "Smoke Factory mkt1005" stays on dev.
 
 ## Production (shipped 2026-10-02)
