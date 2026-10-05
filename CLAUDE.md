@@ -82,6 +82,7 @@ Design `docs/superpowers/specs/2026-10-05-public-marketplace-design.md`.
 - `/signup?as=farm|lab|factory` opens sign-up on that account type. Guests' "Sign up to make an offer" → `?as=factory`; signed-in "Make an offer" → `/dashboard#browse`.
 - Header: new "Marketplace" link; the full desktop menu now starts at 1280 px (`xl`), below that the menu button (1024 px collided). Footer moved to `src/components/landing/site-footer.tsx` (shared by home and marketplace).
 - Shipped 2026-10-05: Convex prod deployed first (`market.publicLots` answers anonymously), then `main` `4537fb7` pushed; Vercel served it in ~50 s. Read-only prod checks passed: `/marketplace` 200 with security headers, English 1440 px and Arabic 360 px (RTL, no sideways scroll, empty state: prod has no open lots yet), home links to it, `/signup?as=factory`, robots, no console errors. Rollback: redeploy code `b1bb219` to Vercel (`publicLots` can stay; nothing old calls it).
+- 2026-10-05 footer release: on phones (under 768 px) the footer is two short lines (Lots for sale · Pricing · FAQ, then logo + © 2026; ~700 px → 164 px); desktop unchanged. `main` `3947b3b`, website only. Prod checked at 360 px. Rollback: redeploy `1136f2f`.
 - Chrome run on dev passed: 1440/1280/1024/360 px, Arabic RTL, filters/sort/dialog/Escape, `?as=factory`, signed-in factory → Browse; no sideways scroll; no console errors. Smoke account "Smoke Factory mkt1005" stays on dev.
 
 ## Production (shipped 2026-10-02)
