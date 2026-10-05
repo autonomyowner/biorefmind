@@ -37,10 +37,32 @@ export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account
       ],
     },
   ];
+  // Phones get two short lines: the main links (sign-in is already in the header), then the logo with the copyright.
+  const phoneLinks = [
+    { label: t.market, href: "/marketplace" },
+    { label: t.pricing, href: "/#pricing" },
+    { label: t.faq, href: "/#faq" },
+  ];
   return (
-    <footer className="pt-16 pb-10">
+    <footer className="pt-10 pb-8 md:pt-16 md:pb-10">
       <div className="mx-auto max-w-[1280px] px-5 sm:px-10 lg:px-16">
-        <div className="grid gap-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+        <div className="md:hidden">
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[15px]">
+            {phoneLinks.map((l) => (
+              <li key={l.label}>
+                <Link href={l.href} className="transition-opacity hover:opacity-70">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-5">
+            <Wordmark className="shrink-0 text-[19px] [&_img]:size-7" />
+            <span dir="ltr" className="text-[13px] text-muted-foreground">© 2026</span>
+          </div>
+        </div>
+
+        <div className="hidden gap-12 md:grid md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <Wordmark />
             <p className="mt-4 max-w-[280px] text-[15px] text-muted-foreground">{t.tagline}</p>
@@ -60,7 +82,7 @@ export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account
             </div>
           ))}
         </div>
-        <div className="mt-16 flex flex-col justify-between gap-3 border-t border-border pt-6 text-[13px] text-muted-foreground sm:flex-row">
+        <div className="mt-16 hidden justify-between gap-3 border-t border-border pt-6 text-[13px] text-muted-foreground md:flex">
           <span>{t.rights}</span>
           <span>{t.madeFor}</span>
         </div>
