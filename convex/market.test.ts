@@ -318,6 +318,49 @@ describe("offers and sales", () => {
   });
 });
 
+describe("public marketplace", () => {
+  test("anyone sees open lots without signing in, with no contact details", async () => {
+    const t = newBackend();
+    const f = await farm(t);
+    const buyer = await factory(t);
+    const p = await photo(t);
+    const open = await list(f.as, f.id, { note: "Dry, in bags" });
+    await f.as.mutation(api.market.createListing, { companyId: f.id, ...lot, residue: "date_pits", photoIds: [p] });
+    const gone = await list(f.as, f.id);
+    await f.as.mutation(api.market.withdrawListing, { listingId: gone });
+    const sold = await list(f.as, f.id, { quantityKg: 10 });
+    const offerId = await buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId: sold, quantityKg: 10, priceDzdPerKg: 15 });
+    await f.as.mutation(api.market.respond, { offerId, accept: true });
+
+    const lots = await t.query(api.market.publicLots, {});
+    expect(lots.map((l) => l.residue)).toEqual(["date_pits", "olive_pomace"]); // newest first, open only
+    expect(lots[0].photoUrls).toHaveLength(1);
+    expect(lots[1]).toEqual({
+      listingId: open,
+      residue: "olive_pomace",
+      remainingKg: 2000,
+      priceDzdPerKg: 15,
+      region: "Sétif",
+      note: "Dry, in bags",
+      photoUrls: [],
+      sellerName: "Ferme Saïd",
+      createdAt: expect.any(Number),
+    });
+    expect(JSON.stringify(lots)).not.toContain("555");
+    // The signed-in view shows exactly the same lots.
+    expect(await buyer.as.query(api.market.browse, {})).toEqual(lots);
+  });
+
+  test("filters by residue; an unknown residue is just empty", async () => {
+    const t = newBackend();
+    const f = await farm(t);
+    await list(f.as, f.id);
+    await list(f.as, f.id, { residue: "date_pits" });
+    expect(await t.query(api.market.publicLots, { residue: "date_pits" })).toMatchObject([{ residue: "date_pits" }]);
+    expect(await t.query(api.market.publicLots, { residue: "nonsense" })).toEqual([]);
+  });
+});
+
 describe("admin sales", () => {
   afterEach(() => vi.unstubAllEnvs());
 

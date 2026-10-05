@@ -165,35 +165,46 @@ export const myListings = query({
   },
 });
 
-/** Open lots, newest first (up to 100), for any signed-in account. No contact details. */
+/** Open lots, newest first (up to 100), optionally of one residue. No contact details. */
+async function openLots(ctx: QueryCtx, residue: string | undefined) {
+  const open = await ctx.db
+    .query("listings")
+    .withIndex("by_status", (q) => q.eq("status", "open"))
+    .order("desc")
+    .take(residue ? 1000 : 100);
+  const out = [];
+  for (const l of open) {
+    if (residue && l.residue !== residue) continue;
+    const seller = await ctx.db.get(l.companyId);
+    out.push({
+      listingId: l._id,
+      residue: l.residue,
+      remainingKg: l.remainingKg,
+      priceDzdPerKg: l.priceDzdPerKg,
+      region: l.region,
+      note: l.note,
+      photoUrls: await photoUrls(ctx, l.photoIds),
+      sellerName: seller?.name ?? "",
+      createdAt: l.createdAt,
+    });
+    if (out.length >= 100) break;
+  }
+  return out;
+}
+
+/** Open lots for any signed-in account (the dashboard's Browse). */
 export const browse = query({
   args: { residue: v.optional(v.string()) },
   handler: async (ctx, { residue }) => {
     await requireUser(ctx);
-    const open = await ctx.db
-      .query("listings")
-      .withIndex("by_status", (q) => q.eq("status", "open"))
-      .order("desc")
-      .take(residue ? 1000 : 100);
-    const out = [];
-    for (const l of open) {
-      if (residue && l.residue !== residue) continue;
-      const seller = await ctx.db.get(l.companyId);
-      out.push({
-        listingId: l._id,
-        residue: l.residue,
-        remainingKg: l.remainingKg,
-        priceDzdPerKg: l.priceDzdPerKg,
-        region: l.region,
-        note: l.note,
-        photoUrls: await photoUrls(ctx, l.photoIds),
-        sellerName: seller?.name ?? "",
-        createdAt: l.createdAt,
-      });
-      if (out.length >= 100) break;
-    }
-    return out;
+    return await openLots(ctx, residue);
   },
+});
+
+/** The same open lots for anyone, signed in or not (the public /marketplace page). */
+export const publicLots = query({
+  args: { residue: v.optional(v.string()) },
+  handler: async (ctx, { residue }) => await openLots(ctx, residue),
 });
 
 /** A factory offers on an open lot. Its pending offer on the same lot, if any, is replaced. */
