@@ -394,6 +394,7 @@ export const myRequests = query({
         tracking: r.tracking,
         listingId: r.listingId,
         saleId: r.saleId,
+        respondedAt: r.respondedAt, // with "expired": accepted → the sample never came; else no answer
         sampleNo: r.sampleNo,
         dueAt: r.dueAt,
         reason: r.reason,

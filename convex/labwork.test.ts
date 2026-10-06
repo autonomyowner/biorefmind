@@ -483,7 +483,9 @@ describe("lifecycle", () => {
     const farm = await company(t, "farm", "farm@x.dz", "Ferme Saïd");
     const a = await ask(farm.as, farm.id, lab.id);
     await t.run((ctx) => ctx.db.patch(a, { createdAt: Date.now() - 8 * DAY }));
-    expect((await farm.as.query(api.labwork.myRequests, { companyId: farm.id }))[0].status).toBe("expired");
+    const unanswered = (await farm.as.query(api.labwork.myRequests, { companyId: farm.id }))[0];
+    expect(unanswered.status).toBe("expired");
+    expect(unanswered.respondedAt).toBeUndefined(); // never answered
     await expect(lab.as.mutation(api.labwork.respond, { requestId: a, accept: true })).rejects.toThrow(
       "This request is no longer open.",
     );
@@ -494,6 +496,9 @@ describe("lifecycle", () => {
     expect((await lab.as.query(api.labwork.labQueue, { companyId: lab.id })).find((r) => r.requestId === b)!.status).toBe(
       "expired",
     );
+    const waited = (await farm.as.query(api.labwork.myRequests, { companyId: farm.id })).find((r) => r.requestId === b)!;
+    expect(waited.status).toBe("expired");
+    expect(waited.respondedAt).toBeDefined(); // accepted: the sample never came
     await lab.as.mutation(api.labwork.receive, { requestId: b, dueAt: Date.now() + 10 * DAY });
     const row = (await lab.as.query(api.labwork.labQueue, { companyId: lab.id })).find((r) => r.requestId === b)!;
     expect(row.status).toBe("received");
