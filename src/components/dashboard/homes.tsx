@@ -261,7 +261,7 @@ function LabHome() {
   );
 }
 
-function LabPlanCard({ paid, trial, end, daysLeft }: { paid: boolean; trial: boolean; end: number; daysLeft: number }) {
+export function LabPlanCard({ paid, trial, end, daysLeft }: { paid: boolean; trial: boolean; end: number; daysLeft: number }) {
   const { workspace } = useDashboard();
   const t = useMessages(dashboardMessages);
   const locale = useLocale();
@@ -376,7 +376,7 @@ function FactoryHome() {
   );
 }
 
-function EnterpriseCard() {
+export function EnterpriseCard() {
   const { workspace, guest } = useDashboard();
   const t = useMessages(dashboardMessages);
   const locale = useLocale();

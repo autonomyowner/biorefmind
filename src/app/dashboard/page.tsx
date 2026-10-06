@@ -1,6 +1,6 @@
-import { DashboardHome } from "@/components/dashboard/homes";
+import { OverviewPage } from "@/components/dashboard/pages/overview";
 
-/** The home for the signed-in account's type: farmer, lab or factory. */
+/** The Overview for the signed-in account's type: farmer, lab or factory. */
 export default function DashboardPage() {
-  return <DashboardHome />;
+  return <OverviewPage />;
 }
