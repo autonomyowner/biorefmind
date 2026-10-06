@@ -44,7 +44,7 @@ export function Donut({
   const key = items.map((i) => `${i.label}:${i.value}`).join("|");
 
   return (
-    <div className={cn("flex flex-col items-center gap-6 sm:flex-row sm:items-center", className)}>
+    <div className={cn("flex flex-col items-center gap-5", className)}>
       <div className="relative shrink-0" style={{ width: SIZE, height: SIZE }} dir="ltr">
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden className="-rotate-90">
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="rgba(7,23,51,0.06)" strokeWidth={STROKE} />
