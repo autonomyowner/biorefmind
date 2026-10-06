@@ -218,7 +218,8 @@ function Welcome({ name, kind, onPick }: { name: string; kind: "farm" | "factory
           <Sparkles className="size-6" strokeWidth={1.8} />
         </span>
         <h1 className="mt-5 text-[30px] leading-tight font-semibold tracking-[-0.03em] sm:text-[38px]">
-          {fill(t.greeting[greetingKey()], { name })} <span className="text-gradient">{t.lead}</span>
+          {fill(t.greeting[greetingKey()], { name })}
+          <span className="text-gradient block">{t.lead}</span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-muted-foreground">{t.leadBody}</p>
       </FadeIn>

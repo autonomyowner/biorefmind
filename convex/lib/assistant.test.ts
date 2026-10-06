@@ -151,5 +151,6 @@ describe("questions, titles, answers, prompt", () => {
     expect(p).toMatch(/never.*phone/i);
     expect(p).toContain("propose_listing");
     expect(p).toMatch(/Never show internal ids/);
+    expect(p).toMatch(/catalog keys/);
   });
 });
