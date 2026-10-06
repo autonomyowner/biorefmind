@@ -140,3 +140,6 @@ export type Certificate = NonNullable<FunctionReturnType<typeof api.labwork.cert
 export type LabResults = Certificate["results"];
 /** Status as people see it: the stored one, or a timeout worked out when read. */
 export type LabRequestStatus = MyLabRequest["status"];
+
+// Dashboard analytics. Contract: docs/superpowers/specs/2026-10-06-dashboard-pages-design.md §7
+export type WorkspaceInsights = FunctionReturnType<typeof api.insights.workspace>;
