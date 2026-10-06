@@ -354,6 +354,7 @@ export const labQueue = query({
         condition: r.condition,
         reason: r.reason,
         cancelledBy: r.cancelledBy,
+        respondedAt: r.respondedAt, // with "expired": accepted → the sample is late but can still be received
         draft: r.draft,
         reports: await reportsOf(ctx, r._id),
         paid: r.paid,

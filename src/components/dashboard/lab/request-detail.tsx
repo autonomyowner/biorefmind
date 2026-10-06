@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { fill } from "@/components/dashboard/messages";
 import { labMessages } from "@/components/dashboard/lab/lab-messages";
-import { DAY, defaultDue, fromDateInput, toDateInput } from "@/components/dashboard/lab/lab-logic";
+import { defaultDue, fromDateInput, toDateInput } from "@/components/dashboard/lab/lab-logic";
 import { ResultsFormCard } from "@/components/dashboard/lab/results-form";
 import { SampleLabel } from "@/components/dashboard/lab/sample-label";
 import { AREA, Chip, Field, FIELD, PRIMARY, QUIET, StatusChip, useFail, useFormat, useGuestBlock, useLabRole } from "@/components/dashboard/lab/ui";
@@ -271,9 +271,8 @@ function Actions({ row }: { row: LabQueueRow }) {
   const reject = useMutation(api.labwork.reject);
   const [busy, setBusy] = useState(false);
   const [amending, setAmending] = useState(false);
-  // An expired request older than the 30-day sample wait may have been accepted: offer receipt anyway.
-  const [now] = useState(() => Date.now());
-  const lateAccepted = row.status === "expired" && now - row.createdAt > 30 * DAY;
+  // An accepted request whose 30-day sample wait ran out: the sample may still arrive, so receipt stays open.
+  const lateAccepted = row.status === "expired" && row.respondedAt !== undefined;
 
   const send = async (fn: () => Promise<unknown>, done: string) => {
     try {

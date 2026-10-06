@@ -499,6 +499,7 @@ describe("lifecycle", () => {
     const waited = (await farm.as.query(api.labwork.myRequests, { companyId: farm.id })).find((r) => r.requestId === b)!;
     expect(waited.status).toBe("expired");
     expect(waited.respondedAt).toBeDefined(); // accepted: the sample never came
+    expect((await lab.as.query(api.labwork.labQueue, { companyId: lab.id })).find((r) => r.requestId === b)!.respondedAt).toBeDefined();
     await lab.as.mutation(api.labwork.receive, { requestId: b, dueAt: Date.now() + 10 * DAY });
     const row = (await lab.as.query(api.labwork.labQueue, { companyId: lab.id })).find((r) => r.requestId === b)!;
     expect(row.status).toBe("received");
