@@ -114,7 +114,6 @@ export type Crop = {
   fields: { key: keyof Lab; label: string; hint: string }[];
 };
 
-export type AssistantMessage = { _id: string; role: "user" | "assistant"; content: string; createdAt: number };
 export type Member = { userId: string; name: string; email: string; role: Role };
 export type Invitation = { _id: Id<"invitations">; email: string; role: Role; createdAt: number };
 
@@ -130,6 +129,10 @@ export type ListingOffer = MyListing["offers"][number];
 export type MarketListing = FunctionReturnType<typeof api.market.browse>[number];
 export type PublicLot = FunctionReturnType<typeof api.market.publicLots>[number];
 export type LabReading = FunctionReturnType<typeof api.labAi.readResults>;
+export type AssistantThread = FunctionReturnType<typeof api.assistant.threads>[number];
+export type AssistantMessage = FunctionReturnType<typeof api.assistant.messages>[number];
+export type AssistantCard = AssistantMessage["cards"][number];
+export type AssistantCardFull = FunctionReturnType<typeof api.assistant.card>;
 export type MyOffer = FunctionReturnType<typeof api.market.myOffers>[number];
 export type Sale = FunctionReturnType<typeof api.market.mySales>[number];
 export type AdminSales = FunctionReturnType<typeof api.admin.sales>;

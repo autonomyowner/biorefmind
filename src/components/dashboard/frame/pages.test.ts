@@ -19,6 +19,10 @@ describe("pageOfPath", () => {
 });
 
 describe("PAGES", () => {
+  test("every account has the assistant right after the Overview", () => {
+    for (const pages of Object.values(PAGES)) expect(pages[1]).toBe("assistant");
+    expect(pageOfPath("/dashboard/assistant")).toBe("assistant");
+  });
   test("every account starts on the Overview and ends with Settings", () => {
     for (const pages of Object.values(PAGES)) {
       expect(pages[0]).toBe("overview");

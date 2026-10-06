@@ -6,6 +6,7 @@ export const dashboardMessages = defineMessages({
     nav: {
       pages: {
         overview: "Overview",
+        assistant: "Assistant",
         listings: "Listings",
         sales: "Sales",
         browse: "Browse lots",
@@ -102,6 +103,7 @@ export const dashboardMessages = defineMessages({
     nav: {
       pages: {
         overview: "نظرة عامة",
+        assistant: "المساعد",
         listings: "إدراجاتي",
         sales: "المبيعات",
         browse: "تصفّح الحمولات",
