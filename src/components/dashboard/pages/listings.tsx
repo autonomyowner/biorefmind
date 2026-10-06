@@ -1,8 +1,41 @@
 "use client";
 
-import { MyListings } from "@/components/dashboard/market";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 
-/** Listings (farm): the lots and the offers on them. */
+import { FadeIn } from "@/components/motion";
+import { MyListings } from "@/components/dashboard/market";
+import { dashboardMessages } from "@/components/dashboard/messages";
+import { pagesMessages } from "@/components/dashboard/pages-messages";
+import { useDashboard } from "@/components/dashboard/shell";
+import { useMessages } from "@/i18n/provider";
+import { HEADER_PRIMARY, PageHeader } from "./page-header";
+
+/** Listings (farm): the lots and the offers on them. `?new=1` opens the new-listing form on arrival. */
 export function ListingsPage() {
-  return <MyListings />;
+  const { workspace, guest } = useDashboard();
+  const t = useMessages(pagesMessages);
+  const nav = useMessages(dashboardMessages).nav.pages;
+  const canSell = !guest && workspace.role !== "inspector";
+  const wantsNew = useSearchParams().get("new") === "1";
+  const [adding, setAdding] = useState(canSell && wantsNew);
+  return (
+    <>
+      <PageHeader
+        title={nav.listings}
+        description={t.headers.listings}
+        action={
+          canSell && !adding ? (
+            <button type="button" onClick={() => setAdding(true)} className={HEADER_PRIMARY}>
+              <Plus className="size-4" /> {t.newListing}
+            </button>
+          ) : null
+        }
+      />
+      <FadeIn index={1}>
+        <MyListings adding={adding} onAddingChange={setAdding} />
+      </FadeIn>
+    </>
+  );
 }
