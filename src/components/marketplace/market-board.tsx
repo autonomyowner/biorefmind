@@ -10,6 +10,7 @@ import { ArrowRight, CalendarDays, Check, MapPin, PackageSearch, Scale, ShieldCh
 // The kit's own close button carries English screen-reader text, so the dialog uses its bare Close part.
 import { Dialog, DialogClose as DialogClosePrimitive, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CountUp } from "@/components/motion";
+import { LabBadge } from "@/components/marketplace/lab-badge";
 import { marketplaceMessages } from "@/components/marketplace/messages";
 import { useLocale, useMessages } from "@/i18n/provider";
 import type { Locale } from "@/i18n/locale";
@@ -285,6 +286,8 @@ function LotCard({ lot: l, index, offerHref, onOpen }: { lot: PublicLot; index: 
         </span>
       </button>
 
+      {l.lab ? <LabBadge lab={l.lab} className="mx-2 mt-3" /> : null}
+
       <div className="mt-auto px-2 pt-4 pb-1">
         <OfferLink href={offerHref} className="w-full" />
       </div>
@@ -418,6 +421,8 @@ function LotDetail({ lot: l, offerHref }: { lot: PublicLot; offerHref: string })
             <p className="[unicode-bidi:plaintext] mt-2 whitespace-pre-line break-words text-[15px] leading-relaxed text-foreground/85">{l.note}</p>
           </div>
         ) : null}
+
+        {l.lab ? <LabBadge lab={l.lab} detail className="mt-5" /> : null}
 
         <div className="mt-6 flex items-start gap-2.5 rounded-2xl bg-[#e6edff] p-3.5 text-[13px] leading-relaxed text-[#24366a]">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-azure" strokeWidth={1.8} />
