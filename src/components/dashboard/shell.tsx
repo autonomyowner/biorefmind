@@ -15,6 +15,7 @@ import {
   PackageSearch,
   Receipt,
   Settings,
+  Sparkles,
   ShieldCheck,
   Sprout,
   Tags,
@@ -64,6 +65,7 @@ const GUEST: Dashboard = {
 /** The icon of every dashboard page (sidebar and ⌘K). */
 export const PAGE_ICON: Record<DashPage, LucideIcon> = {
   overview: LayoutDashboard,
+  assistant: Sparkles,
   listings: Sprout,
   sales: Receipt,
   browse: PackageSearch,

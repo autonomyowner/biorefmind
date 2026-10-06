@@ -23,6 +23,7 @@ export async function resolveConfig(ctx: QueryCtx) {
     model: row?.model ?? (process.env.AI_MODEL || DEFAULT_MODEL),
     photoCheck: row?.photoCheck ?? true,
     resultsReader: row?.resultsReader ?? true,
+    assistant: row?.assistant ?? true,
   };
 }
 
@@ -61,13 +62,26 @@ export const settings = query({
       .withIndex("by_finished", (q) => q.gte("finishedAt", monthStart))
       .collect();
     for (const r of reads) costUsd += r.costUsd ?? 0;
+    // Assistant questions and answers this month (by when they were asked).
+    const chat = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_created", (q) => q.gte("createdAt", monthStart))
+      .collect();
+    for (const m of chat) costUsd += m.costUsd ?? 0;
     return {
       keySource: c.keySource,
       keyMasked: maskKey(c.key),
       model: c.model,
       photoCheck: c.photoCheck,
       resultsReader: c.resultsReader,
-      month: { done, failed, reads: reads.filter((r) => r.status === "done").length, costUsd: Math.round(costUsd * 10_000) / 10_000 },
+      assistant: c.assistant,
+      month: {
+        done,
+        failed,
+        reads: reads.filter((r) => r.status === "done").length,
+        questions: chat.filter((m) => m.role === "user").length,
+        costUsd: Math.round(costUsd * 10_000) / 10_000,
+      },
     };
   },
 });
@@ -75,7 +89,7 @@ export const settings = query({
 async function upsert(
   ctx: MutationCtx,
   userId: Id<"users">,
-  patch: { openrouterKey?: string | undefined; model?: string; photoCheck?: boolean; resultsReader?: boolean },
+  patch: { openrouterKey?: string | undefined; model?: string; photoCheck?: boolean; resultsReader?: boolean; assistant?: boolean },
 ) {
   const row = await settingsRow(ctx);
   const stamp = { updatedAt: Date.now(), updatedBy: userId };
@@ -103,13 +117,14 @@ export const removeKey = mutation({
 });
 
 export const update = mutation({
-  args: { model: v.optional(v.string()), photoCheck: v.optional(v.boolean()), resultsReader: v.optional(v.boolean()) },
-  handler: async (ctx, { model, photoCheck, resultsReader }) => {
+  args: { model: v.optional(v.string()), photoCheck: v.optional(v.boolean()), resultsReader: v.optional(v.boolean()), assistant: v.optional(v.boolean()) },
+  handler: async (ctx, { model, photoCheck, resultsReader, assistant }) => {
     const user = await requireAdmin(ctx);
     await upsert(ctx, user._id, {
       ...(model !== undefined ? { model: cleanModel(model) } : {}),
       ...(photoCheck !== undefined ? { photoCheck } : {}),
       ...(resultsReader !== undefined ? { resultsReader } : {}),
+      ...(assistant !== undefined ? { assistant } : {}),
     });
     return null;
   },

@@ -43,6 +43,16 @@ const AR: Record<string, string> = {
   "Write the model as provider/model, for example google/gemini-3.8-flash.": "اكتب النموذج بالشكل provider/model، مثل google/gemini-3.8-flash.",
   "This photo check is not waiting for a retry.": "فحص الصور هذا لا ينتظر إعادة المحاولة.",
   "You can try again 3 times a day. Please try tomorrow.": "يمكنك إعادة المحاولة 3 مرات في اليوم. حاول غدًا.",
+  // Assistant (convex/lib/assistant.ts)
+  "The assistant is switched off.": "المساعد متوقف حاليًا.",
+  "Type a question or add a photo (up to 2000 characters).": "اكتب سؤالًا أو أضف صورة (حتى 2000 حرف).",
+  "Add up to 4 photos (JPEG, PNG or WebP, up to 2 MB each).": "أضف حتى 4 صور (JPEG أو PNG أو WebP، حتى 2 ميغابايت لكل صورة).",
+  "Your workspace has used today's 60 questions. Please try again tomorrow.": "استخدمت مساحة عملك الأسئلة الستين المتاحة اليوم. حاول مجددًا غدًا.",
+  "Your workspace has used today's 20 photos. Please try again tomorrow.": "استخدمت مساحة عملك الصور العشرين المتاحة اليوم. حاول مجددًا غدًا.",
+  "Please wait for the current answer to finish.": "يرجى الانتظار حتى تكتمل الإجابة الحالية.",
+  "This conversation no longer exists.": "هذه المحادثة لم تعد موجودة.",
+  "Give the conversation a name (1 to 80 characters).": "أعطِ المحادثة اسمًا (من 1 إلى 80 حرفًا).",
+  "This suggestion is no longer available.": "هذا الاقتراح لم يعد متاحًا.",
   // Lab results reader (convex/lib/aiRead.ts)
   "The results reader is switched off.": "قارئ النتائج متوقف حاليًا.",
   "Add up to 4 photos, or one PDF.": "أضف حتى 4 صور، أو ملف PDF واحدًا.",

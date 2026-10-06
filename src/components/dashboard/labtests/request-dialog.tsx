@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Check, Clock, Info, MapPin, Truck, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +44,10 @@ export function useMySales(): Sale[] | undefined {
 }
 
 /** The request dialog for one lab; `lab = null` closes it. */
-export function RequestDialog({ lab, onClose }: { lab: DirectoryLab | null; onClose: () => void }) {
+/** Analyses (and the farm's own lot) to start with, e.g. from an assistant card. */
+export type RequestPreset = { analyses: string[]; listingId?: string };
+
+export function RequestDialog({ lab, onClose, preset }: { lab: DirectoryLab | null; onClose: () => void; preset?: RequestPreset }) {
   // Keep the last lab while the dialog animates closed.
   const [shown, setShown] = useState<DirectoryLab | null>(lab);
   if (lab && lab !== shown) setShown(lab);
@@ -54,13 +57,13 @@ export function RequestDialog({ lab, onClose }: { lab: DirectoryLab | null; onCl
         showCloseButton={false}
         className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto rounded-[28px] border border-white/80 bg-[#eef4fa] p-0 ring-0 sm:max-w-[680px]"
       >
-        {shown ? <RequestForm key={shown.companyId} lab={shown} onDone={onClose} /> : null}
+        {shown ? <RequestForm key={shown.companyId} lab={shown} onDone={onClose} preset={preset} /> : null}
       </DialogContent>
     </Dialog>
   );
 }
 
-function RequestForm({ lab, onDone }: { lab: DirectoryLab; onDone: () => void }) {
+function RequestForm({ lab, onDone, preset }: { lab: DirectoryLab; onDone: () => void; preset?: RequestPreset }) {
   const { workspace, guest } = useDashboard();
   const t = useMessages(labtestsMessages);
   const labels = useMessages(catalogLabels);
@@ -76,7 +79,7 @@ function RequestForm({ lab, onDone }: { lab: DirectoryLab; onDone: () => void })
   const purchases = isFarm ? [] : (sales ?? []);
   const prices = lab.prices ?? [];
 
-  const [chosen, setChosen] = useState<string[]>([]);
+  const [chosen, setChosen] = useState<string[]>(() => (preset?.analyses ?? []).filter((a) => prices.some((p) => p.analysis === a)));
   const [about, setAbout] = useState(""); // listingId or saleId; "" = no lot
   const [residue, setResidue] = useState<string | null>(null);
   const [custom, setCustom] = useState(""); // typed residue; wins over the chips
@@ -115,6 +118,14 @@ function RequestForm({ lab, onDone }: { lab: DirectoryLab; onDone: () => void })
     }
     if (source.region) setRegion(source.region);
   }
+
+  // A preset lot (assistant card) is picked once the farm's lots have loaded.
+  const presetDone = useRef(false);
+  useEffect(() => {
+    if (presetDone.current || !preset?.listingId || !openLots.some((l) => l.listingId === preset.listingId)) return;
+    presetDone.current = true;
+    pickAbout(preset.listingId);
+  });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

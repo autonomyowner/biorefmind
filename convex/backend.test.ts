@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import betterAuthTest from "@convex-dev/better-auth/test";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { api, components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -345,49 +345,6 @@ describe("demo.score", () => {
     });
     await expect(t.query(api.demo.score, { lab: { mold: 101 } })).rejects.toThrow(
       "Lab values must be percentages between 0 and 100.",
-    );
-  });
-});
-
-describe("assistant", () => {
-  test("ask without a key answers from the built-in responder and stores both messages", async () => {
-    vi.stubEnv("OPENROUTER_API_KEY", "");
-    const t = newBackend();
-    const { as, companyId } = await ownerWithCompany(t);
-    await as.mutation(api.shipments.create, shipment(companyId));
-    await expect(as.action(api.assistant.ask, { companyId, question: "  " })).rejects.toThrow("Please type a question.");
-
-    const { answer } = await as.action(api.assistant.ask, { companyId, question: "What are the routing rules?" });
-    expect(answer).toContain("1 shipments");
-    expect(answer).toContain("Route A (pharmaceutical)");
-    const msgs = await as.query(api.assistant.messages, { companyId });
-    expect(msgs.map((m) => m.role)).toEqual(["user", "assistant"]);
-    expect(msgs[1].content).toBe(answer);
-
-    await as.mutation(api.assistant.clear, { companyId });
-    expect(await as.query(api.assistant.messages, { companyId })).toEqual([]);
-    vi.unstubAllEnvs();
-  });
-
-  test("a failing API falls back to the responder", async () => {
-    vi.stubEnv("OPENROUTER_API_KEY", "test-key");
-    const fetchMock = vi.fn(async () => new Response("down", { status: 503 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const t = newBackend();
-    const { as, companyId } = await ownerWithCompany(t);
-    const { answer } = await as.action(api.assistant.ask, { companyId, question: "Summary please" });
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(answer).toContain("no shipments recorded yet");
-    vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
-  });
-
-  test("outsiders cannot ask", async () => {
-    const t = newBackend();
-    const { companyId } = await ownerWithCompany(t);
-    const out = await member(t, "out@x.dz");
-    await expect(out.as.action(api.assistant.ask, { companyId, question: "hi" })).rejects.toThrow(
-      "You don't have access to this workspace.",
     );
   });
 });

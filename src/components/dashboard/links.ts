@@ -3,6 +3,7 @@
 /** Every dashboard page. Which ones an account sees is decided in the shell. */
 export const DASH = {
   overview: "/dashboard",
+  assistant: "/dashboard/assistant",
   listings: "/dashboard/listings",
   sales: "/dashboard/sales",
   browse: "/dashboard/browse",

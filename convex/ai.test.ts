@@ -336,7 +336,8 @@ describe("admin AI settings", () => {
       model: DEFAULT_MODEL,
       photoCheck: true,
       resultsReader: true,
-      month: { done: 0, failed: 0, reads: 0, costUsd: 0 },
+      assistant: true,
+      month: { done: 0, failed: 0, reads: 0, questions: 0, costUsd: 0 },
     });
 
     await expect(boss.mutation(api.ai.saveKey, { key: "nope" })).rejects.toThrow(AI_REFUSE.key);
@@ -352,7 +353,7 @@ describe("admin AI settings", () => {
     await runChecks(t);
     expect(authOf(0)).toBe("Bearer sk-or-v1-savedkey1234567890abcd");
     expect(bodyOf(0).model).toBe("openai/gpt-5-mini");
-    expect((await boss.query(api.ai.settings, {})).month).toEqual({ done: 1, failed: 0, reads: 0, costUsd: 0.0025 });
+    expect((await boss.query(api.ai.settings, {})).month).toEqual({ done: 1, failed: 0, reads: 0, questions: 0, costUsd: 0.0025 });
 
     await boss.mutation(api.ai.removeKey, {});
     expect(await boss.query(api.ai.settings, {})).toMatchObject({ keySource: "env", keyMasked: "sk-or-…0000" });
@@ -375,13 +376,18 @@ describe("admin AI settings", () => {
   });
 
   test("the assistant uses the saved key and model", async () => {
-    stubFetch(() => new Response(JSON.stringify({ choices: [{ message: { content: "Hello" } }] }), { status: 200 }));
+    stubFetch(() => new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: "Hello" } }] })}
+
+data: [DONE]
+
+`, { status: 200 }));
     const t = newBackend();
     const boss = await admin(t);
     await boss.mutation(api.ai.saveKey, { key: "sk-or-v1-savedkey1234567890abcd" });
     const f = await factory(t);
-    const { answer: a } = await f.as.action(api.assistant.ask, { companyId: f.id, question: "Hi" });
-    expect(a).toBe("Hello");
+    const { threadId } = await f.as.mutation(api.assistant.send, { companyId: f.id, text: "Hi", photoIds: [] });
+    await runChecks(t);
+    expect((await f.as.query(api.assistant.messages, { threadId }))![1].text).toBe("Hello");
     expect(authOf(0)).toBe("Bearer sk-or-v1-savedkey1234567890abcd");
     expect(bodyOf(0).model).toBe(DEFAULT_MODEL);
   });

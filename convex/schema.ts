@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { photoCheckResultValidator } from "./lib/ai";
+import { storedCardValidator } from "./lib/assistant";
 
 /** Workspace roles, highest first. */
 export const memberRole = v.union(v.literal("owner"), v.literal("manager"), v.literal("inspector"));
@@ -291,6 +292,7 @@ export default defineSchema({
   photoClaims: defineTable({
     storageId: v.id("_storage"),
     companyId: v.id("companies"),
+    source: v.optional(v.literal("assistant")), // sent in an assistant chat; may still become a lot photo
   }).index("by_storage", ["storageId"]),
 
   /** HACCP / GMP trail: every inspector change to a route, with its reason. */
@@ -312,6 +314,7 @@ export default defineSchema({
     model: v.optional(v.string()),
     photoCheck: v.boolean(),
     resultsReader: v.optional(v.boolean()), // lab results reader; missing = on
+    assistant: v.optional(v.boolean()), // dashboard assistant; missing = on
     updatedAt: v.number(),
     updatedBy: v.id("users"),
   }),
@@ -348,7 +351,32 @@ export default defineSchema({
     .index("by_lab_created", ["labId", "createdAt"])
     .index("by_finished", ["finishedAt"]),
 
-  /** AI assistant conversation, one running thread per user per company. */
+  /** Dashboard assistant conversations. Design: specs/2026-10-06-ai-assistant-design.md */
+  aiThreads: defineTable({
+    companyId: v.id("companies"),
+    userId: v.id("users"),
+    title: v.string(),
+    updatedAt: v.number(),
+  }).index("by_user_company", ["userId", "companyId", "updatedAt"]),
+
+  aiMessages: defineTable({
+    threadId: v.id("aiThreads"),
+    companyId: v.id("companies"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    text: v.string(),
+    photoIds: v.array(v.id("_storage")),
+    steps: v.array(v.object({ tool: v.string(), detail: v.optional(v.string()) })),
+    cards: v.array(storedCardValidator),
+    status: v.union(v.literal("done"), v.literal("streaming"), v.literal("failed")),
+    attempt: v.optional(v.number()), // which run may write (a retry starts attempt 2, …); missing = 1
+    costUsd: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_thread", ["threadId", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_created", ["createdAt"]),
+
+  /** Legacy (BioGrena) assistant messages; no longer written. */
   assistantMessages: defineTable({
     companyId: v.id("companies"),
     userId: v.id("users"),

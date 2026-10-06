@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronRight, Inbox } from "lucide-react";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -9,6 +9,9 @@ import { fill } from "@/components/dashboard/messages";
 import { labMessages } from "@/components/dashboard/lab/lab-messages";
 import { QUEUE_TABS, tabOf, type QueueTab } from "@/components/dashboard/lab/lab-logic";
 import { RequestDialog } from "@/components/dashboard/lab/request-detail";
+import { PendingReading } from "@/components/dashboard/lab/results-form";
+import { useAssistantCard } from "@/components/dashboard/assistant/use-card";
+import type { LabReading } from "@/lib/types";
 import { Chip, StatusChip, useFormat, useLabQueue } from "@/components/dashboard/lab/ui";
 import { useMessages } from "@/i18n/provider";
 import { catalogLabels, labelOf, residueLabel } from "@/lib/catalog-labels";
@@ -21,6 +24,20 @@ export function LabQueue({ id }: { id?: string }) {
   const rows = useLabQueue();
   const [chosen, setChosen] = useState<QueueTab | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+
+  // Opened from an assistant card: that request, with the values read in the chat waiting for its form.
+  const { card, done } = useAssistantCard("results");
+  const [pending, setPending] = useState<{ requestId: string; reading: LabReading } | null>(null);
+  const [usedCard, setUsedCard] = useState<typeof card>(null);
+  if (card && card !== usedCard) {
+    setUsedCard(card);
+    setPending({ requestId: card.requestId, reading: card.reading });
+    setChosen("inLab");
+    setOpenId(card.requestId);
+  }
+  useEffect(() => {
+    if (usedCard) done();
+  }, [usedCard, done]);
 
   const counts = Object.fromEntries(QUEUE_TABS.map((k) => [k, 0])) as Record<QueueTab, number>;
   for (const r of rows ?? []) counts[tabOf(r.status)] += 1;
@@ -78,7 +95,9 @@ export function LabQueue({ id }: { id?: string }) {
         </ul>
       )}
 
-      <RequestDialog row={open} onClose={() => setOpenId(null)} />
+      <PendingReading value={pending ? { ...pending, take: () => setPending(null) } : null}>
+        <RequestDialog row={open} onClose={() => setOpenId(null)} />
+      </PendingReading>
     </Panel>
   );
 }

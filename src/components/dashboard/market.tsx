@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
@@ -233,8 +233,31 @@ export function useMyListings(): MyListing[] | undefined {
   return guest ? SAMPLE_LISTINGS : live;
 }
 
-/** The farm's lots. Pass `adding` + `onAddingChange` to open the new-listing form from outside (the page header). */
-export function MyListings({ id, adding: addingProp, onAddingChange }: { id?: string; adding?: boolean; onAddingChange?: (adding: boolean) => void }) {
+/** A new listing prepared elsewhere (the assistant's card): photos already uploaded. */
+export type ListingDraft = {
+  residue: string;
+  residueName?: string;
+  quantityKg?: number;
+  priceDzdPerKg?: number;
+  note?: string;
+  photos: { storageId: Id<"_storage">; url: string }[];
+};
+
+/**
+ * The farm's lots. Pass `adding` + `onAddingChange` to open the new-listing form from outside (the page header),
+ * and `draft` to open it pre-filled.
+ */
+export function MyListings({
+  id,
+  adding: addingProp,
+  onAddingChange,
+  draft,
+}: {
+  id?: string;
+  adding?: boolean;
+  onAddingChange?: (adding: boolean) => void;
+  draft?: ListingDraft | null;
+}) {
   const { workspace, guest } = useDashboard();
   const t = useMessages(marketMessages);
   const listings = useMyListings();
@@ -270,7 +293,7 @@ export function MyListings({ id, adding: addingProp, onAddingChange }: { id?: st
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <NewListingForm onDone={() => setAdding(false)} />
+            <NewListingForm key={draft ? "draft" : "blank"} draft={draft ?? undefined} onDone={() => setAdding(false)} />
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -291,7 +314,7 @@ export function MyListings({ id, adding: addingProp, onAddingChange }: { id?: st
 
 type Upload = { key: string; preview: string; storageId?: Id<"_storage"> };
 
-function NewListingForm({ onDone }: { onDone: () => void }) {
+function NewListingForm({ onDone, draft }: { onDone: () => void; draft?: ListingDraft }) {
   const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
   const f = useFormat();
@@ -299,13 +322,13 @@ function NewListingForm({ onDone }: { onDone: () => void }) {
   const create = useMutation(api.market.createListing);
   const uploadUrl = useMutation(api.market.generateUploadUrl);
 
-  const [residue, setResidue] = useState<string | null>(null);
-  const [custom, setCustom] = useState(""); // typed residue; wins over the chips
-  const [quantity, setQuantity] = useState("");
-  const [price, setPrice] = useState("");
+  const [residue, setResidue] = useState<string | null>(draft && draft.residue !== "other" ? draft.residue : null);
+  const [custom, setCustom] = useState(draft?.residue === "other" ? (draft.residueName ?? "") : ""); // typed residue; wins over the chips
+  const [quantity, setQuantity] = useState(draft?.quantityKg !== undefined ? String(draft.quantityKg) : "");
+  const [price, setPrice] = useState(draft?.priceDzdPerKg !== undefined ? String(draft.priceDzdPerKg) : "");
   const [region, setRegion] = useState(workspace.region);
-  const [note, setNote] = useState("");
-  const [photos, setPhotos] = useState<Upload[]>([]);
+  const [note, setNote] = useState(draft?.note ?? "");
+  const [photos, setPhotos] = useState<Upload[]>(() => (draft?.photos ?? []).map((p) => ({ key: p.storageId, preview: p.url, storageId: p.storageId })));
   const [busy, setBusy] = useState(false);
 
   const uploading = photos.some((p) => !p.storageId);
@@ -606,7 +629,10 @@ export function useOpenListings(residue: string | null = null): MarketListing[] 
   return guest ? [] : live;
 }
 
-export function BrowseListings({ id }: { id?: string }) {
+/** An offer prepared elsewhere (the assistant's card). */
+export type OfferDraft = { listingId: string; quantityKg?: number; priceDzdPerKg?: number };
+
+export function BrowseListings({ id, offer }: { id?: string; offer?: OfferDraft | null }) {
   const t = useMessages(marketMessages);
   const [residue, setResidue] = useState<string | null>(null);
   const listings = useOpenListings(residue);
@@ -624,7 +650,7 @@ export function BrowseListings({ id }: { id?: string }) {
       ) : (
         <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(3,minmax(0,1fr))]">
           {listings.map((l) => (
-            <MarketCard key={l.listingId} listing={l} />
+            <MarketCard key={l.listingId} listing={l} draft={offer?.listingId === l.listingId ? offer : undefined} />
           ))}
         </ul>
       )}
@@ -632,7 +658,7 @@ export function BrowseListings({ id }: { id?: string }) {
   );
 }
 
-function MarketCard({ listing: l }: { listing: MarketListing }) {
+function MarketCard({ listing: l, draft }: { listing: MarketListing; draft?: OfferDraft }) {
   const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
   const labels = useMessages(catalogLabels);
@@ -641,8 +667,19 @@ function MarketCard({ listing: l }: { listing: MarketListing }) {
   const name = residueLabel(labels.residues, l);
   const canBuy = workspace.kind === "factory" && workspace.role !== "inspector";
 
+  // An offer prepared by the assistant opens this card's form, once, and brings the card into view.
+  const [usedDraft, setUsedDraft] = useState<OfferDraft | undefined>();
+  if (draft && draft !== usedDraft && canBuy) {
+    setUsedDraft(draft);
+    setOffering(true);
+  }
+  const item = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (usedDraft) item.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [usedDraft]);
+
   return (
-    <li className={cn(CARD, "flex flex-col")}>
+    <li ref={item} className={cn(CARD, "flex flex-col", usedDraft && "ring-2 ring-violet/40")}>
       <LotPhoto urls={l.photoUrls} alt={name} className="aspect-[4/3] w-full" />
       <p className="mt-3 truncate text-[16px] font-semibold">{name}</p>
       <p className="mt-0.5 text-[15px]">
@@ -658,7 +695,7 @@ function MarketCard({ listing: l }: { listing: MarketListing }) {
       {l.photoCheck ? <PhotoCheckBox check={l.photoCheck} residue={name} className="mt-3" /> : null}
       <div className="mt-auto pt-3">
         {offering ? (
-          <OfferForm listing={l} onDone={() => setOffering(false)} />
+          <OfferForm listing={l} draft={usedDraft} onDone={() => setOffering(false)} />
         ) : canBuy ? (
           <button type="button" onClick={() => setOffering(true)} className={cn(PRIMARY, "w-full")}>
             <HandCoins className="size-4" /> {t.browse.offer}
@@ -669,14 +706,14 @@ function MarketCard({ listing: l }: { listing: MarketListing }) {
   );
 }
 
-function OfferForm({ listing: l, onDone }: { listing: MarketListing; onDone: () => void }) {
+function OfferForm({ listing: l, onDone, draft }: { listing: MarketListing; onDone: () => void; draft?: OfferDraft }) {
   const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
   const f = useFormat();
   const fail = useFail();
   const make = useMutation(api.market.makeOffer);
-  const [quantity, setQuantity] = useState(String(l.remainingKg));
-  const [price, setPrice] = useState(String(l.priceDzdPerKg));
+  const [quantity, setQuantity] = useState(String(draft?.quantityKg ?? l.remainingKg));
+  const [price, setPrice] = useState(String(draft?.priceDzdPerKg ?? l.priceDzdPerKg));
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
