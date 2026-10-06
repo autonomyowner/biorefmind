@@ -85,6 +85,10 @@ Design `docs/superpowers/specs/2026-10-05-public-marketplace-design.md`.
 - 2026-10-05 footer release: on phones (under 768 px) the footer is two short lines (Lots for sale · Pricing · FAQ, then logo + © 2026; ~700 px → 164 px); desktop unchanged. `main` `3947b3b`, website only. Prod checked at 360 px. Rollback: redeploy `1136f2f`.
 - Chrome run on dev passed: 1440/1280/1024/360 px, Arabic RTL, filters/sort/dialog/Escape, `?as=factory`, signed-in factory → Browse; no sideways scroll; no console errors. Smoke account "Smoke Factory mkt1005" stays on dev.
 
+## Typed residue (branch `residue-other`, 2026-10-06, not shipped)
+- A farmer whose residue is not in the list types it ("Not in the list? Type exactly what you have"): stored as `residue: "other"` + `residueName` (2–80 chars, `cleanResidue` in `convex/lib/market.ts`), carried onto the sale. Typing clears the chip and a chip clears the text. Shown everywhere via `residueLabel` (`src/lib/catalog-labels.ts`); the Browse and /marketplace filters gain "Other". The factory sign-up "buys" chips are unchanged.
+- 74 tests; dev Convex pushed; Chrome run on dev 11/11 (account "Smoke Farm muw9pzfa" stays on dev). Ship order: Convex prod first (new optional fields), then `main`.
+
 ## Production (shipped 2026-10-02)
 - Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
 - Convex prod: `adventurous-hornet-38` (`https://adventurous-hornet-38.eu-west-1.convex.cloud`); env `SITE_URL=https://biorefmind.vercel.app`, `BETTER_AUTH_SECRET`, `ADMIN_EMAILS`. Deploy functions with `npx convex deploy -y`.

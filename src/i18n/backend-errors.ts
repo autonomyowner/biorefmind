@@ -22,6 +22,7 @@ const AR: Record<string, string> = {
   "Only farm accounts can list residues.": "إدراج المخلفات متاح لحسابات المزارع فقط.",
   "Only factory accounts can make offers.": "تقديم العروض متاح لحسابات المصانع فقط.",
   "Choose a residue from the list.": "اختر نوع المخلفات من القائمة.",
+  "Type what you have (2 to 80 characters).": "اكتب ما لديك (من 2 إلى 80 حرفًا).",
   "Quantity must be a whole number of kilograms (1 to 10,000,000).": "يجب أن تكون الكمية عددًا صحيحًا من الكيلوغرامات (من 1 إلى 10,000,000).",
   "Price must be between 0.01 and 100,000 DA per kg.": "يجب أن يكون السعر بين 0.01 و100,000 دج للكيلوغرام.",
   "The note can be up to 1000 characters.": "يمكن أن تصل الملاحظة إلى 1000 حرف.",

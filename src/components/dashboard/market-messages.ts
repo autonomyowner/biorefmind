@@ -27,6 +27,8 @@ export const marketMessages = defineMessages({
     form: {
       title: "New listing",
       residue: "Residue",
+      residueOther: "Not in the list? Type exactly what you have",
+      residueOtherPlaceholder: "e.g. Dried lemon peels, carob pods…",
       quantity: "Quantity (kg)",
       price: "Price (DA per kg)",
       region: "Region",
@@ -111,6 +113,8 @@ export const marketMessages = defineMessages({
     form: {
       title: "إدراج جديد",
       residue: "نوع المخلفات",
+      residueOther: "غير موجود في القائمة؟ اكتب ما لديك بالضبط",
+      residueOtherPlaceholder: "مثلًا: قشور ليمون مجففة، قرون الخروب…",
       quantity: "الكمية (كغ)",
       price: "السعر (دج للكيلوغرام)",
       region: "المنطقة",

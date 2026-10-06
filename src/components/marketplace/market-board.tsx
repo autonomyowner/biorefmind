@@ -14,7 +14,7 @@ import { marketplaceMessages } from "@/components/marketplace/messages";
 import { useLocale, useMessages } from "@/i18n/provider";
 import type { Locale } from "@/i18n/locale";
 import { api } from "@/lib/backend";
-import { RESIDUE_KEYS, catalogLabels, labelOf } from "@/lib/catalog-labels";
+import { LOT_RESIDUE_KEYS, catalogLabels, labelOf, residueLabel } from "@/lib/catalog-labels";
 import { formatDzd, formatKg } from "@/lib/pricing";
 import type { PublicLot } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,7 @@ export function MarketBoard({ initial, signedIn }: { initial: PublicLot[] | null
 
       <div className="mt-12 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div role="group" aria-label={t.filterLabel} className="flex flex-wrap gap-2">
-          {[null, ...RESIDUE_KEYS].map((k) => {
+          {[null, ...LOT_RESIDUE_KEYS].map((k) => {
             const on = residue === k;
             const n = k ? (counts[k] ?? 0) : (all?.length ?? 0);
             return (
@@ -228,7 +228,7 @@ function LotCard({ lot: l, index, offerHref, onOpen }: { lot: PublicLot; index: 
   const t = useMessages(marketplaceMessages);
   const labels = useMessages(catalogLabels);
   const locale = useLocale();
-  const name = labelOf(labels.residues, l.residue);
+  const name = residueLabel(labels.residues, l);
 
   return (
     <motion.li
@@ -353,7 +353,7 @@ function LotDetail({ lot: l, offerHref }: { lot: PublicLot; offerHref: string })
   const labels = useMessages(catalogLabels);
   const locale = useLocale();
   const [active, setActive] = useState(0);
-  const name = labelOf(labels.residues, l.residue);
+  const name = residueLabel(labels.residues, l);
   const rows = [
     { icon: Scale, label: t.detail.available, value: <bdi>{formatKg(l.remainingKg, locale)}</bdi> },
     { icon: MapPin, label: t.detail.region, value: <bdi>{l.region || "–"}</bdi> },

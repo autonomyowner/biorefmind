@@ -67,7 +67,11 @@ async function photo(t: Backend): Promise<Id<"_storage">> {
 
 const lot = { residue: "olive_pomace", quantityKg: 2000, priceDzdPerKg: 15 };
 
-async function list(as: Member, companyId: Id<"companies">, extra: Partial<typeof lot> & { note?: string } = {}) {
+async function list(
+  as: Member,
+  companyId: Id<"companies">,
+  extra: Partial<typeof lot> & { note?: string; residueName?: string } = {},
+) {
   return await as.mutation(api.market.createListing, { companyId, ...lot, photoIds: [], ...extra });
 }
 
@@ -349,6 +353,32 @@ describe("public marketplace", () => {
     expect(JSON.stringify(lots)).not.toContain("555");
     // The signed-in view shows exactly the same lots.
     expect(await buyer.as.query(api.market.browse, {})).toEqual(lots);
+  });
+
+  test("a farmer can type a residue that is not in the list; it follows the lot to the sale", async () => {
+    vi.stubEnv("ADMIN_EMAILS", "boss@biorefmind.com");
+    const t = newBackend();
+    const f = await farm(t);
+    const buyer = await factory(t);
+    await expect(list(f.as, f.id, { residue: "other" })).rejects.toThrow(
+      "Type what you have (2 to 80 characters).",
+    );
+    const listingId = await list(f.as, f.id, { residue: "other", residueName: "  Dried lemon peels " });
+    await list(f.as, f.id, { residueName: "ignored" });
+    const [, mine] = await f.as.query(api.market.myListings, { companyId: f.id });
+    expect(mine).toMatchObject({ listingId, residue: "other", residueName: "Dried lemon peels" });
+    const lots = await t.query(api.market.publicLots, { residue: "other" });
+    expect(lots).toMatchObject([{ listingId, residue: "other", residueName: "Dried lemon peels" }]);
+    expect((await t.query(api.market.publicLots, {}))[0].residueName).toBeUndefined();
+
+    const offerId = await buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId, quantityKg: 10, priceDzdPerKg: 15 });
+    expect((await buyer.as.query(api.market.myOffers, { companyId: buyer.id }))[0]).toMatchObject({ residueName: "Dried lemon peels" });
+    await f.as.mutation(api.market.respond, { offerId, accept: true });
+    expect((await f.as.query(api.market.mySales, { companyId: f.id }))[0]).toMatchObject({ residue: "other", residueName: "Dried lemon peels" });
+    expect((await buyer.as.query(api.market.mySales, { companyId: buyer.id }))[0]).toMatchObject({ residueName: "Dried lemon peels" });
+    const boss = await member(t, "boss@biorefmind.com");
+    expect((await boss.query(api.admin.sales, {})).recent[0]).toMatchObject({ residueName: "Dried lemon peels" });
+    vi.unstubAllEnvs();
   });
 
   test("filters by residue; an unknown residue is just empty", async () => {
