@@ -812,13 +812,19 @@ export function MyOffers({ id }: { id?: string }) {
 
 /* ---------- Both: sales ---------- */
 
-export function SalesPanel({ id }: { id?: string }) {
+/** The account's sales (farm) or purchases (factory), newest first; samples in the guest preview. */
+export function useSales(): Sale[] | undefined {
   const { workspace, guest } = useDashboard();
+  const live = useQuery(api.market.mySales, guest ? "skip" : { companyId: workspace.companyId });
+  return guest ? SAMPLE_SALES : live;
+}
+
+export function SalesPanel({ id }: { id?: string }) {
+  const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
   const labels = useMessages(catalogLabels);
   const f = useFormat();
-  const live = useQuery(api.market.mySales, guest ? "skip" : { companyId: workspace.companyId });
-  const sales = guest ? SAMPLE_SALES : live;
+  const sales = useSales();
 
   return (
     <Panel id={id} title={t.sales.title}>
