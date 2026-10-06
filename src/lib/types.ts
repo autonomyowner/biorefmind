@@ -26,9 +26,28 @@ export type Workspace = {
   trialEndsAt?: number;
   paidUntil?: number;
   listed?: boolean;
+  // Labs only (2026-10-06)
+  address?: string;
+  hours?: string;
+  retention?: string;
+  paused?: boolean;
+  prices?: LabPrice[];
 };
 
-export type DirectoryLab = { companyId: Id<"companies">; name: string; region: string; phone: string; services: string[] };
+/** One analysis on a lab's price list: DA per sample, turnaround in working days. */
+export type LabPrice = { analysis: string; priceDzd: number; days: number };
+
+export type DirectoryLab = {
+  companyId: Id<"companies">;
+  name: string;
+  region: string;
+  phone: string;
+  services: string[];
+  address?: string;
+  hours?: string;
+  paused?: boolean;
+  prices?: LabPrice[];
+};
 
 export type AdminOverview = {
   accounts: {
@@ -113,3 +132,11 @@ export type PublicLot = FunctionReturnType<typeof api.market.publicLots>[number]
 export type MyOffer = FunctionReturnType<typeof api.market.myOffers>[number];
 export type Sale = FunctionReturnType<typeof api.market.mySales>[number];
 export type AdminSales = FunctionReturnType<typeof api.admin.sales>;
+
+// Lab requests and results. Contract: docs/superpowers/specs/2026-10-06-lab-requests-design.md
+export type LabQueueRow = FunctionReturnType<typeof api.labwork.labQueue>[number];
+export type MyLabRequest = FunctionReturnType<typeof api.labwork.myRequests>[number];
+export type Certificate = NonNullable<FunctionReturnType<typeof api.labwork.certificate>>;
+export type LabResults = Certificate["results"];
+/** Status as people see it: the stored one, or a timeout worked out when read. */
+export type LabRequestStatus = MyLabRequest["status"];

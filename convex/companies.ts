@@ -4,7 +4,8 @@ import { mutation, query } from "./_generated/server";
 import { getAppUser } from "./auth";
 import { findMembership, requireMember, SIGN_IN } from "./lib/access";
 import { cleanName, cleanPhone, cleanRegion, LAB_TRIAL_MS, labListed, pickKnown, REFUSE } from "./lib/accounts";
-import { ANALYSES, RESIDUES } from "./lib/catalog";
+import { RESIDUES } from "./lib/catalog";
+import { normalizeServices } from "./lib/labwork";
 
 const INVITE_REFUSAL = "Only owners and managers can invite people.";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,8 +34,13 @@ export const mine = query({
         role: m.role,
         region: c.region ?? "",
         phone: c.phone ?? "",
-        services: c.services,
+        services: c.kind === "lab" ? normalizeServices(c.services) : c.services,
         buys: c.buys,
+        address: c.address,
+        hours: c.hours,
+        retention: c.retention,
+        paused: c.paused,
+        prices: c.prices,
         plan: c.plan,
         trialEndsAt: c.trialEndsAt,
         paidUntil: c.paidUntil,
@@ -65,7 +71,7 @@ export const create = mutation({
     const name = cleanName(args.name);
     const region = cleanRegion(args.region);
     const phone = cleanPhone(args.phone);
-    const services = args.kind === "lab" ? pickKnown(args.services ?? [], ANALYSES) : undefined;
+    const services = args.kind === "lab" ? normalizeServices(args.services) : undefined;
     if (services && services.length === 0) throw new ConvexError(REFUSE.services);
     const buys = args.kind === "factory" ? pickKnown(args.buys ?? [], RESIDUES) : undefined;
     if (args.kind === "farm") {
@@ -111,8 +117,11 @@ export const updateProfile = mutation({
     if (args.region !== undefined) patch.region = cleanRegion(args.region);
     if (args.phone !== undefined) patch.phone = cleanPhone(args.phone);
     if (args.services !== undefined && company.kind === "lab") {
-      patch.services = pickKnown(args.services, ANALYSES);
-      if (patch.services.length === 0) throw new ConvexError(REFUSE.services);
+      const services: string[] = normalizeServices(args.services);
+      if (services.length === 0) throw new ConvexError(REFUSE.services);
+      patch.services = services;
+      // A price stays only while the lab still offers that analysis.
+      if (company.prices) patch.prices = company.prices.filter((p) => services.includes(p.analysis));
     }
     if (args.buys !== undefined && company.kind === "factory") patch.buys = pickKnown(args.buys, RESIDUES);
     await ctx.db.patch(args.companyId, patch);

@@ -13,6 +13,7 @@ import {
   offerFits,
   saleAmounts,
 } from "./lib/market";
+import { badgeVisible, LAB_REFUSE } from "./lib/labwork";
 
 // Design and contract: docs/superpowers/specs/2026-10-04-marketplace-design.md
 
@@ -159,6 +160,7 @@ export const myListings = query({
         note: l.note,
         status: l.status,
         photoUrls: await photoUrls(ctx, l.photoIds),
+        labRequestId: l.labRequestId,
         createdAt: l.createdAt,
         offers,
       });
@@ -167,8 +169,27 @@ export const myListings = query({
   },
 });
 
+/**
+ * The lab badge a lot shows while it is open and its attached results are under 90 days old.
+ * The certificate code only for signed-in viewers.
+ */
+async function lotBadge(ctx: QueryCtx, l: Doc<"listings">, now: number, withCode: boolean) {
+  if (!l.labRequestId) return undefined;
+  const req = await ctx.db.get(l.labRequestId);
+  const report = req?.reportId ? await ctx.db.get(req.reportId) : null;
+  if (!report || !badgeVisible(l, report, now)) return undefined;
+  return {
+    labName: report.lab.name,
+    releasedAt: report.releasedAt,
+    score: report.score,
+    route: report.route,
+    ...(withCode ? { code: report.code } : {}),
+  };
+}
+
 /** Open lots, newest first (up to 100), optionally of one residue. No contact details. */
-async function openLots(ctx: QueryCtx, residue: string | undefined) {
+async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: boolean) {
+  const now = Date.now();
   const open = await ctx.db
     .query("listings")
     .withIndex("by_status", (q) => q.eq("status", "open"))
@@ -188,6 +209,7 @@ async function openLots(ctx: QueryCtx, residue: string | undefined) {
       note: l.note,
       photoUrls: await photoUrls(ctx, l.photoIds),
       sellerName: seller?.name ?? "",
+      lab: await lotBadge(ctx, l, now, signedIn),
       createdAt: l.createdAt,
     });
     if (out.length >= 100) break;
@@ -200,14 +222,42 @@ export const browse = query({
   args: { residue: v.optional(v.string()) },
   handler: async (ctx, { residue }) => {
     await requireUser(ctx);
-    return await openLots(ctx, residue);
+    return await openLots(ctx, residue, true);
   },
 });
 
 /** The same open lots for anyone, signed in or not (the public /marketplace page). */
 export const publicLots = query({
   args: { residue: v.optional(v.string()) },
-  handler: async (ctx, { residue }) => await openLots(ctx, residue),
+  handler: async (ctx, { residue }) => await openLots(ctx, residue, false),
+});
+
+/** The farm shows released lab results on its own lot (the request must be about that lot). */
+export const attachLabReport = mutation({
+  args: { listingId: v.id("listings"), requestId: v.id("labRequests") },
+  handler: async (ctx, { listingId, requestId }) => {
+    const listing = await ctx.db.get(listingId);
+    if (!listing) throw new ConvexError(MARKET_REFUSE.noListing);
+    await requireSeller(ctx, listing.companyId);
+    if (listing.status !== "open") throw new ConvexError(MARKET_REFUSE.closed);
+    const req = await ctx.db.get(requestId);
+    if (!req) throw new ConvexError(LAB_REFUSE.noRequest);
+    if (req.clientId !== listing.companyId || req.listingId !== listingId) throw new ConvexError(LAB_REFUSE.notThisLot);
+    if (req.status !== "released") throw new ConvexError(LAB_REFUSE.notReleased);
+    await ctx.db.patch(listingId, { labRequestId: requestId });
+    return null;
+  },
+});
+
+export const detachLabReport = mutation({
+  args: { listingId: v.id("listings") },
+  handler: async (ctx, { listingId }) => {
+    const listing = await ctx.db.get(listingId);
+    if (!listing) throw new ConvexError(MARKET_REFUSE.noListing);
+    await requireSeller(ctx, listing.companyId);
+    await ctx.db.patch(listingId, { labRequestId: undefined });
+    return null;
+  },
 });
 
 /** A factory offers on an open lot. Its pending offer on the same lot, if any, is replaced. */

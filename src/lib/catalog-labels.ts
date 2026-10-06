@@ -1,7 +1,40 @@
 import { defineMessages } from "@/i18n/messages";
 
 /** The backend's catalog keys (convex/lib/catalog.ts), in the order shown, with their labels. */
-export const ANALYSIS_KEYS = ["moisture", "polyphenols", "punicalagin", "mold", "oxidation", "contamination"] as const;
+export const ANALYSIS_KEYS = [
+  "moisture",
+  "polyphenols",
+  "punicalagin",
+  "pectin",
+  "mold",
+  "oxidation",
+  "heavy_metals",
+  "mycotoxins",
+  "pesticides",
+] as const;
+/** Analyses reported as a list of named lines (convex/lib/catalog.ts PANEL_ANALYSES). */
+export const PANEL_KEYS = ["heavy_metals", "mycotoxins", "pesticides"] as const;
+/** Units printed per analysis (convex/lib/labwork.ts ANALYSIS_SPECS); panels carry a unit per line. */
+export const ANALYSIS_UNITS: Record<string, string> = {
+  moisture: "% (wet basis)",
+  polyphenols: "mg GAE/g DM",
+  punicalagin: "mg/g DM",
+  pectin: "% DM",
+  mold: "CFU/g",
+  oxidation: "meq O₂/kg",
+};
+/** Default methods, pre-filled in the results form (the lab can change them). */
+export const ANALYSIS_METHODS: Record<string, string> = {
+  moisture: "Oven drying at 103–105 °C to constant mass",
+  polyphenols: "Folin–Ciocalteu",
+  punicalagin: "HPLC-DAD (α + β anomers)",
+  pectin: "Acid extraction, gravimetric",
+  mold: "Yeasts and moulds, ISO 21527-2 (DG18)",
+  oxidation: "Peroxide value, ISO 3960",
+  heavy_metals: "ICP-OES / AAS",
+  mycotoxins: "HPLC-FLD",
+  pesticides: "LC-MS/MS and GC-MS/MS multi-residue",
+};
 export const RESIDUE_KEYS = [
   "pomegranate_peels",
   "citrus_peels",
@@ -20,9 +53,13 @@ export const catalogLabels = defineMessages({
       moisture: "Moisture",
       polyphenols: "Polyphenols",
       punicalagin: "Punicalagin",
-      mold: "Mold",
-      oxidation: "Oxidation",
-      contamination: "Contamination",
+      pectin: "Pectin",
+      mold: "Yeasts & moulds",
+      oxidation: "Peroxide value",
+      heavy_metals: "Heavy metals",
+      mycotoxins: "Mycotoxins",
+      pesticides: "Pesticide residues",
+      contamination: "Heavy metals",
     },
     residues: {
       pomegranate_peels: "Pomegranate peels",
@@ -40,9 +77,13 @@ export const catalogLabels = defineMessages({
       moisture: "الرطوبة",
       polyphenols: "البوليفينول",
       punicalagin: "البونيكالاجين",
-      mold: "العفن",
-      oxidation: "الأكسدة",
-      contamination: "التلوث",
+      pectin: "البكتين",
+      mold: "الخمائر والفطريات",
+      oxidation: "مؤشر البيروكسيد",
+      heavy_metals: "المعادن الثقيلة",
+      mycotoxins: "السموم الفطرية",
+      pesticides: "بقايا المبيدات",
+      contamination: "المعادن الثقيلة",
     },
     residues: {
       pomegranate_peels: "قشور الرمان",

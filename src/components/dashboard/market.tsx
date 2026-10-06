@@ -50,6 +50,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     note: "Sun-dried, in 25 kg bags. Collection from the farm.",
     status: "open",
     photoUrls: [],
+    labRequestId: undefined,
     createdAt: NOW,
     offers: [
       {
@@ -76,6 +77,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     note: undefined,
     status: "sold",
     photoUrls: [],
+    labRequestId: undefined,
     createdAt: NOW - 86_400_000 * 6,
     offers: [],
   },
