@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import betterAuthTest from "@convex-dev/better-auth/test";
-import { beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import { api, components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -200,7 +200,7 @@ describe("the full flow", () => {
       requestId,
       status: "requested",
       clientName: "Ferme Saïd",
-      clientPhone: "+213 555 11 11 11",
+      clientPhone: "", // a farmer's phone never reaches the lab: BiorefMind connects them
       clientKind: "farm",
       totalDzd: 16500,
       analyses: [
@@ -551,5 +551,39 @@ describe("lifecycle", () => {
         requestId,
       }),
     ).rejects.toThrow("These results are not about this lot.");
+  });
+});
+
+describe("farmers' phones stay with BiorefMind", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  test("the lab never sees a farmer's phone, even typed into the sample; the admin sees both", async () => {
+    vi.stubEnv("ADMIN_EMAILS", "boss@biorefmind.com");
+    const t = newBackend();
+    const lab = await pricedLab(t);
+    const farm = await company(t, "farm", "farm@x.dz", "Ferme Saïd");
+    await ask(farm.as, farm.id, lab.id, {
+      sample: { ...sample, label: "Lot A 0555 12 34 56", notes: "Call me: +213 661 23 45 67" } as typeof sample,
+    });
+    const [q] = await lab.as.query(api.labwork.labQueue, { companyId: lab.id });
+    expect(q.clientPhone).toBe("");
+    expect(q.sample.label).toBe("Lot A •••");
+    expect(q.sample.notes).toBe("Call me: •••");
+    expect(JSON.stringify(q)).not.toContain("555");
+
+    await expect(farm.as.query(api.admin.labRequests, {})).rejects.toThrow("Only BiorefMind admins can do this.");
+    const boss = await member(t, "boss@biorefmind.com");
+    const rows = await boss.query(api.admin.labRequests, {});
+    expect(rows).toMatchObject([
+      {
+        lab: "Labo Nour",
+        labPhone: "+213 555 11 11 11",
+        client: "Ferme Saïd",
+        clientKind: "farm",
+        clientPhone: "+213 555 11 11 11",
+        status: "requested",
+        totalDzd: 16500,
+      },
+    ]);
   });
 });

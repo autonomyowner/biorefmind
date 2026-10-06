@@ -41,6 +41,7 @@ export const labMessages = defineMessages({
     detail: {
       client: "Client",
       call: "Call",
+      farmerContact: "Farmers' numbers stay private: BiorefMind will call you to arrange the sample with this farmer.",
       sample: "Sample",
       label: "Client's label",
       state: "State",
@@ -210,6 +211,7 @@ export const labMessages = defineMessages({
     detail: {
       client: "العميل",
       call: "اتصال",
+      farmerContact: "تبقى أرقام المزارعين خاصة: سيتصل بك BiorefMind لترتيب العيّنة مع هذا المزارع.",
       sample: "العيّنة",
       label: "تسمية العميل",
       state: "الحالة",

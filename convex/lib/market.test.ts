@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cleanNote, cleanPrice, cleanQuantity, cleanResidue, MARKET_REFUSE, offerFits, saleAmounts } from "./market";
+import { cleanNote, cleanPrice, cleanQuantity, cleanResidue, hasPhone, MARKET_REFUSE, maskPhones, offerFits, saleAmounts } from "./market";
 import { MARKET_FEE_RATE } from "./pricing";
 
 describe("cleanQuantity", () => {
@@ -64,5 +64,35 @@ describe("offerFits", () => {
     expect(offerFits({ quantityKg: 500 }, 500)).toBe(true);
     expect(offerFits({ quantityKg: 501 }, 500)).toBe(false);
     expect(offerFits({ quantityKg: 1 }, 0)).toBe(false);
+  });
+});
+
+describe("phone numbers in free text", () => {
+  const phones = [
+    "0555 12 34 56",
+    "0661234567",
+    "07.70.12.34.56",
+    "call 0550-11-22-33 after 5",
+    "+213 555 12 34 56",
+    "00213555123456",
+    "+213-6-61-23-45-67",
+    "036 12 34 56", // Sétif landline
+    "٠٥٥٥١٢٣٤٥٦", // Arabic-Indic digits
+  ];
+  const fine = ["2000 kg in 50 kg bags", "collected 2026-10-06", "price 15 DA, 1 500 000 DA total", "lot 12345678", "06/10/2026"];
+
+  test("Algerian mobiles, landlines and +213 numbers are found; amounts, dates and lot numbers are not", () => {
+    for (const p of phones) expect(hasPhone(p), p).toBe(true);
+    for (const s of fine) expect(hasPhone(s), s).toBe(false);
+  });
+
+  test("maskPhones hides only the number", () => {
+    expect(maskPhones("Dry peels, call 0555 12 34 56 today")).toBe("Dry peels, call ••• today");
+    expect(maskPhones("2000 kg, ready 2026-10-06")).toBe("2000 kg, ready 2026-10-06");
+  });
+
+  test("notes and messages with a phone number are refused", () => {
+    expect(() => cleanNote("Call me on 0661 23 45 67")).toThrow(MARKET_REFUSE.phone);
+    expect(cleanNote("Dry, in 50 kg bags")).toBe("Dry, in 50 kg bags");
   });
 });

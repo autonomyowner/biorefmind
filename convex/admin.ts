@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireUser } from "./lib/access";
 import { isAdmin, labListed, REFUSE } from "./lib/accounts";
+import { effectiveStatus } from "./lib/labwork";
 import { addMonths, extendBase } from "./lib/pricing";
 
 /** The signed-in profile if its email is in ADMIN_EMAILS, otherwise the admin refusal. */
@@ -90,7 +91,10 @@ export const endLabPlan = mutation({
   },
 });
 
-/** Every marketplace sale: totals, the fees buyers owe BiorefMind, and the latest 50. */
+/**
+ * Every marketplace sale: totals, the fees buyers owe BiorefMind, and the latest 50 with both phones
+ * (only BiorefMind sees them; it puts the two sides in touch).
+ */
 export const sales = query({
   args: {},
   handler: async (ctx) => {
@@ -107,7 +111,9 @@ export const sales = query({
         totalDzd: s.totalDzd,
         feeDzd: s.feeDzd,
         seller: seller?.name ?? "",
+        sellerPhone: seller?.phone ?? "",
         buyer: buyer?.name ?? "",
+        buyerPhone: buyer?.phone ?? "",
         createdAt: s.createdAt,
       });
     }
@@ -117,5 +123,33 @@ export const sales = query({
       feeDzd: rows.reduce((sum, s) => sum + s.feeDzd, 0),
       recent,
     };
+  },
+});
+
+/** The latest 50 lab requests with the lab's and the client's phones, so BiorefMind can put them in touch. */
+export const labRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const now = Date.now();
+    const rows = await ctx.db.query("labRequests").order("desc").take(50);
+    const out = [];
+    for (const r of rows) {
+      const [lab, client] = await Promise.all([ctx.db.get(r.labId), ctx.db.get(r.clientId)]);
+      out.push({
+        requestId: r._id,
+        lab: lab?.name ?? "",
+        labPhone: lab?.phone ?? "",
+        client: client?.name ?? "",
+        clientKind: r.clientKind,
+        clientPhone: client?.phone ?? "",
+        clientRegion: client?.region ?? "",
+        analyses: r.analyses.map((a) => a.analysis),
+        status: effectiveStatus(r, now, lab !== null && labListed(lab, now)),
+        totalDzd: r.totalDzd,
+        createdAt: r.createdAt,
+      });
+    }
+    return out;
   },
 });

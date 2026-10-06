@@ -9,6 +9,7 @@ import {
   cleanQuantity,
   cleanResidue,
   MARKET_REFUSE,
+  maskPhones,
   MAX_LISTING_PHOTOS,
   offerFits,
   saleAmounts,
@@ -144,7 +145,7 @@ export const myListings = query({
           quantityKg: o.quantityKg,
           priceDzdPerKg: o.priceDzdPerKg,
           totalDzd: saleAmounts(o.quantityKg, o.priceDzdPerKg).totalDzd,
-          message: o.message,
+          message: maskPhones(o.message),
           status: o.status,
           createdAt: o.createdAt,
         });
@@ -206,7 +207,7 @@ async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: bo
       remainingKg: l.remainingKg,
       priceDzdPerKg: l.priceDzdPerKg,
       region: l.region,
-      note: l.note,
+      note: maskPhones(l.note),
       photoUrls: await photoUrls(ctx, l.photoIds),
       sellerName: seller?.name ?? "",
       lab: await lotBadge(ctx, l, now, signedIn),
@@ -388,7 +389,7 @@ export const myOffers = query({
   },
 });
 
-/** Sales the workspace made or received, newest first, with the other side's contact. */
+/** Sales the workspace made or received, newest first. No phones: BiorefMind puts the two sides in touch. */
 export const mySales = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, { companyId }) => {
@@ -420,7 +421,6 @@ export const mySales = query({
         side,
         otherName: other?.name ?? "",
         otherRegion: other?.region ?? "",
-        otherPhone: other?.phone ?? "",
         createdAt: s.createdAt,
       });
     }
