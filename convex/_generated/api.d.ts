@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as assistant from "../assistant.js";
 import type * as auth from "../auth.js";
@@ -22,6 +23,7 @@ import type * as labs from "../labs.js";
 import type * as labwork from "../labwork.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_accounts from "../lib/accounts.js";
+import type * as lib_ai from "../lib/ai.js";
 import type * as lib_catalog from "../lib/catalog.js";
 import type * as lib_crops from "../lib/crops.js";
 import type * as lib_insights from "../lib/insights.js";
@@ -31,6 +33,7 @@ import type * as lib_pricing from "../lib/pricing.js";
 import type * as lib_scoring from "../lib/scoring.js";
 import type * as lib_shipmentView from "../lib/shipmentView.js";
 import type * as market from "../market.js";
+import type * as photoCheck from "../photoCheck.js";
 import type * as seed from "../seed.js";
 import type * as shipments from "../shipments.js";
 import type * as users from "../users.js";
@@ -43,6 +46,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  ai: typeof ai;
   analytics: typeof analytics;
   assistant: typeof assistant;
   auth: typeof auth;
@@ -56,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   labwork: typeof labwork;
   "lib/access": typeof lib_access;
   "lib/accounts": typeof lib_accounts;
+  "lib/ai": typeof lib_ai;
   "lib/catalog": typeof lib_catalog;
   "lib/crops": typeof lib_crops;
   "lib/insights": typeof lib_insights;
@@ -65,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   "lib/scoring": typeof lib_scoring;
   "lib/shipmentView": typeof lib_shipmentView;
   market: typeof market;
+  photoCheck: typeof photoCheck;
   seed: typeof seed;
   shipments: typeof shipments;
   users: typeof users;

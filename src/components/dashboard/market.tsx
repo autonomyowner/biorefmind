@@ -15,6 +15,8 @@ import { fill } from "@/components/dashboard/messages";
 import { marketMessages } from "@/components/dashboard/market-messages";
 import { Panel } from "@/components/dashboard/profile-card";
 import { LabBadge } from "@/components/marketplace/lab-badge";
+import { PhotoCheckBox } from "@/components/marketplace/photo-check";
+import { FarmerPhotoCheck } from "@/components/dashboard/farmer-photo-check";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
 import { api } from "@/lib/backend";
@@ -52,6 +54,16 @@ const SAMPLE_LISTINGS: MyListing[] = [
     status: "open",
     photoUrls: [],
     labRequestId: undefined,
+    photoCheck: {
+      status: "done",
+      result: {
+        match: "yes",
+        seen: { en: "Dried pomegranate peels in woven bags, dark red and evenly dried.", ar: "قشور رمان مجففة في أكياس منسوجة، حمراء داكنة ومجففة بشكل متساوٍ." },
+        state: "dried",
+        concerns: ["browning"],
+        tip: { en: "Add one close-up photo in daylight so buyers can see the peel colour.", ar: "أضف صورة قريبة في ضوء النهار ليرى المشترون لون القشور." },
+      },
+    },
     createdAt: NOW,
     offers: [
       {
@@ -79,6 +91,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     status: "sold",
     photoUrls: [],
     labRequestId: undefined,
+    photoCheck: undefined,
     createdAt: NOW - 86_400_000 * 6,
     offers: [],
   },
@@ -505,6 +518,7 @@ function ListingCard({ listing: l }: { listing: MyListing }) {
         </div>
       </div>
       {l.note ? <p className="mt-3 text-[14px] leading-relaxed text-foreground/80">{l.note}</p> : null}
+      {l.photoCheck && l.status === "open" ? <FarmerPhotoCheck listingId={l.listingId} check={l.photoCheck} residue={name} canAct={canAct} /> : null}
 
       {l.status === "open" ? (
         <div className="mt-4">
@@ -657,6 +671,7 @@ function MarketCard({ listing: l }: { listing: MarketListing }) {
       {l.note ? <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-foreground/80">{l.note}</p> : null}
       {/* Browse has no detail view, so the card carries the disclaimer and the certificate link. */}
       {l.lab ? <LabBadge lab={l.lab} detail className="mt-3" /> : null}
+      {l.photoCheck ? <PhotoCheckBox check={l.photoCheck} residue={name} className="mt-3" /> : null}
       <div className="mt-auto pt-3">
         {offering ? (
           <OfferForm listing={l} onDone={() => setOffering(false)} />

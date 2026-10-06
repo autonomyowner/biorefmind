@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { photoCheckResultValidator } from "./lib/ai";
 
 /** Workspace roles, highest first. */
 export const memberRole = v.union(v.literal("owner"), v.literal("manager"), v.literal("inspector"));
@@ -304,6 +305,35 @@ export default defineSchema({
   })
     .index("by_shipment", ["shipmentId", "createdAt"])
     .index("by_company", ["companyId", "createdAt"]),
+
+  /** Admin's AI settings (one row). Design: specs/2026-10-06-ai-photo-check-design.md */
+  aiSettings: defineTable({
+    openrouterKey: v.optional(v.string()), // never returned to any client; falls back to env OPENROUTER_API_KEY
+    model: v.optional(v.string()),
+    photoCheck: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  }),
+
+  /** The AI's look at a lot's photos. Shown publicly only when done; never a lab result. */
+  photoChecks: defineTable({
+    listingId: v.id("listings"),
+    companyId: v.id("companies"), // the farm, for its daily cap
+    status: v.union(v.literal("pending"), v.literal("done"), v.literal("failed"), v.literal("off")),
+    result: v.optional(photoCheckResultValidator),
+    model: v.optional(v.string()),
+    costUsd: v.optional(v.number()),
+    attempts: v.number(),
+    queuedAt: v.optional(v.number()), // when it last became pending; stuck after 10 minutes
+    retryDay: v.optional(v.number()), // UTC day of the latest "Try again"
+    retries: v.optional(v.number()), // presses on retryDay
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_listing", ["listingId"])
+    .index("by_created", ["createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_finished", ["finishedAt"]),
 
   /** AI assistant conversation, one running thread per user per company. */
   assistantMessages: defineTable({

@@ -6,7 +6,6 @@ import { requireMember } from "./lib/access";
 import { getCrop } from "./lib/crops";
 
 const QUESTION_REFUSAL = "Please type a question.";
-const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
 
 export const messages = query({
   args: { companyId: v.id("companies") },
@@ -147,7 +146,7 @@ export const ask = action({
     await ctx.runMutation(internal.assistant.store, { companyId, userId: c.userId, role: "user", content: q });
 
     let answer: string | null = null;
-    const key = process.env.OPENROUTER_API_KEY;
+    const { key, model } = await ctx.runQuery(internal.ai.config, {});
     if (key) {
       try {
         const data = `Workspace: ${c.companyName}\n\n${rulesText()}\n\nOverview: ${JSON.stringify(c.overview)}\n\nLatest shipments: ${JSON.stringify(c.shipments)}`;
@@ -155,7 +154,7 @@ export const ask = action({
           method: "POST",
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: process.env.AI_MODEL || DEFAULT_MODEL,
+            model,
             max_tokens: 800,
             messages: [
               { role: "system", content: `${SYSTEM_PROMPT}\n\n${data}` },
