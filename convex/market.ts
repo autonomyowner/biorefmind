@@ -15,6 +15,7 @@ import {
   saleAmounts,
 } from "./lib/market";
 import { badgeVisible, LAB_REFUSE } from "./lib/labwork";
+import { checkFor, farmerView, publicView, queuePhotoCheck } from "./photoCheck";
 
 // Design and contract: docs/superpowers/specs/2026-10-04-marketplace-design.md
 
@@ -86,7 +87,7 @@ export const createListing = mutation({
       if (claimed || !(await ctx.db.system.get(storageId))) throw new ConvexError(MARKET_REFUSE.photoMissing);
       await ctx.db.insert("photoClaims", { storageId, companyId: company._id });
     }
-    return await ctx.db.insert("listings", {
+    const listingId = await ctx.db.insert("listings", {
       companyId: company._id,
       residue,
       residueName,
@@ -100,6 +101,8 @@ export const createListing = mutation({
       createdBy: user._id,
       createdAt: Date.now(),
     });
+    if (photoIds.length > 0) await queuePhotoCheck(ctx, listingId);
+    return listingId;
   },
 });
 
@@ -162,6 +165,7 @@ export const myListings = query({
         status: l.status,
         photoUrls: await photoUrls(ctx, l.photoIds),
         labRequestId: l.labRequestId,
+        photoCheck: farmerView(await checkFor(ctx, l._id)),
         createdAt: l.createdAt,
         offers,
       });
@@ -211,6 +215,7 @@ async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: bo
       photoUrls: await photoUrls(ctx, l.photoIds),
       sellerName: seller?.name ?? "",
       lab: await lotBadge(ctx, l, now, signedIn),
+      photoCheck: publicView(await checkFor(ctx, l._id)),
       createdAt: l.createdAt,
     });
     if (out.length >= 100) break;

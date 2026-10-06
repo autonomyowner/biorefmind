@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import betterAuthTest from "@convex-dev/better-auth/test";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -15,6 +15,15 @@ beforeAll(async () => {
       .map(([, load]) => load()),
   );
 }, 180_000);
+
+// Posting a lot with photos schedules the AI photo check (covered in ai.test.ts). Fake setTimeout so it
+// never runs on its own after a test has ended; Date stays real.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function newBackend() {
   const t = convexTest(schema, modules);

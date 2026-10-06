@@ -6,7 +6,7 @@ import { effectiveStatus } from "./lib/labwork";
 import { addMonths, extendBase } from "./lib/pricing";
 
 /** The signed-in profile if its email is in ADMIN_EMAILS, otherwise the admin refusal. */
-async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
   const user = await requireUser(ctx);
   if (!isAdmin(user.email)) throw new ConvexError(REFUSE.admin);
   return user;

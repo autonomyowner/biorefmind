@@ -305,6 +305,48 @@ export default defineSchema({
     .index("by_shipment", ["shipmentId", "createdAt"])
     .index("by_company", ["companyId", "createdAt"]),
 
+  /** Admin's AI settings (one row). Design: specs/2026-10-06-ai-photo-check-design.md */
+  aiSettings: defineTable({
+    openrouterKey: v.optional(v.string()), // never returned to any client; falls back to env OPENROUTER_API_KEY
+    model: v.optional(v.string()),
+    photoCheck: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  }),
+
+  /** The AI's look at a lot's photos. Shown publicly only when done; never a lab result. */
+  photoChecks: defineTable({
+    listingId: v.id("listings"),
+    status: v.union(v.literal("pending"), v.literal("done"), v.literal("failed"), v.literal("off")),
+    result: v.optional(
+      v.object({
+        match: v.union(v.literal("yes"), v.literal("unsure"), v.literal("no")),
+        seen: v.object({ en: v.string(), ar: v.string() }),
+        state: v.union(v.literal("fresh"), v.literal("dried"), v.literal("unclear")),
+        concerns: v.array(
+          v.union(
+            v.literal("mould"),
+            v.literal("wet"),
+            v.literal("browning"),
+            v.literal("foreign_matter"),
+            v.literal("mixed"),
+            v.literal("poor_photo"),
+          ),
+        ),
+        tip: v.object({ en: v.string(), ar: v.string() }),
+      }),
+    ),
+    model: v.optional(v.string()),
+    costUsd: v.optional(v.number()),
+    attempts: v.number(),
+    retryDay: v.optional(v.number()), // UTC day of the latest "Try again"
+    retries: v.optional(v.number()), // presses on retryDay
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_listing", ["listingId"])
+    .index("by_created", ["createdAt"]),
+
   /** AI assistant conversation, one running thread per user per company. */
   assistantMessages: defineTable({
     companyId: v.id("companies"),
