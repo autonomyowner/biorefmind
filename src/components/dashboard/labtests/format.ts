@@ -1,0 +1,32 @@
+// Pure helpers for the lab-tests screens (no React, no path aliases, so tests can import them).
+
+const DAY = 86_400_000;
+
+/** Arabic plural class for a count: 1, 2, 3–10, then 11+ (and 0). English uses one/other. */
+export function pluralClass(n: number): "one" | "two" | "few" | "many" {
+  if (n === 1) return "one";
+  if (n === 2) return "two";
+  if (n >= 3 && n <= 10) return "few";
+  return "many";
+}
+
+/** Today as a date input value (local time). */
+export function todayInput(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** A date input value → midday local time in ms (stays on the same calendar day); empty or bad → NaN. */
+export function inputToMs(value: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return Number.NaN;
+  return new Date(`${value}T12:00:00`).getTime();
+}
+
+/**
+ * Why an expired request expired. A waiting request expires 7 days after it was sent; an accepted
+ * one 30 days after the lab accepted it. So one that expired within 30 days of being sent was
+ * never answered; after that the row alone cannot tell.
+ */
+export function expiredWhy(createdAt: number, now: number): "noAnswer" | "unknown" {
+  return now - createdAt <= 30 * DAY ? "noAnswer" : "unknown";
+}
