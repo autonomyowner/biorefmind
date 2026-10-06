@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { Clock, FlaskConical, MapPin, Phone, Send } from "lucide-react";
 
@@ -8,7 +8,8 @@ import { useDashboard } from "@/components/dashboard/shell";
 import { dashboardMessages } from "@/components/dashboard/messages";
 import { KeyChips, Panel } from "@/components/dashboard/profile-card";
 import { labtestsMessages } from "@/components/dashboard/labtests/labtests-messages";
-import { RequestDialog } from "@/components/dashboard/labtests/request-dialog";
+import { useAssistantCard } from "@/components/dashboard/assistant/use-card";
+import { RequestDialog, type RequestPreset } from "@/components/dashboard/labtests/request-dialog";
 import { PRIMARY, daysText, telHref, useLabFormat } from "@/components/dashboard/labtests/shared";
 import { Spinner } from "@/components/ui/spinner";
 import { useMessages } from "@/i18n/provider";
@@ -60,6 +61,22 @@ export function LabDirectory({ id, title }: { id?: string; title: string }) {
   const [asking, setAsking] = useState<DirectoryLab | null>(null);
   const live = useQuery(api.labs.directory, guest ? "skip" : service ? { service } : {}) as DirectoryLab[] | undefined;
   const labs = guest ? SAMPLE_LABS.filter((l) => !service || l.services.includes(service)) : live;
+
+  // Opened from an assistant card: that lab's request form with the analyses ticked, or the labs that do the first one.
+  const [preset, setPreset] = useState<RequestPreset | undefined>();
+  const { card, done } = useAssistantCard("lab_request");
+  const [used, setUsed] = useState<typeof card>(null);
+  if (card && card !== used && (!card.labId || labs !== undefined)) {
+    setUsed(card);
+    const lab = card.labId ? labs?.find((l) => l.companyId === card.labId) : undefined;
+    if (lab) {
+      setPreset({ analyses: card.analyses, listingId: card.listingId });
+      setAsking(lab);
+    } else setService(card.analyses[0] ?? null);
+  }
+  useEffect(() => {
+    if (used) done();
+  }, [used, done]);
 
   return (
     <Panel id={id} title={title}>
@@ -115,7 +132,14 @@ export function LabDirectory({ id, title }: { id?: string; title: string }) {
           ))}
         </ul>
       )}
-      <RequestDialog lab={asking} onClose={() => setAsking(null)} />
+      <RequestDialog
+        lab={asking}
+        preset={preset}
+        onClose={() => {
+          setAsking(null);
+          setPreset(undefined);
+        }}
+      />
     </Panel>
   );
 }

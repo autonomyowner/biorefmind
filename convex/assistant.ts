@@ -12,7 +12,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { resolveConfig } from "./ai";
-import { requireMember, requireUser } from "./lib/access";
+import { findMembership, requireMember, requireUser } from "./lib/access";
 import { labListed } from "./lib/accounts";
 import { OPENROUTER_URL, utcDay } from "./lib/ai";
 import { LAB_DAILY_READS, parseReading, readingPrompt, readingValidator, readSchema, sniffType, type Reading } from "./lib/aiRead";
@@ -109,16 +109,20 @@ export const messages = query({
   },
 });
 
-/** One card, for the form it opens (with photo URLs for a listing). */
+/**
+ * One card, for the form it opens (with photo URLs for a listing). Null for anything that isn't the caller's own
+ * card (the id comes from a URL, so a bad one must not break the page).
+ */
 export const card = query({
-  args: { messageId: v.id("aiMessages"), index: v.number() },
+  args: { messageId: v.string(), index: v.number() },
   handler: async (ctx, { messageId, index }) => {
     const user = await requireUser(ctx);
-    const msg = await ctx.db.get(messageId);
+    const id = ctx.db.normalizeId("aiMessages", messageId);
+    const msg = id ? await ctx.db.get(id) : null;
     const thread = msg ? await ctx.db.get(msg.threadId) : null;
     const c = msg?.cards[index];
-    if (!msg || !thread || thread.userId !== user._id || !c) throw new ConvexError(ASSIST_REFUSE.noCard);
-    await requireMember(ctx, thread.companyId);
+    if (!msg || !thread || thread.userId !== user._id || !c) return null;
+    if (!(await findMembership(ctx, thread.companyId, user._id))) return null;
     const photos = [];
     if (c.type === "listing") {
       for (const storageId of c.photoIds) {

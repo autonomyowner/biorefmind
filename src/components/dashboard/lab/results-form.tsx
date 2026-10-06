@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, use, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Plus, ScanText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +29,12 @@ import type { LabQueueRow, LabReading, LabResults } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Mode = "release" | "amend";
+
+/**
+ * A reading waiting for one request's form (the assistant read the sheet in a chat). The queue provides it;
+ * the release form takes it once when it opens, exactly as if the reader card had just answered.
+ */
+export const PendingReading = createContext<{ requestId: string; reading: LabReading; take: () => void } | null>(null);
 
 /** A field the results reader filled, until the analyst edits it. */
 const AI_FILLED = "border-violet/60 bg-violet/[0.07] ring-2 ring-violet/15";
@@ -92,8 +98,21 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
   const [busy, setBusy] = useState<"draft" | "release" | null>(null);
   const [confirming, setConfirming] = useState(false);
   const locale = useLocale();
+  const pending = use(PendingReading);
+  const fromChat = mode === "release" && pending?.requestId === row.requestId ? pending : null;
   const [aiFilled, setAiFilled] = useState<ReadonlySet<string>>(new Set());
   const [aiRead, setAiRead] = useState<{ count: number; notes: LabReading["notes"] } | null>(null);
+  const [chatUsed, setChatUsed] = useState(false);
+  if (fromChat && !chatUsed) {
+    setChatUsed(true);
+    const { form: next, filled } = applyReading(form, fromChat.reading);
+    setForm(next);
+    setAiFilled(new Set(filled));
+    setAiRead({ count: filled.filter((k) => k.startsWith("item:") || k.startsWith("line:")).length, notes: fromChat.reading.notes });
+  }
+  useEffect(() => {
+    if (chatUsed) fromChat?.take();
+  }, [chatUsed, fromChat]);
   const seen = (key: string) =>
     setAiFilled((s) => {
       if (!s.has(key)) return s;

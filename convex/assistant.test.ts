@@ -239,7 +239,10 @@ describe("photos and cards", () => {
     expect(card).toMatchObject({ type: "listing", residue: "pomegranate_peels", photos: [{ storageId: p }] });
 
     const other = await company(t, "farm", "other@x.dz", "Ferme B");
-    await expect(other.as.query(api.assistant.card, { messageId: answer.messageId, index: 0 })).rejects.toThrow(ASSIST_REFUSE.noCard);
+    // Someone else's card, a wrong index or a made-up id: nothing.
+    expect(await other.as.query(api.assistant.card, { messageId: answer.messageId, index: 0 })).toBeNull();
+    expect(await farm.as.query(api.assistant.card, { messageId: answer.messageId, index: 3 })).toBeNull();
+    expect(await farm.as.query(api.assistant.card, { messageId: "nonsense", index: 0 })).toBeNull();
     await expect(
       other.as.mutation(api.market.createListing, { companyId: other.id, residue: "pomegranate_peels", quantityKg: 1, priceDzdPerKg: 1, photoIds: [p] }),
     ).rejects.toThrow("One of the photos could not be found.");

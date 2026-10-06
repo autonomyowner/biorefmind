@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { KeyRound, ScanSearch, ScanText, Sparkles } from "lucide-react";
+import { KeyRound, MessagesSquare, ScanSearch, ScanText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { CountUp } from "@/components/motion";
@@ -36,7 +36,7 @@ export function AiSection() {
 
   const [key, setKey] = useState("");
   const [model, setModel] = useState<string | null>(null); // null = show the saved model
-  const [busy, setBusy] = useState<"" | "key" | "remove" | "test" | "model" | "switch" | "reader">("");
+  const [busy, setBusy] = useState<"" | "key" | "remove" | "test" | "model" | "switch" | "reader" | "assistant">("");
   const [armed, setArmed] = useState(false);
   const [test, setTest] = useState<string | null>(null);
 
@@ -71,14 +71,15 @@ export function AiSection() {
         <Sparkles className="size-5 text-violet" /> AI
       </h2>
       <p className="mt-1 text-[14px] text-muted-foreground">
-        BiorefMind uses OpenRouter for the photo check on lots, the lab results reader and the assistant. The key never leaves the backend.
+        BiorefMind uses OpenRouter for the dashboard assistant, the photo check on lots and the lab results reader. The key never leaves the backend.
       </p>
       {!s ? (
         <Spinner className="flex py-8" />
       ) : (
         <>
-          <dl className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))]">
+          <dl className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(5,minmax(0,1fr))]">
             {[
+              { label: "Assistant questions this month", value: <CountUp value={s.month.questions} /> },
               { label: "Photo checks this month", value: <CountUp value={s.month.done} /> },
               { label: "Failed checks this month", value: <CountUp value={s.month.failed} /> },
               { label: "Lab sheets read this month", value: <CountUp value={s.month.reads} /> },
@@ -181,6 +182,23 @@ export function AiSection() {
               </div>
             </form>
             <div className="divide-y divide-foreground/[0.07] rounded-2xl border border-white bg-white/70 px-4">
+              <div className="flex items-start justify-between gap-4 py-4">
+                <div>
+                  <p className="flex items-center gap-2 text-[14px] font-semibold">
+                    <MessagesSquare className="size-4 text-violet" /> Dashboard assistant
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">
+                    Chat for farmers, factories and labs. About $0.002–0.01 a question, 60 a day per workspace.
+                  </p>
+                </div>
+                <Switch
+                  className="mt-1"
+                  checked={s.assistant}
+                  disabled={busy !== ""}
+                  aria-label="Dashboard assistant"
+                  onCheckedChange={(on) => void run("assistant", () => update({ assistant: on }), on ? "Assistant on." : "Assistant off.")}
+                />
+              </div>
               <div className="flex items-start justify-between gap-4 py-4">
                 <div>
                   <p className="flex items-center gap-2 text-[14px] font-semibold">
