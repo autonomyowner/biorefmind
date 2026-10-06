@@ -169,6 +169,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       ],
       totalDzd: 13500,
       sample: { residue: "pomegranate_peels", label: "Lot A — sun-dried", state: "dried", collectedAt: now - 2 * DAY, region: "Sétif", grams: 400 },
+      respondedAt: undefined,
       createdAt: now - 3 * 3_600_000,
     },
     {
@@ -185,6 +186,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       analyses: [{ analysis: "mold", priceDzd: 3000, days: 5 }],
       totalDzd: 3000,
       sample: { residue: "citrus_peels", label: "Orange peel, batch 12", state: "fresh", collectedAt: now - DAY, region: "Blida", grams: 1200, packaging: "Cool box" },
+      respondedAt: now - DAY,
       createdAt: now - 2 * DAY,
     },
     {
@@ -206,6 +208,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       dueAt: now - 2 * DAY,
       condition: "Chilled, sealed bag",
       paid: true,
+      respondedAt: now - 17 * DAY,
       createdAt: now - 18 * DAY,
     },
     {
@@ -224,6 +227,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       dueAt: now - 2 * DAY,
       reports: [{ code: "PREVIEW00000", version: 1, reportNo: `S-${new Date(now).getFullYear()}-0005-R1`, releasedAt: now - 3 * DAY, amendReason: undefined }],
       paid: true,
+      respondedAt: now - 13 * DAY,
       createdAt: now - 14 * DAY,
     },
   ];

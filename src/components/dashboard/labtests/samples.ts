@@ -32,6 +32,7 @@ export const SAMPLE_REQUESTS: MyLabRequest[] = [
     cancelledBy: undefined,
     reports: [],
     attached: false,
+    respondedAt: undefined,
     createdAt: NOW - DAY,
   },
   {
@@ -54,6 +55,7 @@ export const SAMPLE_REQUESTS: MyLabRequest[] = [
     cancelledBy: undefined,
     reports: [],
     attached: false,
+    respondedAt: NOW - 4 * DAY,
     createdAt: NOW - 5 * DAY,
   },
   {
@@ -77,6 +79,7 @@ export const SAMPLE_REQUESTS: MyLabRequest[] = [
     cancelledBy: undefined,
     reports: [{ code: "K7M2Q9XRT4HD", version: 1, reportNo: "S-2026-0031-R1", releasedAt: NOW - 5 * DAY, amendReason: undefined }],
     attached: false,
+    respondedAt: NOW - 14 * DAY,
     createdAt: NOW - 15 * DAY,
   },
 ];
