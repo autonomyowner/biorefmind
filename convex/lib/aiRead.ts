@@ -1,4 +1,4 @@
-import { ConvexError } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { cleanPair, cleanText, type Bilingual } from "./ai";
 import { ANALYSIS_SPECS, isPanel } from "./labwork";
 import type { Analysis } from "./catalog";
@@ -216,3 +216,18 @@ export function parseReading(text: string, analyses: readonly string[], received
   if (to && (!from || to >= from)) reading.testedTo = to;
   return reading;
 }
+
+const qualifierV = v.optional(v.union(v.literal("<"), v.literal(">"), v.literal("nd")));
+/** Convex validator for a Reading (stored on an assistant card). */
+export const readingValidator = v.object({
+  items: v.array(v.object({ analysis: v.string(), value: v.number(), qualifier: qualifierV, uncertainty: v.optional(v.number()) })),
+  panels: v.array(
+    v.object({
+      analysis: v.string(),
+      lines: v.array(v.object({ name: v.string(), value: v.number(), qualifier: qualifierV, unit: v.string() })),
+    }),
+  ),
+  testedFrom: v.optional(v.string()),
+  testedTo: v.optional(v.string()),
+  notes: v.array(v.object({ en: v.string(), ar: v.string() })),
+});

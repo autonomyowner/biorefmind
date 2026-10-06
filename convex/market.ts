@@ -78,14 +78,17 @@ export const createListing = mutation({
     const note = cleanNote(args.note);
     const photoIds = [...new Set(args.photoIds)];
     if (photoIds.length > MAX_LISTING_PHOTOS) throw new ConvexError(MARKET_REFUSE.photos);
-    // Each photo must be a fresh upload: stored, and not yet attached anywhere.
+    // Each photo must be a fresh upload (stored, not attached anywhere), or a photo this workspace sent to
+    // its assistant (it then stops being an assistant photo, so deleting the chat keeps it).
     for (const storageId of photoIds) {
       const claimed = await ctx.db
         .query("photoClaims")
         .withIndex("by_storage", (q) => q.eq("storageId", storageId))
         .first();
-      if (claimed || !(await ctx.db.system.get(storageId))) throw new ConvexError(MARKET_REFUSE.photoMissing);
-      await ctx.db.insert("photoClaims", { storageId, companyId: company._id });
+      const fromAssistant = claimed?.source === "assistant" && claimed.companyId === company._id;
+      if ((claimed && !fromAssistant) || !(await ctx.db.system.get(storageId))) throw new ConvexError(MARKET_REFUSE.photoMissing);
+      if (fromAssistant) await ctx.db.replace(claimed._id, { storageId, companyId: company._id });
+      else await ctx.db.insert("photoClaims", { storageId, companyId: company._id });
     }
     const listingId = await ctx.db.insert("listings", {
       companyId: company._id,
@@ -193,7 +196,7 @@ async function lotBadge(ctx: QueryCtx, l: Doc<"listings">, now: number, withCode
 }
 
 /** Open lots, newest first (up to 100), optionally of one residue. No contact details. */
-async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: boolean) {
+export async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: boolean) {
   const now = Date.now();
   const open = await ctx.db
     .query("listings")
