@@ -5,31 +5,32 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
 import {
-  Building2,
+  ChartColumn,
   CreditCard,
   FlaskConical,
   HandCoins,
-  Home,
+  LayoutDashboard,
   ListChecks,
   LogOut,
   MapPin,
   PackageSearch,
   Receipt,
+  Settings,
   ShieldCheck,
   Sprout,
   Tags,
-  TestTubes,
-  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
 import { LanguageSwitch } from "@/components/language-switch";
 import { AppFrame, FrameSkeleton } from "@/components/app-frame";
-import { dashboardMessages, type DashboardMessages } from "@/components/dashboard/messages";
+import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
+import { DASH, withGuest, type DashPage } from "@/components/dashboard/links";
+import { dashboardMessages } from "@/components/dashboard/messages";
 import { useMessages } from "@/i18n/provider";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/lib/backend";
-import type { Kind, Viewer, Workspace } from "@/lib/types";
+import type { Viewer, Workspace } from "@/lib/types";
 
 type Dashboard = { workspace: Workspace; viewer: NonNullable<Viewer>; guest: boolean };
 
@@ -57,33 +58,25 @@ const GUEST: Dashboard = {
   },
 };
 
-type NavItem = { href: string; label: keyof DashboardMessages["nav"]; icon: LucideIcon };
-
-const NAV: Record<Kind, NavItem[]> = {
-  farm: [
-    { href: "#top", label: "home", icon: Home },
-    { href: "#listings", label: "listings", icon: Sprout },
-    { href: "#sales", label: "sales", icon: Receipt },
-    { href: "#labtests", label: "labtests", icon: TestTubes },
-    { href: "#labs", label: "labs", icon: FlaskConical },
-  ],
-  lab: [
-    { href: "#top", label: "home", icon: Home },
-    { href: "#requests", label: "requests", icon: ListChecks },
-    { href: "#prices", label: "prices", icon: Tags },
-    { href: "#profile", label: "profile", icon: UserRound },
-    { href: "#plan", label: "plan", icon: CreditCard },
-  ],
-  factory: [
-    { href: "#top", label: "home", icon: Home },
-    { href: "#browse", label: "browse", icon: PackageSearch },
-    { href: "#offers", label: "offers", icon: HandCoins },
-    { href: "#sales", label: "sales", icon: Receipt },
-    { href: "#labtests", label: "labtests", icon: TestTubes },
-    { href: "#labs", label: "labs", icon: FlaskConical },
-    { href: "#enterprise", label: "enterprise", icon: Building2 },
-  ],
+/** The icon of every dashboard page (sidebar and ⌘K). */
+export const PAGE_ICON: Record<DashPage, LucideIcon> = {
+  overview: LayoutDashboard,
+  listings: Sprout,
+  sales: Receipt,
+  browse: PackageSearch,
+  offers: HandCoins,
+  labs: FlaskConical,
+  requests: ListChecks,
+  prices: Tags,
+  analytics: ChartColumn,
+  plan: CreditCard,
+  settings: Settings,
 };
+
+/** The pages the signed-in account has, in sidebar order (for the ⌘K palette and links). */
+export function useDashPages(): readonly DashPage[] {
+  return PAGES[useDashboard().workspace.kind];
+}
 
 /** Auth guard + the dashboard frame: sidebar for the account's type, top bar, content. */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -115,9 +108,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       ? { viewer, workspace: workspaces[0], guest: false }
       : null;
 
-  if (!value) return <FrameSkeleton />;
+  // A page this account does not have (a lab on /dashboard/listings) goes to the Overview.
+  const pages = value ? PAGES[value.workspace.kind] : null;
+  const page = pageOfPath(pathname);
+  const allowed = !pages || page === null || pages.includes(page);
+  useEffect(() => {
+    if (!allowed) router.replace(withGuest(DASH.overview, guest));
+  }, [allowed, guest, router]);
 
-  const items = NAV[value.workspace.kind].map((i) => ({ ...i, label: t.nav[i.label] }));
+  if (!value || !pages) return <FrameSkeleton />;
+
+  const items = pages.map((p) => ({ href: withGuest(DASH[p], guest), label: t.nav.pages[p], icon: PAGE_ICON[p] }));
   const initials = value.workspace.name
     .split(/\s+/)
     .slice(0, 2)
@@ -178,7 +179,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </>
         }
       >
-        {children}
+        {allowed ? children : null}
       </AppFrame>
     </DashboardContext>
   );
