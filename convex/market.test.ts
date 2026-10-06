@@ -167,7 +167,7 @@ describe("listings", () => {
 });
 
 describe("offers and sales", () => {
-  test("offer → accept records a sale with the 5% buyer fee and shares phones", async () => {
+  test("offer → accept records a sale with the 5% buyer fee; neither side ever sees a phone", async () => {
     const t = newBackend();
     const f = await farm(t);
     const buyer = await factory(t);
@@ -200,12 +200,14 @@ describe("offers and sales", () => {
         totalDzd: 28_000,
         feeDzd: 1400,
         otherName: "Peel Factory",
-        otherPhone: "+213 555 22 22 22",
       },
     ]);
     expect(await buyer.as.query(api.market.mySales, { companyId: buyer.id })).toMatchObject([
-      { saleId, side: "bought", otherName: "Ferme Saïd", otherRegion: "Sétif", otherPhone: "+213 555 11 11 11", feeDzd: 1400 },
+      { saleId, side: "bought", otherName: "Ferme Saïd", otherRegion: "Sétif", feeDzd: 1400 },
     ]);
+    // BiorefMind connects them: phones reach only the admin page.
+    expect(JSON.stringify(await f.as.query(api.market.mySales, { companyId: f.id }))).not.toContain("555");
+    expect(JSON.stringify(await buyer.as.query(api.market.mySales, { companyId: buyer.id }))).not.toContain("555");
     expect((await f.as.query(api.market.myListings, { companyId: f.id }))[0]).toMatchObject({ status: "sold", remainingKg: 0 });
     expect(await buyer.as.query(api.market.browse, {})).toEqual([]);
     await expect(f.as.mutation(api.market.respond, { offerId, accept: true })).rejects.toThrow(
@@ -381,6 +383,27 @@ describe("public marketplace", () => {
     vi.unstubAllEnvs();
   });
 
+  test("phone numbers cannot be typed into notes or offers, and old ones are masked", async () => {
+    const t = newBackend();
+    const f = await farm(t);
+    const buyer = await factory(t);
+    await expect(list(f.as, f.id, { note: "Call 0555 12 34 56" })).rejects.toThrow(
+      "Phone numbers can't be shared here: BiorefMind puts buyers and sellers in touch.",
+    );
+    const listingId = await list(f.as, f.id, { note: "Dry, in bags" });
+    await expect(
+      buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId, quantityKg: 10, priceDzdPerKg: 15, message: "ring +213 661 23 45 67" }),
+    ).rejects.toThrow("Phone numbers can't be shared here: BiorefMind puts buyers and sellers in touch.");
+    // A note saved before the rule: masked wherever others read it.
+    await t.run((ctx) => ctx.db.patch(listingId, { note: "Dry, call 0661 23 45 67" }));
+    expect((await t.query(api.market.publicLots, {}))[0].note).toBe("Dry, call •••");
+    expect((await buyer.as.query(api.market.browse, {}))[0].note).toBe("Dry, call •••");
+    const offerId = await buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId, quantityKg: 10, priceDzdPerKg: 15 });
+    await t.run((ctx) => ctx.db.patch(offerId, { message: "my number 0550 11 22 33" }));
+    const [mine] = await f.as.query(api.market.myListings, { companyId: f.id });
+    expect(mine.offers[0].message).toBe("my number •••");
+  });
+
   test("filters by residue; an unknown residue is just empty", async () => {
     const t = newBackend();
     const f = await farm(t);
@@ -412,6 +435,14 @@ describe("admin sales", () => {
     const boss = await member(t, "boss@biorefmind.com");
     const s = await boss.query(api.admin.sales, {});
     expect(s).toMatchObject({ count: 2, totalDzd: 33_000, feeDzd: 1650 });
-    expect(s.recent[0]).toMatchObject({ residue: "date_pits", totalDzd: 3000, feeDzd: 150, seller: "Ferme Saïd", buyer: "Peel Factory" });
+    expect(s.recent[0]).toMatchObject({
+      residue: "date_pits",
+      totalDzd: 3000,
+      feeDzd: 150,
+      seller: "Ferme Saïd",
+      sellerPhone: "+213 555 11 11 11",
+      buyer: "Peel Factory",
+      buyerPhone: "+213 555 22 22 22",
+    });
   });
 });

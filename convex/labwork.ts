@@ -18,6 +18,7 @@ import {
   verifyCode,
   type Results,
 } from "./lib/labwork";
+import { maskPhones } from "./lib/market";
 
 // Design and contract: docs/superpowers/specs/2026-10-06-lab-requests-design.md
 
@@ -32,6 +33,11 @@ const sampleArg = v.object({
   packaging: v.optional(v.string()),
   notes: v.optional(v.string()),
 });
+
+/** A farmer's sample text as the lab and the certificate show it: any phone number masked. */
+function maskSample(sample: Doc<"labRequests">["sample"]): Doc<"labRequests">["sample"] {
+  return { ...sample, label: maskPhones(sample.label), packaging: maskPhones(sample.packaging), notes: maskPhones(sample.notes) };
+}
 
 async function getRequest(ctx: QueryCtx | MutationCtx, requestId: Id<"labRequests">) {
   const req = await ctx.db.get(requestId);
@@ -264,7 +270,7 @@ async function issue(
     reportNo: `${req.sampleNo}-R${version}`,
     lab: { name: by.lab.name, address: by.lab.address ?? "", phone: by.lab.phone ?? "" },
     client: { name: client?.name ?? "", region: client?.region ?? "" },
-    sample: req.sample,
+    sample: req.clientKind === "farm" ? maskSample(req.sample) : req.sample,
     sampleNo: req.sampleNo!,
     condition: req.condition,
     receivedAt: req.receivedAt!,
@@ -319,7 +325,10 @@ export const setPaid = mutation({
   },
 });
 
-/** Every request sent to the lab, newest first, with the client's contact. Any lab member. */
+/**
+ * Every request sent to the lab, newest first. Any lab member. A farmer's phone never reaches the lab
+ * (BiorefMind puts them in touch), including one typed into the sample's text.
+ */
 export const labQueue = query({
   args: { companyId: v.id("companies") },
   handler: async (ctx, { companyId }) => {
@@ -340,12 +349,12 @@ export const labQueue = query({
         status: effectiveStatus(r, now, labOpen),
         overdue: isOverdue(r, now),
         clientName: client?.name ?? "",
-        clientPhone: client?.phone ?? "",
+        clientPhone: r.clientKind === "farm" ? "" : (client?.phone ?? ""),
         clientRegion: client?.region ?? "",
         clientKind: r.clientKind,
         analyses: r.analyses,
         totalDzd: r.totalDzd,
-        sample: r.sample,
+        sample: r.clientKind === "farm" ? maskSample(r.sample) : r.sample,
         delivery: r.delivery,
         tracking: r.tracking,
         sampleNo: r.sampleNo,
