@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { LanguageSwitch } from "@/components/language-switch";
-import { AppFrame, FrameSkeleton } from "@/components/app-frame";
+import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
 import { forwardHash } from "@/components/dashboard/forward-hash";
 import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
 import { DASH, withGuest, type DashPage } from "@/components/dashboard/links";
@@ -127,7 +127,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!value || !pages) return <FrameSkeleton />;
 
-  const items = pages.map((p) => ({ href: withGuest(DASH[p], guest), label: t.nav.pages[p], icon: PAGE_ICON[p] }));
+  const items: FrameItem[] = pages.map((p) => ({
+    href: withGuest(DASH[p], guest),
+    label: t.nav.pages[p],
+    icon: PAGE_ICON[p],
+    group: p === "settings" ? "general" : "menu",
+  }));
   const initials = value.workspace.name
     .split(/\s+/)
     .slice(0, 2)
@@ -138,6 +143,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <DashboardContext value={value}>
       <AppFrame
         items={items}
+        groupLabels={{ menu: t.nav.groupMenu, general: t.nav.groupGeneral }}
         menuLabel={t.nav.menu}
         closeLabel={t.nav.closeMenu}
         extra={

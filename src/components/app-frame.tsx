@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { Menu, X, type LucideIcon } from "lucide-react";
 
@@ -10,13 +11,29 @@ import { dirOf } from "@/i18n/locale";
 import { useLocale } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
-export type FrameItem = { href: string; label: string; icon: LucideIcon };
+/**
+ * A sidebar item. `href` is either a page path ("/dashboard/sales", active from the URL) or a
+ * section hash ("#accounts", active from scrolling). `badge` shows a count when above 0;
+ * `group: "general"` puts the item under the "General" label.
+ */
+export type FrameItem = { href: string; label: string; icon: LucideIcon; badge?: number; group?: "menu" | "general" };
+
+const isRoute = (href: string) => href.startsWith("/");
+
+/** Whether a route item is the current page: exact for a top-level path, by prefix below it. */
+export function isActiveRoute(href: string, pathname: string): boolean {
+  const path = href.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  const here = pathname.replace(/\/+$/, "") || "/";
+  if (here === path) return true;
+  return path.split("/").length > 2 && here.startsWith(`${path}/`);
+}
 
 /** The section whose top is nearest above the upper third of the window ("#top" near the page top). */
 function useActiveSection(hrefs: string[]): string {
   const [active, setActive] = useState(hrefs[0] ?? "");
   const key = hrefs.join("|");
   useEffect(() => {
+    if (!key) return;
     const ids = key.split("|");
     function update() {
       const line = window.innerHeight * 0.33;
@@ -57,6 +74,7 @@ export function AppFrame({
   closeLabel,
   homeHref = "/",
   brandSuffix,
+  groupLabels,
   children,
 }: {
   items: FrameItem[];
@@ -68,12 +86,18 @@ export function AppFrame({
   closeLabel: string;
   homeHref?: string;
   brandSuffix?: string;
+  /** Small uppercase labels above the main items and the "general" ones (Settings…). */
+  groupLabels?: { menu: string; general: string };
   children: React.ReactNode;
 }) {
   const locale = useLocale();
   const rtl = dirOf(locale) === "rtl";
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const active = useActiveSection(items.map((i) => i.href));
+  const activeSection = useActiveSection(items.filter((i) => !isRoute(i.href)).map((i) => i.href));
+  const isOn = (href: string) => (isRoute(href) ? isActiveRoute(href, pathname) : activeSection === href);
+  const main = items.filter((i) => i.group !== "general");
+  const general = items.filter((i) => i.group === "general");
 
   // Escape closes the drawer; the page behind it does not scroll.
   useEffect(() => {
@@ -89,7 +113,7 @@ export function AppFrame({
   }, [open]);
 
   const nav = (where: "side" | "drawer") => (
-    <nav className="flex h-full flex-col gap-1 p-4">
+    <nav className="flex h-full flex-col gap-1 overflow-y-auto p-4">
       <div className="mb-5 flex items-center justify-between">
         <Link href={homeHref} dir="ltr" lang="en" className="flex items-center gap-2 px-2 text-[19px] font-bold tracking-[-0.02em] text-[#08263f]">
           <Image src="/logo-mark.png" alt="" width={77} height={77} className="size-8" />
@@ -106,35 +130,59 @@ export function AppFrame({
           </button>
         ) : null}
       </div>
-      {items.map((item) => {
-        const on = active === item.href;
-        return (
-          <a
-            key={item.href}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            aria-current={on ? "true" : undefined}
-            className={cn(
-              "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition-colors",
-              on ? "font-medium text-primary-foreground" : "text-foreground/80 hover:bg-white/70",
-            )}
-          >
-            {on ? (
-              <motion.span
-                layoutId={`frame-active-${where}`}
-                className="btn-navy absolute inset-0 rounded-xl"
-                transition={{ type: "spring", stiffness: 420, damping: 38 }}
-              />
-            ) : null}
-            <item.icon className="relative size-[18px]" strokeWidth={1.8} />
-            <span className="relative">{item.label}</span>
-          </a>
-        );
-      })}
+      {groupLabels ? <GroupLabel>{groupLabels.menu}</GroupLabel> : null}
+      {main.map((item) => renderItem(item, where))}
+      {general.length > 0 ? (
+        <>
+          {groupLabels ? <GroupLabel className="mt-5">{groupLabels.general}</GroupLabel> : null}
+          {general.map((item) => renderItem(item, where))}
+        </>
+      ) : null}
       {extra}
-      {footer ? <div className="mt-auto">{footer}</div> : null}
+      {footer ? <div className="mt-auto pt-4">{footer}</div> : null}
     </nav>
   );
+
+  function renderItem(item: FrameItem, where: "side" | "drawer") {
+    const on = isOn(item.href);
+    const className = cn(
+      "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition-colors",
+      on ? "font-medium text-primary-foreground" : "text-foreground/80 hover:bg-white/70",
+    );
+    const body = (
+      <>
+        {on ? (
+          <motion.span
+            layoutId={`frame-active-${where}`}
+            className="btn-navy absolute inset-0 rounded-xl"
+            transition={{ type: "spring", stiffness: 420, damping: 38 }}
+          />
+        ) : null}
+        <item.icon className="relative size-[18px]" strokeWidth={1.8} />
+        <span className="relative min-w-0 flex-1 truncate">{item.label}</span>
+        {item.badge ? (
+          <span
+            dir="ltr"
+            className={cn(
+              "relative min-w-6 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums",
+              on ? "bg-white text-azure" : "bg-azure text-white",
+            )}
+          >
+            {item.badge > 99 ? "99+" : item.badge}
+          </span>
+        ) : null}
+      </>
+    );
+    return isRoute(item.href) ? (
+      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={on ? "page" : undefined} className={className}>
+        {body}
+      </Link>
+    ) : (
+      <a key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={on ? "true" : undefined} className={className}>
+        {body}
+      </a>
+    );
+  }
 
   return (
     <MotionConfig reducedMotion="user">
@@ -191,6 +239,10 @@ export function AppFrame({
       </div>
     </MotionConfig>
   );
+}
+
+function GroupLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn("mb-1 px-3 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase rtl:text-[12px] rtl:tracking-normal", className)}>{children}</p>;
 }
 
 /** What shows while the signed-in frame waits for the account: the same layout, in grey. */
