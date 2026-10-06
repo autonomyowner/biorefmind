@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cleanNote, cleanPrice, cleanQuantity, MARKET_REFUSE, offerFits, saleAmounts } from "./market";
+import { cleanNote, cleanPrice, cleanQuantity, cleanResidue, MARKET_REFUSE, offerFits, saleAmounts } from "./market";
 import { MARKET_FEE_RATE } from "./pricing";
 
 describe("cleanQuantity", () => {
@@ -30,6 +30,23 @@ describe("cleanNote", () => {
     expect(cleanNote("  dry, bagged  ")).toBe("dry, bagged");
     expect(cleanNote("x".repeat(1000))).toHaveLength(1000);
     expect(() => cleanNote("x".repeat(1001))).toThrow(MARKET_REFUSE.note);
+  });
+});
+
+describe("cleanResidue", () => {
+  test("a catalog residue drops any typed name", () => {
+    expect(cleanResidue("olive_pomace", undefined)).toEqual({ residue: "olive_pomace" });
+    expect(cleanResidue("olive_pomace", "anything")).toEqual({ residue: "olive_pomace" });
+  });
+  test("'other' needs a typed name of 2 to 80 characters, trimmed", () => {
+    expect(cleanResidue("other", "  Dried lemon peels  ")).toEqual({ residue: "other", residueName: "Dried lemon peels" });
+    expect(cleanResidue("other", "x".repeat(80)).residueName).toHaveLength(80);
+    for (const bad of [undefined, "", "   ", "x", "x".repeat(81)]) {
+      expect(() => cleanResidue("other", bad)).toThrow(MARKET_REFUSE.residueName);
+    }
+  });
+  test("anything else is refused", () => {
+    expect(() => cleanResidue("gold", "Gold")).toThrow(MARKET_REFUSE.residue);
   });
 });
 

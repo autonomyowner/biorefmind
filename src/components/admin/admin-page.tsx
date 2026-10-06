@@ -29,7 +29,7 @@ import { CountUp, FadeIn } from "@/components/motion";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/backend";
 import { errorMessage } from "@/lib/errors";
-import { catalogLabels, labelOf } from "@/lib/catalog-labels";
+import { catalogLabels, residueLabel } from "@/lib/catalog-labels";
 import { formatDzd, formatKg, formatPrice, LAB_PRICE_USD } from "@/lib/pricing";
 import type { AdminOverview, AdminSales, Kind, Viewer } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -646,7 +646,7 @@ function MarketSection() {
                   {sales.recent.map((s) => (
                     <tr key={s.saleId} className="border-b border-foreground/5 last:border-0">
                       <td className="whitespace-nowrap px-4 py-2.5">{fmt(s.createdAt)}</td>
-                      <td className="px-4 py-2.5">{labelOf(RESIDUE_EN, s.residue)}</td>
+                      <td className="px-4 py-2.5">{residueLabel(RESIDUE_EN, s)}</td>
                       <td className="px-4 py-2.5">{s.seller}</td>
                       <td className="px-4 py-2.5">{s.buyer}</td>
                       <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatKg(s.quantityKg, "en")}</td>

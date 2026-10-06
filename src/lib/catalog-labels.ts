@@ -11,6 +11,8 @@ export const RESIDUE_KEYS = [
   "date_pits",
   "corn_silk",
 ] as const;
+/** Every residue a lot can have: the catalog plus "other" (the farmer typed what it is). */
+export const LOT_RESIDUE_KEYS = [...RESIDUE_KEYS, "other"] as const;
 
 export const catalogLabels = defineMessages({
   en: {
@@ -30,6 +32,7 @@ export const catalogLabels = defineMessages({
       grape_marc: "Grape marc",
       date_pits: "Date pits",
       corn_silk: "Corn silk",
+      other: "Other",
     },
   },
   ar: {
@@ -49,6 +52,7 @@ export const catalogLabels = defineMessages({
       grape_marc: "تفل العنب",
       date_pits: "نوى التمر",
       corn_silk: "حرير الذرة",
+      other: "أخرى",
     },
   },
 });
@@ -56,4 +60,9 @@ export const catalogLabels = defineMessages({
 /** A label for a catalog key; unknown keys show as-is. */
 export function labelOf(map: Record<string, string>, key: string): string {
   return map[key] ?? key;
+}
+
+/** A lot's residue as shown: the farmer's own words for "other", else the catalog label. */
+export function residueLabel(map: Record<string, string>, lot: { residue: string; residueName?: string }): string {
+  return lot.residueName || labelOf(map, lot.residue);
 }

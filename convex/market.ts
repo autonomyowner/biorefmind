@@ -2,12 +2,12 @@ import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireMember, requireUser } from "./lib/access";
-import { cleanRegion, pickKnown } from "./lib/accounts";
-import { RESIDUES } from "./lib/catalog";
+import { cleanRegion } from "./lib/accounts";
 import {
   cleanNote,
   cleanPrice,
   cleanQuantity,
+  cleanResidue,
   MARKET_REFUSE,
   MAX_LISTING_PHOTOS,
   offerFits,
@@ -59,6 +59,7 @@ export const createListing = mutation({
   args: {
     companyId: v.id("companies"),
     residue: v.string(),
+    residueName: v.optional(v.string()), // only with residue "other"
     quantityKg: v.number(),
     priceDzdPerKg: v.number(),
     region: v.optional(v.string()),
@@ -67,8 +68,7 @@ export const createListing = mutation({
   },
   handler: async (ctx, args) => {
     const { user, company } = await requireSeller(ctx, args.companyId);
-    const [residue] = pickKnown([args.residue], RESIDUES);
-    if (!residue) throw new ConvexError(MARKET_REFUSE.residue);
+    const { residue, residueName } = cleanResidue(args.residue, args.residueName);
     const quantityKg = cleanQuantity(args.quantityKg);
     const priceDzdPerKg = cleanPrice(args.priceDzdPerKg);
     const region = args.region?.trim() ? cleanRegion(args.region) : (company.region ?? "");
@@ -87,6 +87,7 @@ export const createListing = mutation({
     return await ctx.db.insert("listings", {
       companyId: company._id,
       residue,
+      residueName,
       quantityKg,
       remainingKg: quantityKg,
       priceDzdPerKg,
@@ -150,6 +151,7 @@ export const myListings = query({
       out.push({
         listingId: l._id,
         residue: l.residue,
+        residueName: l.residueName,
         quantityKg: l.quantityKg,
         remainingKg: l.remainingKg,
         priceDzdPerKg: l.priceDzdPerKg,
@@ -179,6 +181,7 @@ async function openLots(ctx: QueryCtx, residue: string | undefined) {
     out.push({
       listingId: l._id,
       residue: l.residue,
+      residueName: l.residueName,
       remainingKg: l.remainingKg,
       priceDzdPerKg: l.priceDzdPerKg,
       region: l.region,
@@ -293,6 +296,7 @@ export const respond = mutation({
       sellerId: offer.sellerId,
       buyerId: offer.buyerId,
       residue: listing.residue,
+      residueName: listing.residueName,
       quantityKg: offer.quantityKg,
       priceDzdPerKg: offer.priceDzdPerKg,
       ...saleAmounts(offer.quantityKg, offer.priceDzdPerKg),
@@ -319,6 +323,7 @@ export const myOffers = query({
         offerId: o._id,
         listingId: o.listingId,
         residue: listing?.residue ?? "",
+        residueName: listing?.residueName,
         sellerName: seller?.name ?? "",
         sellerRegion: listing?.region ?? seller?.region ?? "",
         quantityKg: o.quantityKg,
@@ -357,6 +362,7 @@ export const mySales = query({
       out.push({
         saleId: s._id,
         residue: s.residue,
+        residueName: s.residueName,
         quantityKg: s.quantityKg,
         priceDzdPerKg: s.priceDzdPerKg,
         totalDzd: s.totalDzd,

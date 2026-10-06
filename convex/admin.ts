@@ -102,6 +102,7 @@ export const sales = query({
       recent.push({
         saleId: s._id,
         residue: s.residue,
+        residueName: s.residueName,
         quantityKg: s.quantityKg,
         totalDzd: s.totalDzd,
         feeDzd: s.feeDzd,

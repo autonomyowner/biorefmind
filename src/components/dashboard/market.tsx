@@ -17,7 +17,7 @@ import { Panel } from "@/components/dashboard/profile-card";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
 import { api } from "@/lib/backend";
-import { RESIDUE_KEYS, catalogLabels, labelOf } from "@/lib/catalog-labels";
+import { LOT_RESIDUE_KEYS, RESIDUE_KEYS, catalogLabels, labelOf, residueLabel } from "@/lib/catalog-labels";
 import { errorMessage } from "@/lib/errors";
 import { formatDzd, formatKg, MARKET_FEE_RATE } from "@/lib/pricing";
 import type { MarketListing, MyListing, MyOffer, Sale } from "@/lib/types";
@@ -42,6 +42,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
   {
     listingId: "g1" as Id<"listings">,
     residue: "pomegranate_peels",
+    residueName: undefined,
     quantityKg: 1200,
     remainingKg: 1200,
     priceDzdPerKg: 18,
@@ -67,6 +68,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
   {
     listingId: "g2" as Id<"listings">,
     residue: "olive_pomace",
+    residueName: undefined,
     quantityKg: 3000,
     remainingKg: 0,
     priceDzdPerKg: 6,
@@ -82,6 +84,7 @@ const SAMPLE_SALES: Sale[] = [
   {
     saleId: "gs1" as Id<"sales">,
     residue: "olive_pomace",
+    residueName: undefined,
     quantityKg: 3000,
     priceDzdPerKg: 6,
     totalDzd: 18_000,
@@ -161,10 +164,10 @@ function LotPhoto({ urls, alt, className }: { urls: string[]; alt: string; class
   );
 }
 
-/** Choosing one residue from the catalog. */
+/** Choosing one residue from the catalog; as a filter (`withAll`) it also offers "other". */
 function ResiduePicker({ value, onChange, withAll }: { value: string | null; onChange: (k: string | null) => void; withAll?: string }) {
   const labels = useMessages(catalogLabels);
-  const keys: (string | null)[] = withAll ? [null, ...RESIDUE_KEYS] : [...RESIDUE_KEYS];
+  const keys: (string | null)[] = withAll ? [null, ...LOT_RESIDUE_KEYS] : [...RESIDUE_KEYS];
   return (
     <div className="flex flex-wrap gap-2">
       {keys.map((k) => {
@@ -295,6 +298,7 @@ function NewListingForm({ onDone }: { onDone: () => void }) {
   const uploadUrl = useMutation(api.market.generateUploadUrl);
 
   const [residue, setResidue] = useState<string | null>(null);
+  const [custom, setCustom] = useState(""); // typed residue; wins over the chips
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [region, setRegion] = useState(workspace.region);
@@ -331,7 +335,7 @@ function NewListingForm({ onDone }: { onDone: () => void }) {
     try {
       await create({
         companyId: workspace.companyId,
-        residue: residue ?? "",
+        ...(custom.trim() ? { residue: "other", residueName: custom } : { residue: residue ?? "" }),
         quantityKg: num(quantity),
         priceDzdPerKg: num(price),
         region,
@@ -352,7 +356,23 @@ function NewListingForm({ onDone }: { onDone: () => void }) {
       <p className="text-[16px] font-semibold">{t.form.title}</p>
       <fieldset>
         <legend className="mb-2 text-[14px] font-medium">{t.form.residue}</legend>
-        <ResiduePicker value={residue} onChange={setResidue} />
+        <ResiduePicker
+          value={custom.trim() ? null : residue}
+          onChange={(k) => {
+            setResidue(k);
+            setCustom("");
+          }}
+        />
+        <label className="mt-3 block text-[13px] text-muted-foreground">
+          {t.form.residueOther}
+          <Input
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            maxLength={80}
+            placeholder={t.form.residueOtherPlaceholder}
+            className={cn(FIELD, "mt-1.5 text-foreground")}
+          />
+        </label>
       </fieldset>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
         <label className="block text-[14px] font-medium">
@@ -442,7 +462,7 @@ function ListingCard({ listing: l }: { listing: MyListing }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const canAct = !guest && workspace.role !== "inspector";
-  const name = labelOf(labels.residues, l.residue);
+  const name = residueLabel(labels.residues, l);
   const tone = l.status === "open" ? "green" : l.status === "sold" ? "blue" : "grey";
 
   async function doWithdraw() {
@@ -615,7 +635,7 @@ function MarketCard({ listing: l }: { listing: MarketListing }) {
   const labels = useMessages(catalogLabels);
   const f = useFormat();
   const [offering, setOffering] = useState(false);
-  const name = labelOf(labels.residues, l.residue);
+  const name = residueLabel(labels.residues, l);
   const canBuy = workspace.kind === "factory" && workspace.role !== "inspector";
 
   return (
@@ -760,7 +780,7 @@ export function MyOffers({ id }: { id?: string }) {
             <li key={o.offerId} className={CARD}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-semibold">{labelOf(labels.residues, o.residue)}</p>
+                  <p className="truncate text-[15px] font-semibold">{residueLabel(labels.residues, o)}</p>
                   <p className="truncate text-[13px] text-muted-foreground">
                     {o.sellerName} · {o.sellerRegion}
                   </p>
@@ -807,7 +827,7 @@ export function SalesPanel({ id }: { id?: string }) {
             <li key={s.saleId} className={CARD}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-semibold">{labelOf(labels.residues, s.residue)}</p>
+                  <p className="truncate text-[15px] font-semibold">{residueLabel(labels.residues, s)}</p>
                   <p className="truncate text-[13px] text-muted-foreground">
                     {fill(s.side === "sold" ? t.sales.sold : t.sales.bought, { name: s.otherName })} · {s.otherRegion}
                   </p>

@@ -1,13 +1,19 @@
 import { ConvexError } from "convex/values";
+import { pickKnown } from "./accounts";
+import { RESIDUES } from "./catalog";
 import { MARKET_FEE_RATE } from "./pricing";
 
 export const MAX_LISTING_PHOTOS = 4;
+
+/** The residue key of a lot whose farmer typed what it is (in `residueName`). */
+export const OTHER_RESIDUE = "other";
 
 /** Every refusal of the marketplace functions, word for word (the website translates them). */
 export const MARKET_REFUSE = {
   farmOnly: "Only farm accounts can list residues.",
   factoryOnly: "Only factory accounts can make offers.",
   residue: "Choose a residue from the list.",
+  residueName: "Type what you have (2 to 80 characters).",
   quantity: "Quantity must be a whole number of kilograms (1 to 10,000,000).",
   price: "Price must be between 0.01 and 100,000 DA per kg.",
   note: "The note can be up to 1000 characters.",
@@ -33,6 +39,18 @@ export function cleanPrice(dzd: number): number {
   const p = Number.isFinite(dzd) ? round2(dzd) : Number.NaN;
   if (!(p >= 0.01 && p <= 100_000)) throw new ConvexError(MARKET_REFUSE.price);
   return p;
+}
+
+/** A catalog residue, or "other" with the farmer's own words for it (2–80 characters). */
+export function cleanResidue(key: string, name: string | undefined): { residue: string; residueName?: string } {
+  if (key === OTHER_RESIDUE) {
+    const s = name?.trim() ?? "";
+    if (s.length < 2 || s.length > 80) throw new ConvexError(MARKET_REFUSE.residueName);
+    return { residue: OTHER_RESIDUE, residueName: s };
+  }
+  const [residue] = pickKnown([key], RESIDUES);
+  if (!residue) throw new ConvexError(MARKET_REFUSE.residue);
+  return { residue };
 }
 
 export function cleanNote(raw: string | undefined): string | undefined {

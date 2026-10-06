@@ -65,7 +65,8 @@ export default defineSchema({
   /** A lot a farm puts up for sale. Prices in DA per kg. Design: specs/2026-10-04-marketplace-design.md */
   listings: defineTable({
     companyId: v.id("companies"), // the farm selling
-    residue: v.string(), // key from lib/catalog RESIDUES
+    residue: v.string(), // key from lib/catalog RESIDUES, or "other"
+    residueName: v.optional(v.string()), // the farmer's own words, only with "other"
     quantityKg: v.number(), // as listed
     remainingKg: v.number(), // goes down with each sale; 0 → sold
     priceDzdPerKg: v.number(),
@@ -102,6 +103,7 @@ export default defineSchema({
     sellerId: v.id("companies"),
     buyerId: v.id("companies"),
     residue: v.string(),
+    residueName: v.optional(v.string()),
     quantityKg: v.number(),
     priceDzdPerKg: v.number(),
     totalDzd: v.number(),
