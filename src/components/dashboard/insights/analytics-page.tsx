@@ -139,7 +139,7 @@ function Loaded({ data, stale }: { data: WorkspaceInsights; stale: boolean }) {
                 </p>
               ) : null}
             </div>
-            <Sparkline values={k.spark} className="mt-auto h-12 pt-3" />
+            <Sparkline values={k.spark} className="mt-auto pt-4" />
           </FadeIn>
         ))}
       </div>
