@@ -12,7 +12,6 @@ export const insightsMessages = defineMessages({
       less: "Less",
       more: "More",
       others: "Others",
-      today: "Today",
       chartHint: "Use the arrow keys to read each day.",
     },
     change: {
@@ -20,7 +19,6 @@ export const insightsMessages = defineMessages({
       none: "no earlier figures",
     },
     days: "{n} days",
-    percent: "{n}%",
     acceptance: "Acceptance {pct}",
     analytics: {
       title: "Analytics",
@@ -99,7 +97,6 @@ export const insightsMessages = defineMessages({
       less: "أقل",
       more: "أكثر",
       others: "أخرى",
-      today: "اليوم",
       chartHint: "استعمل مفاتيح الأسهم لقراءة كل يوم.",
     },
     change: {
@@ -107,7 +104,6 @@ export const insightsMessages = defineMessages({
       none: "لا أرقام سابقة",
     },
     days: "{n} يوم",
-    percent: "{n}%",
     acceptance: "نسبة القبول {pct}",
     analytics: {
       title: "التحليلات",
