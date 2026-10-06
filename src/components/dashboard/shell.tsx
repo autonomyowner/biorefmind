@@ -24,7 +24,8 @@ import {
 import { LanguageSwitch } from "@/components/language-switch";
 import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
 import { forwardHash } from "@/components/dashboard/forward-hash";
-import { AvatarMenu, PageTitle, initialsOf } from "@/components/dashboard/frame/top-bar";
+import { CommandPalette } from "@/components/dashboard/frame/command-palette";
+import { AvatarMenu, PageTitle, SearchButton, initialsOf } from "@/components/dashboard/frame/top-bar";
 import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
 import { DASH, withGuest, type DashPage } from "@/components/dashboard/links";
 import { dashboardMessages } from "@/components/dashboard/messages";
@@ -125,6 +126,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     if (target) router.replace(withGuest(target, guest));
   }, [pages, onOverview, guest, router]);
 
+  // ⌘K / Ctrl+K opens the command palette (and closes it again).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const ready = Boolean(value);
+  useEffect(() => {
+    if (!ready) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [ready]);
+
   if (!value || !pages) return <FrameSkeleton />;
 
   const items: FrameItem[] = pages.map((p) => ({
@@ -170,6 +186,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         headerStart={<PageTitle title={title} />}
         headerEnd={
           <>
+            <SearchButton onOpen={() => setPaletteOpen(true)} />
             <LanguageSwitch className="hidden h-10 sm:inline-flex" />
             <AvatarMenu onSignOut={signOut} />
           </>
@@ -177,6 +194,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       >
         {allowed ? children : null}
       </AppFrame>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onSignOut={signOut} />
     </DashboardContext>
   );
 }
