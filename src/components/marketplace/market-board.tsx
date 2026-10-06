@@ -72,7 +72,7 @@ export function MarketBoard({ initial, signedIn }: { initial: PublicLot[] | null
     return c;
   }, [all]);
   const selected = openId ? ([...(all ?? []), ...(oneLive ?? [])].find((l) => l.listingId === openId) ?? null) : null;
-  const offerHref = signedIn ? "/dashboard#browse" : "/signup?as=factory";
+  const offerHref = signedIn ? "/dashboard/browse" : "/signup?as=factory";
 
   return (
     <MotionConfig reducedMotion="user">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "motion/react";
 import {
@@ -24,6 +25,8 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useDashboard } from "@/components/dashboard/shell";
+import { DASH } from "@/components/dashboard/links";
+import { useDashHref } from "@/components/dashboard/use-dash-href";
 import { fill } from "@/components/dashboard/messages";
 import { useMyListings } from "@/components/dashboard/market";
 import { Panel } from "@/components/dashboard/profile-card";
@@ -89,6 +92,7 @@ export function LabTests({ id }: { id?: string }) {
   const requests = useMyLabRequests();
   const listings = useMyListings();
   const sales = useMySales();
+  const href = useDashHref();
   return (
     <Panel id={id} title={t.list.title}>
       {requests === undefined ? (
@@ -100,9 +104,9 @@ export function LabTests({ id }: { id?: string }) {
           </span>
           <p className="mt-3 text-[17px] font-semibold">{t.list.emptyTitle}</p>
           <p className="mt-1.5 max-w-[420px] text-[14px] leading-relaxed text-muted-foreground">{t.list.emptyBody}</p>
-          <a href="#labs" className={cn(QUIET, "mt-4 h-9 px-4 text-[13px]")}>
+          <Link href={href(`${DASH.labs}?tab=find`)} className={cn(QUIET, "mt-4 h-9 px-4 text-[13px]")}>
             <Search className="size-4" /> {t.list.toDirectory}
-          </a>
+          </Link>
         </div>
       ) : (
         <ul className="space-y-3">

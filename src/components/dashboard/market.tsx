@@ -220,11 +220,14 @@ export function useMyListings(): MyListing[] | undefined {
   return guest ? SAMPLE_LISTINGS : live;
 }
 
-export function MyListings({ id }: { id?: string }) {
+/** The farm's lots. Pass `adding` + `onAddingChange` to open the new-listing form from outside (the page header). */
+export function MyListings({ id, adding: addingProp, onAddingChange }: { id?: string; adding?: boolean; onAddingChange?: (adding: boolean) => void }) {
   const { workspace, guest } = useDashboard();
   const t = useMessages(marketMessages);
   const listings = useMyListings();
-  const [adding, setAdding] = useState(false);
+  const [addingState, setAddingState] = useState(false);
+  const adding = addingProp ?? addingState;
+  const setAdding = onAddingChange ?? setAddingState;
   const canSell = !guest && workspace.role !== "inspector";
 
   return (
@@ -236,7 +239,7 @@ export function MyListings({ id }: { id?: string }) {
           <Link href="/marketplace" className={cn(QUIET, "h-9 px-3.5 text-[13px]")}>
             <Store className="size-4" /> {t.listings.public}
           </Link>
-          {canSell && !adding ? (
+          {canSell && !adding && !onAddingChange ? (
             <button type="button" onClick={() => setAdding(true)} className={cn(PRIMARY, "h-9 px-4")}>
               <Plus className="size-4" /> {t.listings.new}
             </button>
@@ -812,13 +815,19 @@ export function MyOffers({ id }: { id?: string }) {
 
 /* ---------- Both: sales ---------- */
 
-export function SalesPanel({ id }: { id?: string }) {
+/** The account's sales (farm) or purchases (factory), newest first; samples in the guest preview. */
+export function useSales(): Sale[] | undefined {
   const { workspace, guest } = useDashboard();
+  const live = useQuery(api.market.mySales, guest ? "skip" : { companyId: workspace.companyId });
+  return guest ? SAMPLE_SALES : live;
+}
+
+export function SalesPanel({ id }: { id?: string }) {
+  const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
   const labels = useMessages(catalogLabels);
   const f = useFormat();
-  const live = useQuery(api.market.mySales, guest ? "skip" : { companyId: workspace.companyId });
-  const sales = guest ? SAMPLE_SALES : live;
+  const sales = useSales();
 
   return (
     <Panel id={id} title={t.sales.title}>

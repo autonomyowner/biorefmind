@@ -5,31 +5,35 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
 import {
-  Building2,
+  ChartColumn,
   CreditCard,
   FlaskConical,
   HandCoins,
-  Home,
+  LayoutDashboard,
   ListChecks,
-  LogOut,
   MapPin,
   PackageSearch,
   Receipt,
+  Settings,
   ShieldCheck,
   Sprout,
   Tags,
-  TestTubes,
-  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
 import { LanguageSwitch } from "@/components/language-switch";
-import { AppFrame, FrameSkeleton } from "@/components/app-frame";
-import { dashboardMessages, type DashboardMessages } from "@/components/dashboard/messages";
+import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
+import { forwardHash } from "@/components/dashboard/forward-hash";
+import { WithBadges, type Badges } from "@/components/dashboard/frame/badges";
+import { CommandPalette } from "@/components/dashboard/frame/command-palette";
+import { AvatarMenu, PageTitle, SearchButton, initialsOf } from "@/components/dashboard/frame/top-bar";
+import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
+import { DASH, withGuest, type DashPage } from "@/components/dashboard/links";
+import { dashboardMessages } from "@/components/dashboard/messages";
 import { useMessages } from "@/i18n/provider";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/lib/backend";
-import type { Kind, Viewer, Workspace } from "@/lib/types";
+import type { Viewer, Workspace } from "@/lib/types";
 
 type Dashboard = { workspace: Workspace; viewer: NonNullable<Viewer>; guest: boolean };
 
@@ -57,33 +61,25 @@ const GUEST: Dashboard = {
   },
 };
 
-type NavItem = { href: string; label: keyof DashboardMessages["nav"]; icon: LucideIcon };
-
-const NAV: Record<Kind, NavItem[]> = {
-  farm: [
-    { href: "#top", label: "home", icon: Home },
-    { href: "#listings", label: "listings", icon: Sprout },
-    { href: "#sales", label: "sales", icon: Receipt },
-    { href: "#labtests", label: "labtests", icon: TestTubes },
-    { href: "#labs", label: "labs", icon: FlaskConical },
-  ],
-  lab: [
-    { href: "#top", label: "home", icon: Home },
-    { href: "#requests", label: "requests", icon: ListChecks },
-    { href: "#prices", label: "prices", icon: Tags },
-    { href: "#profile", label: "profile", icon: UserRound },
-    { href: "#plan", label: "plan", icon: CreditCard },
-  ],
-  factory: [
-    { href: "#top", label: "home", icon: Home },
-    { href: "#browse", label: "browse", icon: PackageSearch },
-    { href: "#offers", label: "offers", icon: HandCoins },
-    { href: "#sales", label: "sales", icon: Receipt },
-    { href: "#labtests", label: "labtests", icon: TestTubes },
-    { href: "#labs", label: "labs", icon: FlaskConical },
-    { href: "#enterprise", label: "enterprise", icon: Building2 },
-  ],
+/** The icon of every dashboard page (sidebar and ⌘K). */
+export const PAGE_ICON: Record<DashPage, LucideIcon> = {
+  overview: LayoutDashboard,
+  listings: Sprout,
+  sales: Receipt,
+  browse: PackageSearch,
+  offers: HandCoins,
+  labs: FlaskConical,
+  requests: ListChecks,
+  prices: Tags,
+  analytics: ChartColumn,
+  plan: CreditCard,
+  settings: Settings,
 };
+
+/** The pages the signed-in account has, in sidebar order (for the ⌘K palette and links). */
+export function useDashPages(): readonly DashPage[] {
+  return PAGES[useDashboard().workspace.kind];
+}
 
 /** Auth guard + the dashboard frame: sidebar for the account's type, top bar, content. */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -115,71 +111,101 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       ? { viewer, workspace: workspaces[0], guest: false }
       : null;
 
-  if (!value) return <FrameSkeleton />;
+  // A page this account does not have (a lab on /dashboard/listings) goes to the Overview.
+  const pages = value ? PAGES[value.workspace.kind] : null;
+  const page = pageOfPath(pathname);
+  const allowed = !pages || page === null || pages.includes(page);
+  useEffect(() => {
+    if (!allowed) router.replace(withGuest(DASH.overview, guest));
+  }, [allowed, guest, router]);
 
-  const items = NAV[value.workspace.kind].map((i) => ({ ...i, label: t.nav[i.label] }));
-  const initials = value.workspace.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+  // Old one-page links (/dashboard#sales) open their page, once the account's pages are known.
+  const onOverview = page === "overview";
+  useEffect(() => {
+    if (!pages || !onOverview) return;
+    const target = forwardHash(window.location.hash, pages);
+    if (target) router.replace(withGuest(target, guest));
+  }, [pages, onOverview, guest, router]);
+
+  // ⌘K / Ctrl+K opens the command palette (and closes it again).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const ready = Boolean(value);
+  useEffect(() => {
+    if (!ready) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [ready]);
+
+  if (!value || !pages) return <FrameSkeleton />;
+
+  const items = (badges: Badges): FrameItem[] =>
+    pages.map((p) => ({
+      href: withGuest(DASH[p], guest),
+      label: t.nav.pages[p],
+      icon: PAGE_ICON[p],
+      badge: badges[p],
+      group: p === "settings" ? "general" : "menu",
+    }));
+  const title = t.nav.pages[page ?? "overview"];
+
+  const adminLink = value.viewer.isAdmin ? (
+    <Link
+      href="/admin"
+      className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-foreground/80 transition-colors hover:bg-white/70"
+    >
+      <ShieldCheck className="size-[18px]" strokeWidth={1.8} />
+      {t.nav.admin}
+    </Link>
+  ) : null;
+
+  const identity = (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
+      <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
+        {initialsOf(value.workspace.name)}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">{value.workspace.name}</span>
+        <span className="flex items-center gap-1 truncate text-muted-foreground">
+          {value.workspace.region ? <MapPin className="size-3.5 shrink-0 text-azure" /> : null}
+          {value.workspace.region || t.kinds[value.workspace.kind]}
+        </span>
+      </span>
+    </div>
+  );
+
+  const headerEnd = (
+    <>
+      <SearchButton onOpen={() => setPaletteOpen(true)} />
+      <LanguageSwitch className="hidden h-10 sm:inline-flex" />
+      <AvatarMenu onSignOut={signOut} />
+    </>
+  );
 
   return (
     <DashboardContext value={value}>
-      <AppFrame
-        items={items}
-        menuLabel={t.nav.menu}
-        closeLabel={t.nav.closeMenu}
-        extra={
-          value.viewer.isAdmin ? (
-            <Link
-              href="/admin"
-              className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-foreground/80 transition-colors hover:bg-white/70"
-            >
-              <ShieldCheck className="size-[18px]" strokeWidth={1.8} />
-              {t.nav.admin}
-            </Link>
-          ) : null
-        }
-        footer={
-          <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
-            <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">{initials}</span>
-            <span className="min-w-0">
-              <span className="block truncate font-semibold">{value.workspace.name}</span>
-              <span className="block text-muted-foreground">{t.kinds[value.workspace.kind]}</span>
-            </span>
-          </div>
-        }
-        headerStart={
-          value.workspace.region ? (
-            <p className="hidden min-w-0 items-center gap-1.5 truncate text-[15px] text-muted-foreground sm:flex">
-              <MapPin className="size-4 shrink-0 text-azure" /> {value.workspace.region}
-            </p>
-          ) : null
-        }
-        headerEnd={
-          <>
-            <LanguageSwitch className="h-10" />
-            {value.guest ? (
-              <Link href="/" className="inline-flex h-10 items-center rounded-full border border-foreground/15 bg-white/50 px-4 text-[14px] font-medium">
-                {t.nav.exitGuest}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={signOut}
-                aria-label={t.nav.signOut}
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-foreground/15 bg-white/50 px-3 text-[14px] font-medium transition-colors hover:bg-white sm:px-4"
-              >
-                <LogOut className="size-4 rtl:-scale-x-100" />
-                <span className="hidden sm:inline">{t.nav.signOut}</span>
-              </button>
-            )}
-          </>
-        }
-      >
-        {children}
-      </AppFrame>
+      <WithBadges>
+        {(badges) => (
+          <AppFrame
+            items={items(badges)}
+            groupLabels={{ menu: t.nav.groupMenu, general: t.nav.groupGeneral }}
+            menuLabel={t.nav.menu}
+            closeLabel={t.nav.closeMenu}
+            extra={adminLink}
+            footer={identity}
+            headerStart={<PageTitle title={title} />}
+            headerEnd={headerEnd}
+          >
+            {allowed ? children : null}
+          </AppFrame>
+        )}
+      </WithBadges>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onSignOut={signOut} />
     </DashboardContext>
   );
 }
