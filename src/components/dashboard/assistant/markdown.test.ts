@@ -31,6 +31,17 @@ describe("parseBlocks", () => {
     expect(table).toEqual({ t: "table", head: ["Lab", "Price"], rows: [["Nour", "1,500 DA"], ["Hodna", "1,800 DA"]] });
   });
 
+  test("a numbered list split by bullets keeps its numbers; --- is a divider", () => {
+    const blocks = parseBlocks("1. First\n- detail\n2. Second\n\n---\n\nDone");
+    expect(blocks).toEqual([
+      { t: "ol", items: ["First"], start: 1 },
+      { t: "ul", items: ["detail"] },
+      { t: "ol", items: ["Second"], start: 2 },
+      { t: "hr" },
+      { t: "para", v: "Done" },
+    ]);
+  });
+
   test("an empty answer is no blocks", () => {
     expect(parseBlocks("  \n ")).toEqual([]);
   });

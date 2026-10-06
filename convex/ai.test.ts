@@ -387,7 +387,7 @@ data: [DONE]
     const f = await factory(t);
     const { threadId } = await f.as.mutation(api.assistant.send, { companyId: f.id, text: "Hi", photoIds: [] });
     await runChecks(t);
-    expect((await f.as.query(api.assistant.messages, { threadId }))[1].text).toBe("Hello");
+    expect((await f.as.query(api.assistant.messages, { threadId }))![1].text).toBe("Hello");
     expect(authOf(0)).toBe("Bearer sk-or-v1-savedkey1234567890abcd");
     expect(bodyOf(0).model).toBe(DEFAULT_MODEL);
   });

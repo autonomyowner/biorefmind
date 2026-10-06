@@ -77,7 +77,8 @@ export function AssistantPage() {
   const [created, setCreated] = useState<ReadonlySet<string>>(new Set());
   const known = !threadId || guest || created.has(threadId) || threads?.some((x) => x.threadId === threadId);
   const live = useQuery(api.assistant.messages, !guest && threadId && known ? { threadId } : "skip");
-  const messages: AssistantMessage[] | undefined = guest ? SAMPLE_CHAT[locale] : threadId ? (known ? live : []) : [];
+  const gone = live === null; // deleted (maybe in another tab)
+  const messages: AssistantMessage[] | undefined = guest ? SAMPLE_CHAT[locale] : threadId ? (known && !gone ? live : []) : [];
 
   const uploadUrl = useMutation(api.assistant.uploadUrl);
   const send = useMutation(api.assistant.send);
@@ -90,8 +91,8 @@ export function AssistantPage() {
 
   // A thread that no longer exists (deleted elsewhere): back to a new conversation.
   useEffect(() => {
-    if (!guest && threadId && threads && !known) router.replace(href(DASH.assistant));
-  }, [guest, threadId, threads, known, router, href]);
+    if (!guest && threadId && ((threads && !known) || gone)) router.replace(href(DASH.assistant));
+  }, [guest, threadId, threads, known, gone, router, href]);
 
   async function onSend(d: Draft): Promise<boolean> {
     if (guest) {
@@ -187,7 +188,7 @@ export function AssistantPage() {
               onPick={(prompt, photo) => composer.current?.set(prompt, photo)}
             />
           ) : (
-            <ol className="space-y-7 pb-6">
+            <ol data-chat className="space-y-7 pb-16">
               {messages.map((m) => (
                 <li key={m.messageId}>
                   {m.role === "user" ? <UserMessage message={m} /> : <AssistantAnswer message={m} photos={allPhotos} canAct={!guest} />}

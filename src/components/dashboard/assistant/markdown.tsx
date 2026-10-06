@@ -32,6 +32,7 @@ export function Markdown({ text, className }: { text: string; className?: string
   return (
     <div className={cn("space-y-3 text-[15px] leading-relaxed text-foreground/90", className)}>
       {parseBlocks(text).map((b, i) => {
+        if (b.t === "hr") return <hr key={i} className="border-foreground/[0.08]" />;
         if (b.t === "heading")
           return (
             <p key={i} dir="auto" className="pt-1 text-[16px] font-semibold text-foreground">
@@ -73,7 +74,7 @@ export function Markdown({ text, className }: { text: string; className?: string
           );
         const List = b.t === "ul" ? "ul" : "ol";
         return (
-          <List key={i} dir="auto" className={cn("space-y-1 ps-5", b.t === "ul" ? "list-disc marker:text-violet" : "list-decimal marker:font-semibold marker:text-violet")}>
+          <List key={i} dir="auto" start={b.t === "ol" && b.start !== 1 ? b.start : undefined} className={cn("space-y-1 ps-5", b.t === "ul" ? "list-disc marker:text-violet" : "list-decimal marker:font-semibold marker:text-violet")}>
             {b.items.map((it, j) => (
               <li key={j}>
                 <Inlines text={it} />

@@ -5,7 +5,9 @@ export type Inline = { t: "text" | "bold" | "italic" | "code"; v: string };
 export type Block =
   | { t: "para"; v: string }
   | { t: "heading"; v: string }
-  | { t: "ul" | "ol"; items: string[] }
+  | { t: "ul"; items: string[] }
+  | { t: "ol"; items: string[]; start: number }
+  | { t: "hr" }
   | { t: "table"; head: string[]; rows: string[][] };
 
 const INLINE = /\*\*([^*\n]+?)\*\*|\*([^*\n]+?)\*|`([^`\n]+?)`/g;
@@ -45,6 +47,11 @@ export function parseBlocks(text: string): Block[] {
       flush();
       continue;
     }
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      flush();
+      out.push({ t: "hr" });
+      continue;
+    }
     const heading = /^#{1,4}\s+(.*)$/.exec(trimmed);
     if (heading) {
       flush();
@@ -62,14 +69,20 @@ export function parseBlocks(text: string): Block[] {
       continue;
     }
     const bullet = /^[-*•]\s+(.*)$/.exec(trimmed);
-    const numbered = /^\d+[.)]\s+(.*)$/.exec(trimmed);
-    if (bullet || numbered) {
+    const numbered = /^(\d+)[.)]\s+(.*)$/.exec(trimmed);
+    if (bullet) {
       flush();
-      const t = bullet ? "ul" : "ol";
       const last = out.at(-1);
-      const item = (bullet ?? numbered)![1];
-      if (last && last.t === t) last.items.push(item);
-      else out.push({ t, items: [item] });
+      if (last?.t === "ul") last.items.push(bullet[1]);
+      else out.push({ t: "ul", items: [bullet[1]] });
+      continue;
+    }
+    if (numbered) {
+      flush();
+      // A numbered list interrupted by bullets keeps its own numbers ("2." stays 2).
+      const last = out.at(-1);
+      if (last?.t === "ol") last.items.push(numbered[2]);
+      else out.push({ t: "ol", items: [numbered[2]], start: Number(numbered[1]) });
       continue;
     }
     // A plain line right after a list continues as a paragraph.

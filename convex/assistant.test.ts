@@ -109,7 +109,7 @@ describe("conversations", () => {
     await settle(t);
 
     expect(await farm.as.query(api.assistant.threads, { companyId: farm.id })).toMatchObject([{ threadId, title: "Hello there" }]);
-    const msgs = await farm.as.query(api.assistant.messages, { threadId });
+    const msgs = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(msgs.map((m) => [m.role, m.text, m.status])).toEqual([
       ["user", "Hello there", "done"],
       ["assistant", "Hello Saïd, how can I help?", "done"],
@@ -128,7 +128,7 @@ describe("conversations", () => {
     const { threadId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "My lots?", photoIds: [] });
     await settle(t);
 
-    const [, answer] = await farm.as.query(api.assistant.messages, { threadId });
+    const [, answer] = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(answer).toMatchObject({ text: "You have one open lot.", status: "done", steps: [{ tool: "my_listings", detail: "1" }] });
     const second = bodyOf(1).messages;
     const toolMsg = second.find((m: { role: string }) => m.role === "tool");
@@ -159,7 +159,8 @@ describe("conversations", () => {
     const { threadId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "Hi", photoIds: [] });
     await settle(t);
     const refused = "This conversation no longer exists.";
-    await expect(other.as.query(api.assistant.messages, { threadId })).rejects.toThrow(refused);
+    // Reading someone else's (or a deleted) conversation gives nothing, so an open tab never breaks.
+    expect((await other.as.query(api.assistant.messages, { threadId }))!).toBeNull();
     await expect(other.as.mutation(api.assistant.send, { companyId: other.id, threadId, text: "x", photoIds: [] })).rejects.toThrow(refused);
     await expect(other.as.mutation(api.assistant.rename, { threadId, title: "Mine" })).rejects.toThrow(refused);
     await expect(other.as.mutation(api.assistant.remove, { threadId })).rejects.toThrow(refused);
@@ -206,11 +207,11 @@ describe("conversations", () => {
     const farm = await company(t, "farm", "farm@x.dz", "Ferme Saïd");
     const { threadId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "hi", photoIds: [] });
     await settle(t);
-    let [, answer] = await farm.as.query(api.assistant.messages, { threadId });
+    let [, answer] = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(answer.status).toBe("failed");
     await farm.as.mutation(api.assistant.retry, { messageId: answer.messageId });
     await settle(t);
-    [, answer] = await farm.as.query(api.assistant.messages, { threadId });
+    [, answer] = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(answer).toMatchObject({ status: "done", text: "Back again." });
   });
 });
@@ -230,7 +231,7 @@ describe("photos and cards", () => {
     const parts = bodyOf(0).messages.at(-1).content as { type: string; image_url?: { url: string } }[];
     expect(parts.some((x) => x.type === "image_url" && x.image_url!.url.startsWith("data:image/jpeg;base64,"))).toBe(true);
 
-    const [question, answer] = await farm.as.query(api.assistant.messages, { threadId });
+    const [question, answer] = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(question.photos).toHaveLength(1);
     expect(answer.cards).toEqual([
       { type: "listing", residue: "pomegranate_peels", quantityKg: 800, priceDzdPerKg: 18, note: "Sun-dried", photoIds: [p] },
@@ -254,6 +255,7 @@ describe("photos and cards", () => {
       expect(await ctx.storage.get(p)).not.toBeNull();
     });
     expect(await farm.as.query(api.assistant.threads, { companyId: farm.id })).toEqual([]);
+    expect((await farm.as.query(api.assistant.messages, { threadId }))!).toBeNull();
   });
 
   test("deleting a conversation deletes its unused photos", async () => {
@@ -283,7 +285,7 @@ describe("photos and cards", () => {
     );
     const { threadId } = await buyer.as.mutation(api.assistant.send, { companyId: buyer.id, text: "Offer?", photoIds: [] });
     await settle(t);
-    const [, answer] = await buyer.as.query(api.assistant.messages, { threadId });
+    const [, answer] = (await buyer.as.query(api.assistant.messages, { threadId }))!;
     expect(answer.cards).toEqual([{ type: "offer", listingId: lotId, quantityKg: 500, priceDzdPerKg: 8.5 }]);
     expect(answer.steps.map((s) => s.tool)).toEqual(["propose_offer:skipped", "propose_offer"]);
   });
@@ -330,7 +332,7 @@ describe("photos and cards", () => {
     const p = await photo(t);
     const { threadId } = await lab.as.mutation(api.assistant.send, { companyId: lab.id, text: `Read this for ${sampleNo}`, photoIds: [p] });
     await settle(t);
-    const [, answer] = await lab.as.query(api.assistant.messages, { threadId });
+    const [, answer] = (await lab.as.query(api.assistant.messages, { threadId }))!;
     expect(answer.steps.map((s) => s.tool)).toEqual(["read_sheet", "propose_results"]);
     expect(answer.cards).toEqual([
       { type: "results", requestId, sampleNo, reading: { items: [{ analysis: "moisture", value: 9.8, uncertainty: 0.3 }], panels: [], notes: [] } },

@@ -77,10 +77,13 @@ export const threads = query({
   },
 });
 
+/** The conversation's messages, or null when it isn't the caller's (or was just deleted in another tab). */
 export const messages = query({
   args: { threadId: v.id("aiThreads") },
   handler: async (ctx, { threadId }) => {
-    await ownThread(ctx, threadId);
+    const user = await requireUser(ctx);
+    const thread = await ctx.db.get(threadId);
+    if (!thread || thread.userId !== user._id || !(await findMembership(ctx, thread.companyId, user._id))) return null;
     const now = Date.now();
     const rows = await ctx.db
       .query("aiMessages")
