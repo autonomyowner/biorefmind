@@ -26,6 +26,7 @@ import { CurrencySwitch, Price } from "@/components/currency";
 import { useDashboard } from "@/components/dashboard/shell";
 import { dashboardMessages, fill } from "@/components/dashboard/messages";
 import { LabDirectory, SAMPLE_LABS } from "@/components/dashboard/lab-directory";
+import { LabTests } from "@/components/dashboard/labtests/my-requests";
 import { BrowseListings, MyListings, MyOffers, SalesPanel, useMyListings, useMyOffers, useOpenListings } from "@/components/dashboard/market";
 import { Panel, ProfileCard } from "@/components/dashboard/profile-card";
 import { Spinner } from "@/components/ui/spinner";
@@ -215,6 +216,9 @@ function FarmHome() {
         <ProfileCard title={t.profile.title} />
       </FadeIn>
       <FadeIn index={8} className="mt-5">
+        <LabTests id="labtests" />
+      </FadeIn>
+      <FadeIn index={9} className="mt-5">
         <LabDirectory id="labs" title={t.directory.title} />
       </FadeIn>
     </>
@@ -381,7 +385,10 @@ function FactoryHome() {
         <SalesPanel id="sales" />
         <ProfileCard title={t.profile.title} />
       </FadeIn>
-      <FadeIn index={8} className={cn(TWO_COLS, "mt-5")}>
+      <FadeIn index={8} className="mt-5">
+        <LabTests id="labtests" />
+      </FadeIn>
+      <FadeIn index={9} className={cn(TWO_COLS, "mt-5")}>
         <LabDirectory id="labs" title={t.directory.titleFactory} />
         <EnterpriseCard />
       </FadeIn>
