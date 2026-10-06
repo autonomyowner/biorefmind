@@ -264,7 +264,7 @@ function NavLink({ href, current, children }: { href: string; current: boolean; 
 }
 
 /** When signedIn (from the session cookie), "Sign in" becomes "Dashboard". `current` underlines that page's link. */
-export function SiteHeader({ signedIn = false, current = "home" }: { signedIn?: boolean; current?: "home" | "market" }) {
+export function SiteHeader({ signedIn = false, current = "home" }: { signedIn?: boolean; current?: "home" | "market" | "none" }) {
   const t = useMessages(landingMessages).nav;
   const menus = menusOf(t);
   const [open, setOpen] = useState(false);

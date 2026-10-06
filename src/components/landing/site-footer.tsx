@@ -6,7 +6,7 @@ import type { LandingMessages } from "@/components/landing/messages";
 
 type T = LandingMessages;
 
-/** The public pages' footer (home and /marketplace). Links point at the home page's sections. */
+/** The public pages' footer (home, /marketplace, /verify). Links point at the home page's sections. */
 export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account: T["account"] }) {
   const columns = [
     {
@@ -34,10 +34,12 @@ export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account
       links: [
         { label: t.faq, href: "/#faq" },
         { label: t.routes, href: "/#routes" },
+        { label: t.verify, href: "/verify" },
       ],
     },
   ];
   // Phones get two short lines: the main links (sign-in is already in the header), then the logo with the copyright.
+  // "Check a certificate" stays desktop-only: a fourth link would wrap to a third line at 360 px.
   const phoneLinks = [
     { label: t.market, href: "/marketplace" },
     { label: t.pricing, href: "/#pricing" },

@@ -14,6 +14,7 @@ import { useDashboard } from "@/components/dashboard/shell";
 import { fill } from "@/components/dashboard/messages";
 import { marketMessages } from "@/components/dashboard/market-messages";
 import { Panel } from "@/components/dashboard/profile-card";
+import { LabBadge } from "@/components/marketplace/lab-badge";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
 import { api } from "@/lib/backend";
@@ -50,6 +51,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     note: "Sun-dried, in 25 kg bags. Collection from the farm.",
     status: "open",
     photoUrls: [],
+    labRequestId: undefined,
     createdAt: NOW,
     offers: [
       {
@@ -76,6 +78,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     note: undefined,
     status: "sold",
     photoUrls: [],
+    labRequestId: undefined,
     createdAt: NOW - 86_400_000 * 6,
     offers: [],
   },
@@ -650,6 +653,8 @@ function MarketCard({ listing: l }: { listing: MarketListing }) {
         <MapPin className="size-3.5 shrink-0" /> {l.region} · {fill(t.browse.from, { name: l.sellerName })}
       </p>
       {l.note ? <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-foreground/80">{l.note}</p> : null}
+      {/* Browse has no detail view, so the card carries the disclaimer and the certificate link. */}
+      {l.lab ? <LabBadge lab={l.lab} detail className="mt-3" /> : null}
       <div className="mt-auto pt-3">
         {offering ? (
           <OfferForm listing={l} onDone={() => setOffering(false)} />

@@ -1,11 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { REFUSE } from "../../convex/lib/accounts";
+import { LAB_REFUSE } from "../../convex/lib/labwork";
 import { MARKET_REFUSE } from "../../convex/lib/market";
 import { localizeBackendError } from "./backend-errors";
 
 describe("localizeBackendError", () => {
-  test("every account and marketplace refusal has Arabic", () => {
-    const missing = [...Object.values(REFUSE), ...Object.values(MARKET_REFUSE)].filter(
+  test("every account, marketplace and lab-work refusal has Arabic", () => {
+    const missing = [...Object.values(REFUSE), ...Object.values(MARKET_REFUSE), ...Object.values(LAB_REFUSE)].filter(
       (m) => localizeBackendError(m, "ar") === m,
     );
     expect(missing).toEqual([]);

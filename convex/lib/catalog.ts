@@ -1,5 +1,18 @@
 /** Analyses a lab can offer. Keys are stored; labels live in the website (src/lib/catalog-labels.ts). */
-export const ANALYSES = ["moisture", "polyphenols", "punicalagin", "mold", "oxidation", "contamination"] as const;
+export const ANALYSES = [
+  "moisture",
+  "polyphenols",
+  "punicalagin",
+  "pectin",
+  "mold",
+  "oxidation",
+  "heavy_metals",
+  "mycotoxins",
+  "pesticides",
+] as const;
+
+/** Analyses reported as a list of named parameters (each with value, unit and an optional limit). */
+export const PANEL_ANALYSES = ["heavy_metals", "mycotoxins", "pesticides"] as const;
 
 /** Residues a factory can say it buys. */
 export const RESIDUES = [

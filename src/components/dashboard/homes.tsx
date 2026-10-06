@@ -7,11 +7,8 @@ import {
   BadgeCheck,
   CalendarClock,
   Check,
-  CircleDollarSign,
-  Eye,
   EyeOff,
   FlaskConical,
-  Inbox,
   MapPin,
   PackageSearch,
   Percent,
@@ -26,6 +23,11 @@ import { CurrencySwitch, Price } from "@/components/currency";
 import { useDashboard } from "@/components/dashboard/shell";
 import { dashboardMessages, fill } from "@/components/dashboard/messages";
 import { LabDirectory, SAMPLE_LABS } from "@/components/dashboard/lab-directory";
+import { LabTests } from "@/components/dashboard/labtests/my-requests";
+import { labMessages } from "@/components/dashboard/lab/lab-messages";
+import { useMonthStats } from "@/components/dashboard/lab/month-stats";
+import { LabQueue } from "@/components/dashboard/lab/queue";
+import { LabSettings } from "@/components/dashboard/lab/settings";
 import { BrowseListings, MyListings, MyOffers, SalesPanel, useMyListings, useMyOffers, useOpenListings } from "@/components/dashboard/market";
 import { Panel, ProfileCard } from "@/components/dashboard/profile-card";
 import { Spinner } from "@/components/ui/spinner";
@@ -142,19 +144,6 @@ function Steps({ steps }: { steps: Step[] }) {
   );
 }
 
-/** An empty state with an icon, a title and one line. */
-function Empty({ icon: Icon, title, body }: { icon: LucideIcon; title: string; body: string }) {
-  return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-azure/25 bg-white/40 px-6 py-10 text-center">
-      <span className="orb flex size-12 items-center justify-center rounded-full">
-        <Icon className="size-5" strokeWidth={1.8} />
-      </span>
-      <p className="mt-4 text-[17px] font-semibold">{title}</p>
-      <p className="mt-1.5 max-w-[420px] text-[14px] leading-relaxed text-muted-foreground">{body}</p>
-    </div>
-  );
-}
-
 /** Listed labs for the stat tiles (same query as the directory, so it is shared). */
 function useListedLabs(): DirectoryLab[] | undefined {
   const { guest } = useDashboard();
@@ -215,6 +204,9 @@ function FarmHome() {
         <ProfileCard title={t.profile.title} />
       </FadeIn>
       <FadeIn index={8} className="mt-5">
+        <LabTests id="labtests" />
+      </FadeIn>
+      <FadeIn index={9} className="mt-5">
         <LabDirectory id="labs" title={t.directory.title} />
       </FadeIn>
     </>
@@ -226,6 +218,8 @@ function FarmHome() {
 function LabHome() {
   const { workspace } = useDashboard();
   const t = useMessages(dashboardMessages);
+  const lt = useMessages(labMessages);
+  const monthStats = useMonthStats();
   const [now] = useState(() => Date.now());
 
   const paid = workspace.plan === "lab_paid" && (workspace.paidUntil ?? 0) > now;
@@ -233,46 +227,36 @@ function LabHome() {
   const end = paid ? workspace.paidUntil! : trial ? workspace.trialEndsAt! : 0;
   const daysLeft = end ? Math.max(0, Math.ceil((end - now) / DAY)) : 0;
 
+  // Lab workspace (queue, request detail, results, prices): src/components/dashboard/lab/*
   return (
     <>
       <Greeting />
-      <StatStrip
-        stats={[
-          {
-            icon: workspace.listed ? Eye : EyeOff,
-            label: t.stats.directory,
-            value: (
-              <span className={cn("text-[22px] sm:text-[24px]", workspace.listed ? "text-[#12a26a]" : "text-destructive")}>
-                {workspace.listed ? t.stats.shown : t.stats.hiddenShort}
-              </span>
-            ),
-          },
-          { icon: CalendarClock, label: t.stats.daysLeft, value: <CountUp value={daysLeft} /> },
-          { icon: FlaskConical, label: t.stats.offers, value: <CountUp value={workspace.services?.length ?? 0} /> },
-          { icon: CircleDollarSign, label: t.stats.monthly, value: <Price usd={LAB_PRICE_USD} className="text-[22px] sm:text-[26px]" /> },
-        ]}
-      />
-      <div className={TWO_COLS}>
-        <FadeIn index={5}>
+      <StatStrip stats={monthStats} />
+      <FadeIn index={5}>
+        <LabQueue id="requests" />
+      </FadeIn>
+      <FadeIn index={6} className={cn(TWO_COLS, "mt-5")}>
+        <LabSettings id="prices" />
+        <div className="self-start">
+          <Steps
+            steps={[
+              { label: t.steps.account, done: true },
+              { label: t.steps.services, done: (workspace.services?.length ?? 0) > 0, href: "#profile" },
+              { label: lt.steps.prices, done: (workspace.prices?.length ?? 0) > 0, href: "#prices" },
+              { label: t.steps.visible, done: Boolean(workspace.listed) },
+              { label: t.steps.paid, done: paid, href: "#plan" },
+            ]}
+          />
+        </div>
+      </FadeIn>
+      <div className={cn(TWO_COLS, "mt-5")}>
+        <FadeIn index={7}>
           <ProfileCard id="profile" title={t.profile.publicTitle} />
         </FadeIn>
-        <FadeIn index={6}>
+        <FadeIn index={8}>
           <LabPlanCard paid={paid} trial={trial} end={end} daysLeft={daysLeft} />
         </FadeIn>
       </div>
-      <FadeIn index={7} className={cn(TWO_COLS, "mt-5")}>
-        <Panel id="requests" title={t.lab.requestsTitle}>
-          <Empty icon={Inbox} title={t.lab.requestsTitle} body={t.lab.requestsEmpty} />
-        </Panel>
-        <Steps
-          steps={[
-            { label: t.steps.account, done: true },
-            { label: t.steps.services, done: (workspace.services?.length ?? 0) > 0, href: "#profile" },
-            { label: t.steps.visible, done: Boolean(workspace.listed) },
-            { label: t.steps.paid, done: paid, href: "#plan" },
-          ]}
-        />
-      </FadeIn>
     </>
   );
 }
@@ -381,7 +365,10 @@ function FactoryHome() {
         <SalesPanel id="sales" />
         <ProfileCard title={t.profile.title} />
       </FadeIn>
-      <FadeIn index={8} className={cn(TWO_COLS, "mt-5")}>
+      <FadeIn index={8} className="mt-5">
+        <LabTests id="labtests" />
+      </FadeIn>
+      <FadeIn index={9} className={cn(TWO_COLS, "mt-5")}>
         <LabDirectory id="labs" title={t.directory.titleFactory} />
         <EnterpriseCard />
       </FadeIn>
