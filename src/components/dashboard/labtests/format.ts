@@ -1,7 +1,5 @@
 // Pure helpers for the lab-tests screens (no React, no path aliases, so tests can import them).
 
-const DAY = 86_400_000;
-
 /** Arabic plural class for a count: 1, 2, 3–10, then 11+ (and 0). English uses one/other. */
 export function pluralClass(n: number): "one" | "two" | "few" | "many" {
   if (n === 1) return "one";
@@ -23,10 +21,9 @@ export function inputToMs(value: string): number {
 }
 
 /**
- * Why an expired request expired. A waiting request expires 7 days after it was sent; an accepted
- * one 30 days after the lab accepted it. So one that expired within 30 days of being sent was
- * never answered; after that the row alone cannot tell.
+ * Why an expired request expired: only accepted requests carry `respondedAt` (a declined one is
+ * never "expired"), so with it the sample never came; without it the lab never answered.
  */
-export function expiredWhy(createdAt: number, now: number): "noAnswer" | "unknown" {
-  return now - createdAt <= 30 * DAY ? "noAnswer" : "unknown";
+export function expiredWhy(respondedAt: number | undefined): "noAnswer" | "noSample" {
+  return respondedAt === undefined ? "noAnswer" : "noSample";
 }

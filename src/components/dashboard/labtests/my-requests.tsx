@@ -71,13 +71,13 @@ const ICON: Record<LabRequestStatus, LucideIcon> = {
 };
 
 /** The plain sentence for a request's status. */
-function explain(t: LabtestsMessages, r: MyLabRequest, now: number): string {
+function explain(t: LabtestsMessages, r: MyLabRequest): string {
   const s = t.list.status;
   switch (r.status) {
     case "cancelled":
       return r.cancelledBy === "lab" ? s.cancelledByLab : s.cancelledByYou;
     case "expired":
-      return expiredWhy(r.createdAt, now) === "noAnswer" ? s.expiredNoAnswer : s.expired;
+      return expiredWhy(r.respondedAt) === "noAnswer" ? s.expiredNoAnswer : s.expiredNoSample;
     default:
       return s[r.status];
   }
@@ -89,8 +89,6 @@ export function LabTests({ id }: { id?: string }) {
   const requests = useMyLabRequests();
   const listings = useMyListings();
   const sales = useMySales();
-  const [now] = useState(() => Date.now());
-
   return (
     <Panel id={id} title={t.list.title}>
       {requests === undefined ? (
@@ -112,7 +110,6 @@ export function LabTests({ id }: { id?: string }) {
             <RequestCard
               key={r.requestId}
               request={r}
-              now={now}
               listing={listings?.find((l) => l.listingId === r.listingId)}
               sale={sales?.find((s) => s.saleId === r.saleId)}
             />
@@ -123,7 +120,7 @@ export function LabTests({ id }: { id?: string }) {
   );
 }
 
-function RequestCard({ request: r, now, listing, sale }: { request: MyLabRequest; now: number; listing?: MyListing; sale?: Sale }) {
+function RequestCard({ request: r, listing, sale }: { request: MyLabRequest; listing?: MyListing; sale?: Sale }) {
   const { workspace, guest } = useDashboard();
   const t = useMessages(labtestsMessages);
   const labels = useMessages(catalogLabels);
@@ -184,7 +181,7 @@ function RequestCard({ request: r, now, listing, sale }: { request: MyLabRequest
       {/* What is happening, in plain words */}
       <div className="mt-3 rounded-xl bg-white/70 px-3 py-2.5 text-[14px]">
         <p className="flex items-start gap-2 font-medium">
-          <Icon className="mt-0.5 size-4 shrink-0 text-azure" /> {explain(t, r, now)}
+          <Icon className="mt-0.5 size-4 shrink-0 text-azure" /> {explain(t, r)}
         </p>
         {r.status === "received" ? (
           <div className="mt-1 space-y-0.5 ps-6 text-[13px] text-muted-foreground">

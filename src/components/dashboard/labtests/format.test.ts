@@ -30,9 +30,8 @@ describe("date input", () => {
 });
 
 describe("expiredWhy", () => {
-  it("knows a request expired within 30 days was never answered", () => {
-    expect(expiredWhy(0, 8 * DAY)).toBe("noAnswer");
-    expect(expiredWhy(0, 30 * DAY)).toBe("noAnswer");
-    expect(expiredWhy(0, 31 * DAY)).toBe("unknown");
+  it("an answered (accepted) request expired because the sample never came; otherwise the lab never answered", () => {
+    expect(expiredWhy(undefined)).toBe("noAnswer");
+    expect(expiredWhy(31 * DAY)).toBe("noSample");
   });
 });
