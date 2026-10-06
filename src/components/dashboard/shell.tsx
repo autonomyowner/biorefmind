@@ -11,7 +11,6 @@ import {
   HandCoins,
   LayoutDashboard,
   ListChecks,
-  LogOut,
   MapPin,
   PackageSearch,
   Receipt,
@@ -25,6 +24,7 @@ import {
 import { LanguageSwitch } from "@/components/language-switch";
 import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
 import { forwardHash } from "@/components/dashboard/forward-hash";
+import { AvatarMenu, PageTitle, initialsOf } from "@/components/dashboard/frame/top-bar";
 import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
 import { DASH, withGuest, type DashPage } from "@/components/dashboard/links";
 import { dashboardMessages } from "@/components/dashboard/messages";
@@ -133,11 +133,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     icon: PAGE_ICON[p],
     group: p === "settings" ? "general" : "menu",
   }));
-  const initials = value.workspace.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+  const title = t.nav.pages[page ?? "overview"];
 
   return (
     <DashboardContext value={value}>
@@ -159,38 +155,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         }
         footer={
           <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
-            <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">{initials}</span>
+            <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
+              {initialsOf(value.workspace.name)}
+            </span>
             <span className="min-w-0">
               <span className="block truncate font-semibold">{value.workspace.name}</span>
-              <span className="block text-muted-foreground">{t.kinds[value.workspace.kind]}</span>
+              <span className="flex items-center gap-1 truncate text-muted-foreground">
+                {value.workspace.region ? <MapPin className="size-3.5 shrink-0 text-azure" /> : null}
+                {value.workspace.region || t.kinds[value.workspace.kind]}
+              </span>
             </span>
           </div>
         }
-        headerStart={
-          value.workspace.region ? (
-            <p className="hidden min-w-0 items-center gap-1.5 truncate text-[15px] text-muted-foreground sm:flex">
-              <MapPin className="size-4 shrink-0 text-azure" /> {value.workspace.region}
-            </p>
-          ) : null
-        }
+        headerStart={<PageTitle title={title} />}
         headerEnd={
           <>
-            <LanguageSwitch className="h-10" />
-            {value.guest ? (
-              <Link href="/" className="inline-flex h-10 items-center rounded-full border border-foreground/15 bg-white/50 px-4 text-[14px] font-medium">
-                {t.nav.exitGuest}
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={signOut}
-                aria-label={t.nav.signOut}
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-foreground/15 bg-white/50 px-3 text-[14px] font-medium transition-colors hover:bg-white sm:px-4"
-              >
-                <LogOut className="size-4 rtl:-scale-x-100" />
-                <span className="hidden sm:inline">{t.nav.signOut}</span>
-              </button>
-            )}
+            <LanguageSwitch className="hidden h-10 sm:inline-flex" />
+            <AvatarMenu onSignOut={signOut} />
           </>
         }
       >
