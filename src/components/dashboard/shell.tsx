@@ -24,6 +24,7 @@ import {
 
 import { LanguageSwitch } from "@/components/language-switch";
 import { AppFrame, FrameSkeleton } from "@/components/app-frame";
+import { forwardHash } from "@/components/dashboard/forward-hash";
 import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
 import { DASH, withGuest, type DashPage } from "@/components/dashboard/links";
 import { dashboardMessages } from "@/components/dashboard/messages";
@@ -115,6 +116,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!allowed) router.replace(withGuest(DASH.overview, guest));
   }, [allowed, guest, router]);
+
+  // Old one-page links (/dashboard#sales) open their page, once the account's pages are known.
+  const onOverview = page === "overview";
+  useEffect(() => {
+    if (!pages || !onOverview) return;
+    const target = forwardHash(window.location.hash, pages);
+    if (target) router.replace(withGuest(target, guest));
+  }, [pages, onOverview, guest, router]);
 
   if (!value || !pages) return <FrameSkeleton />;
 
