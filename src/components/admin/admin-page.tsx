@@ -64,6 +64,7 @@ const NAV = [
   { href: "#accounts", label: "Accounts", icon: Users },
   { href: "#billing", label: "Lab billing", icon: CreditCard },
   { href: "#market", label: "Marketplace", icon: HandCoins },
+  { href: "#labwork", label: "Lab requests", icon: FlaskConical },
   { href: "#requests", label: "Enterprise requests", icon: Inbox },
 ];
 
@@ -212,6 +213,7 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
       <AccountsSection accounts={accounts} now={now} />
       <BillingSection labs={labs} now={now} />
       <MarketSection />
+      <LabWorkSection />
       <RequestsSection requests={requests} />
     </>
   );
@@ -601,8 +603,80 @@ function EndPlan({ companyId, name }: { companyId: Account["companyId"]; name: s
 /* ---------- Marketplace ---------- */
 
 const RESIDUE_EN: Record<string, string> = catalogLabels.en.residues;
+const ANALYSIS_EN: Record<string, string> = catalogLabels.en.analyses;
 
 /** Every sale and the 5% fees buyers owe; billing them is piece 4. Amounts in dinars. */
+/** A phone number under a name, as a tap-to-call link. */
+function TelLink({ phone }: { phone: string }) {
+  if (!phone) return null;
+  return (
+    <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} dir="ltr" className="mt-0.5 flex items-center gap-1 text-[13px] text-azure">
+      <Phone className="size-3" /> {phone}
+    </a>
+  );
+}
+
+const LAB_STATUS: Record<string, string> = {
+  requested: "Waiting for the lab",
+  accepted: "Accepted, sample expected",
+  declined: "Declined",
+  received: "Sample received",
+  released: "Results released",
+  cancelled: "Cancelled",
+  expired: "Expired",
+  lab_unavailable: "Lab not listed",
+};
+
+/** The latest lab requests with both phones: BiorefMind arranges the sample between lab and farmer. */
+function LabWorkSection() {
+  const rows = useQuery(api.admin.labRequests, {});
+  return (
+    <section id="labwork" className="glass mt-5 scroll-mt-24 rounded-[28px] p-5 sm:p-7">
+      <h2 className="text-[19px] font-semibold">Lab requests</h2>
+      <p className="mt-1 text-[14px] text-muted-foreground">
+        The latest 50. Labs never see a farmer&apos;s phone: call both to arrange the sample.
+      </p>
+      {!rows ? (
+        <Spinner className="flex py-8" />
+      ) : rows.length === 0 ? (
+        <p className="mt-4 rounded-2xl bg-white/50 px-4 py-6 text-center text-[15px] text-muted-foreground">No lab requests yet.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-white bg-white/60">
+          <table className="w-full min-w-[720px] text-start text-[14px]">
+            <thead className="text-[13px] text-muted-foreground">
+              <tr className="border-b border-foreground/10">
+                {["Date", "Client", "Lab", "Analyses", "Status", "Total"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-start font-medium">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.requestId} className="border-b border-foreground/5 align-top last:border-0">
+                  <td className="whitespace-nowrap px-4 py-2.5">{fmt(r.createdAt)}</td>
+                  <td className="px-4 py-2.5">
+                    {r.client} <span className="text-muted-foreground">· {r.clientKind === "farm" ? "Farmer" : "Factory"}</span>
+                    <TelLink phone={r.clientPhone} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {r.lab}
+                    <TelLink phone={r.labPhone} />
+                  </td>
+                  <td className="px-4 py-2.5">{r.analyses.map((a) => ANALYSIS_EN[a] ?? a).join(", ")}</td>
+                  <td className="px-4 py-2.5">{LAB_STATUS[r.status] ?? r.status}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatDzd(r.totalDzd, "en")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MarketSection() {
   const sales = useQuery(api.admin.sales, {}) as AdminSales | undefined;
   const figures = sales
@@ -615,7 +689,10 @@ function MarketSection() {
   return (
     <section id="market" className="glass mt-5 scroll-mt-24 rounded-[28px] p-5 sm:p-7">
       <h2 className="text-[19px] font-semibold">Marketplace</h2>
-      <p className="mt-1 text-[14px] text-muted-foreground">Accepted offers between farmers and factories. Fees are not billed yet.</p>
+      <p className="mt-1 text-[14px] text-muted-foreground">
+        Accepted offers between farmers and factories. Only BiorefMind sees the phones: call both sides to arrange pickup and
+        payment. Fees are not billed yet.
+      </p>
       {!sales ? (
         <Spinner className="flex py-8" />
       ) : (
@@ -647,8 +724,14 @@ function MarketSection() {
                     <tr key={s.saleId} className="border-b border-foreground/5 last:border-0">
                       <td className="whitespace-nowrap px-4 py-2.5">{fmt(s.createdAt)}</td>
                       <td className="px-4 py-2.5">{residueLabel(RESIDUE_EN, s)}</td>
-                      <td className="px-4 py-2.5">{s.seller}</td>
-                      <td className="px-4 py-2.5">{s.buyer}</td>
+                      <td className="px-4 py-2.5">
+                        {s.seller}
+                        <TelLink phone={s.sellerPhone} />
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {s.buyer}
+                        <TelLink phone={s.buyerPhone} />
+                      </td>
                       <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatKg(s.quantityKg, "en")}</td>
                       <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatDzd(s.totalDzd, "en")}</td>
                       <td className="whitespace-nowrap px-4 py-2.5 font-medium tabular-nums">{formatDzd(s.feeDzd, "en")}</td>

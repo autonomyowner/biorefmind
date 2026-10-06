@@ -28,7 +28,7 @@ export const pagesMessages = defineMessages({
     },
     headers: {
       listings: "Your lots for sale and the offers factories make on them.",
-      sales: "Completed deals, with the other side's phone number.",
+      sales: "Completed deals. BiorefMind arranges pickup and payment with both sides.",
       browse: "Open lots from farms and plants. Offer on all or part of a lot.",
       offers: "The offers you made and the sellers' answers.",
       labs: "Your lab tests, and the labs you can send samples to.",
@@ -106,7 +106,7 @@ export const pagesMessages = defineMessages({
     },
     headers: {
       listings: "حمولاتك المعروضة للبيع والعروض التي تقدّمها المصانع عليها.",
-      sales: "الصفقات المكتملة، مع رقم هاتف الطرف الآخر.",
+      sales: "الصفقات المكتملة. يرتّب BiorefMind الاستلام والدفع مع الطرفين.",
       browse: "حمولات مفتوحة من المزارع والمصانع. قدّم عرضًا على الحمولة كلها أو جزء منها.",
       offers: "العروض التي قدّمتها وردود البائعين عليها.",
       labs: "تحاليلك، والمختبرات التي يمكنك إرسال العيّنات إليها.",

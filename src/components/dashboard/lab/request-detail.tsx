@@ -95,6 +95,8 @@ function RequestDetail({ row }: { row: LabQueueRow }) {
             >
               <Phone className="size-3.5" /> {t.detail.call} <bdi dir="ltr">{row.clientPhone}</bdi>
             </a>
+          ) : row.clientKind === "farm" ? (
+            <p className="mt-3 rounded-xl bg-[#eef2ff] px-3 py-2 text-[13px] leading-relaxed text-[#24366a]">{t.detail.farmerContact}</p>
           ) : null}
         </Section>
 

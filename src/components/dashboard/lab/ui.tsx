@@ -161,7 +161,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       status: "requested",
       overdue: false,
       clientName: "Ferme Saïd",
-      clientPhone: "+213 555 12 34 56",
+      clientPhone: "", // farmers' phones stay with BiorefMind
       clientRegion: "Sétif",
       analyses: [
         { analysis: "moisture", priceDzd: 1500, days: 2 },
@@ -195,7 +195,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       status: "received",
       overdue: true,
       clientName: "Coopérative El Baraka",
-      clientPhone: "+213 555 98 76 54",
+      clientPhone: "",
       clientRegion: "Béjaïa",
       analyses: [
         { analysis: "polyphenols", priceDzd: 4000, days: 5 },
@@ -217,7 +217,7 @@ export function sampleQueue(now: number): LabQueueRow[] {
       status: "released",
       overdue: false,
       clientName: "Ferme Saïd",
-      clientPhone: "+213 555 12 34 56",
+      clientPhone: "", // farmers' phones stay with BiorefMind
       clientRegion: "Sétif",
       analyses: [{ analysis: "pectin", priceDzd: 4000, days: 7 }],
       totalDzd: 4000,

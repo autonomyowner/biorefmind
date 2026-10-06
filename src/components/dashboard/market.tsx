@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, HandCoins, ImagePlus, MapPin, PackageSearch, Phone, Plus, Receipt, Sprout, Store, X } from "lucide-react";
+import { Check, HandCoins, Headset, ImagePlus, MapPin, PackageSearch, Plus, Receipt, Sprout, Store, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -95,7 +95,6 @@ const SAMPLE_SALES: Sale[] = [
     side: "sold",
     otherName: "Bio-Énergie Est",
     otherRegion: "Constantine",
-    otherPhone: "+213 31 00 00 00",
     createdAt: NOW - 86_400_000 * 5,
   },
 ];
@@ -846,12 +845,6 @@ export function SalesPanel({ id }: { id?: string }) {
                     {fill(s.side === "sold" ? t.sales.sold : t.sales.bought, { name: s.otherName })} · {s.otherRegion}
                   </p>
                 </div>
-                <a
-                  href={`tel:${s.otherPhone.replace(/[^\d+]/g, "")}`}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#e6edff] px-3 py-1.5 text-[13px] font-medium text-azure"
-                >
-                  <Phone className="size-3.5" /> {t.sales.call}
-                </a>
               </div>
               <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="text-[14px]" dir="ltr">
@@ -860,8 +853,8 @@ export function SalesPanel({ id }: { id?: string }) {
                 <p className="text-[13px] text-muted-foreground">{f.date(s.createdAt)}</p>
               </div>
               {s.side === "bought" ? <p className="mt-1 text-[13px] text-muted-foreground">{fill(t.sales.fee, { fee: f.dzd(s.feeDzd) })}</p> : null}
-              <p dir="ltr" className="mt-1 text-[13px] text-muted-foreground rtl:text-end">
-                {s.otherPhone}
+              <p className="mt-2.5 flex items-start gap-2 rounded-xl bg-[#eef2ff] px-3 py-2 text-[13px] leading-relaxed text-[#24366a]">
+                <Headset className="mt-0.5 size-4 shrink-0 text-azure" /> {t.sales.connect}
               </p>
             </li>
           ))}
