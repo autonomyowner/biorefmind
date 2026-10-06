@@ -101,7 +101,7 @@ export const createListing = mutation({
       createdBy: user._id,
       createdAt: Date.now(),
     });
-    if (photoIds.length > 0) await queuePhotoCheck(ctx, listingId);
+    if (photoIds.length > 0) await queuePhotoCheck(ctx, listingId, company._id);
     return listingId;
   },
 });
@@ -165,7 +165,7 @@ export const myListings = query({
         status: l.status,
         photoUrls: await photoUrls(ctx, l.photoIds),
         labRequestId: l.labRequestId,
-        photoCheck: farmerView(await checkFor(ctx, l._id)),
+        photoCheck: farmerView(await checkFor(ctx, l._id), Date.now()),
         createdAt: l.createdAt,
         offers,
       });

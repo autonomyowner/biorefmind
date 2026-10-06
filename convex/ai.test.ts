@@ -5,7 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 import { api, components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { AI_REFUSE, DAILY_CAP, DEFAULT_MODEL } from "./lib/ai";
+import { AI_REFUSE, DAILY_CAP, DEFAULT_MODEL, FARM_DAILY_CAP } from "./lib/ai";
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -179,16 +179,96 @@ describe("photo check", () => {
     stubFetch(() => okResponse());
     const t = newBackend();
     const f = await farm(t);
+    const other = (await farm(t, "other@x.dz")).id; // the day's checks were other farms'
     const listingId = await post(t, f.as, f.id, 0);
     await t.run(async (ctx) => {
       for (let i = 0; i < DAILY_CAP; i++) {
-        await ctx.db.insert("photoChecks", { listingId, status: "done", attempts: 1, createdAt: Date.now() });
+        await ctx.db.insert("photoChecks", { listingId, companyId: other, status: "done", attempts: 1, createdAt: Date.now() });
       }
     });
     await post(t, f.as, f.id);
     await runChecks(t);
     expect(fetchMock).not.toHaveBeenCalled();
     expect((await f.as.query(api.market.myListings, { companyId: f.id }))[0].photoCheck).toEqual({ status: "off" });
+  });
+
+  test("the daily cap ignores checks that were off (they cost nothing)", async () => {
+    stubFetch(() => okResponse());
+    const t = newBackend();
+    const f = await farm(t);
+    const listingId = await post(t, f.as, f.id, 0);
+    await t.run(async (ctx) => {
+      for (let i = 0; i < DAILY_CAP + 5; i++) {
+        await ctx.db.insert("photoChecks", { listingId, companyId: f.id, status: "off", attempts: 0, createdAt: Date.now() });
+      }
+    });
+    await post(t, f.as, f.id);
+    await runChecks(t);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  test("one farm gets at most FARM_DAILY_CAP checks a day", async () => {
+    stubFetch(() => okResponse());
+    const t = newBackend();
+    const f = await farm(t);
+    const other = await farm(t, "other@x.dz");
+    const listingId = await post(t, f.as, f.id, 0);
+    await t.run(async (ctx) => {
+      for (let i = 0; i < FARM_DAILY_CAP; i++) {
+        await ctx.db.insert("photoChecks", { listingId, companyId: f.id, status: "done", attempts: 1, createdAt: Date.now() });
+      }
+    });
+    await post(t, f.as, f.id);
+    await post(t, other.as, other.id);
+    await runChecks(t);
+    expect(fetchMock).toHaveBeenCalledOnce(); // only the other farm's lot
+    expect((await f.as.query(api.market.myListings, { companyId: f.id }))[0].photoCheck).toEqual({ status: "off" });
+    expect((await other.as.query(api.market.myListings, { companyId: other.id }))[0].photoCheck?.status).toBe("done");
+  });
+
+  test("a check stuck pending for over 10 minutes shows as failed and can be retried", async () => {
+    stubFetch(() => okResponse());
+    const t = newBackend();
+    const f = await farm(t);
+    const listingId = await post(t, f.as, f.id);
+    // The scheduled run never happens (e.g. the action died); age the check by 11 minutes.
+    await t.run(async (ctx) => {
+      const check = await ctx.db.query("photoChecks").first();
+      await ctx.db.patch(check!._id, { queuedAt: Date.now() - 11 * 60_000 });
+    });
+    expect((await f.as.query(api.market.myListings, { companyId: f.id }))[0].photoCheck).toEqual({ status: "failed" });
+    await f.as.mutation(api.photoCheck.retry, { listingId });
+    await runChecks(t);
+    expect((await t.query(api.market.publicLots, {}))[0].photoCheck).toEqual(answer);
+  });
+
+  test("calls carry a timeout; a typed residue goes as data, not instructions", async () => {
+    stubFetch(() => okResponse());
+    const t = newBackend();
+    const f = await farm(t);
+    await f.as.mutation(api.market.createListing, {
+      companyId: f.id,
+      residue: "other",
+      residueName: "Fig leaves",
+      quantityKg: 10,
+      priceDzdPerKg: 5,
+      photoIds: [await photo(t)],
+    });
+    await runChecks(t);
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    const body = bodyOf(0);
+    expect(body.messages[0].content).not.toContain("Fig leaves");
+    expect(JSON.stringify(body.messages[1].content)).toContain("Fig leaves");
+  });
+
+  test("retry refuses a lot that is no longer open", async () => {
+    stubFetch(() => new Response("down", { status: 503 }));
+    const t = newBackend();
+    const f = await farm(t);
+    const listingId = await post(t, f.as, f.id);
+    await runChecks(t);
+    await f.as.mutation(api.market.withdrawListing, { listingId });
+    await expect(f.as.mutation(api.photoCheck.retry, { listingId })).rejects.toThrow("This listing is no longer open.");
   });
 
   test("two failed attempts → failed; the farmer retries (3 a day), others cannot", async () => {

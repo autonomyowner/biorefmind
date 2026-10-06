@@ -5,12 +5,17 @@ import { internalAction, internalMutation, internalQuery, mutation, type Mutatio
 import { requireMember } from "./lib/access";
 import {
   AI_REFUSE,
+  CALL_TIMEOUT_MS,
   DAILY_CAP,
+  FARM_DAILY_CAP,
   OPENROUTER_URL,
   parsePhotoCheck,
   PHOTO_SCHEMA,
+  photoCheckData,
   photoCheckPrompt,
+  photoCheckResultValidator,
   RETRIES_PER_DAY,
+  STUCK_AFTER_MS,
   utcDay,
   type PhotoCheckResult,
 } from "./lib/ai";
@@ -20,6 +25,8 @@ import { MARKET_REFUSE } from "./lib/market";
 
 const ATTEMPTS = 2;
 
+const dayStart = (now: number) => utcDay(now) * 86_400_000;
+
 export async function checkFor(ctx: QueryCtx, listingId: Id<"listings">): Promise<Doc<"photoChecks"> | null> {
   return await ctx.db
     .query("photoChecks")
@@ -27,16 +34,36 @@ export async function checkFor(ctx: QueryCtx, listingId: Id<"listings">): Promis
     .first();
 }
 
-/** Queues a check for a lot that has photos (called by market.createListing). */
-export async function queuePhotoCheck(ctx: MutationCtx, listingId: Id<"listings">) {
-  const checkId = await ctx.db.insert("photoChecks", { listingId, status: "pending", attempts: 0, createdAt: Date.now() });
+/** Pending, or pending so long that the run must have died (shown and retried as failed). */
+function effectiveStatus(p: Doc<"photoChecks">, now: number): Doc<"photoChecks">["status"] {
+  if (p.status === "pending" && now - (p.queuedAt ?? p.createdAt) > STUCK_AFTER_MS) return "failed";
+  return p.status;
+}
+
+/**
+ * Queues a check for a lot that has photos (called by market.createListing).
+ * A farm over its daily allowance gets an "off" check straight away, with no call.
+ */
+export async function queuePhotoCheck(ctx: MutationCtx, listingId: Id<"listings">, companyId: Id<"companies">) {
+  const now = Date.now();
+  const farmToday = await ctx.db
+    .query("photoChecks")
+    .withIndex("by_company_created", (q) => q.eq("companyId", companyId).gte("createdAt", dayStart(now)))
+    .filter((q) => q.neq(q.field("status"), "off"))
+    .take(FARM_DAILY_CAP);
+  if (farmToday.length >= FARM_DAILY_CAP) {
+    await ctx.db.insert("photoChecks", { listingId, companyId, status: "off", attempts: 0, createdAt: now, finishedAt: now });
+    return;
+  }
+  const checkId = await ctx.db.insert("photoChecks", { listingId, companyId, status: "pending", attempts: 0, createdAt: now, queuedAt: now });
   await ctx.scheduler.runAfter(0, internal.photoCheck.run, { checkId });
 }
 
 /** The farmer's view: status always, result when done. */
-export function farmerView(p: Doc<"photoChecks"> | null) {
+export function farmerView(p: Doc<"photoChecks"> | null, now: number) {
   if (!p) return undefined;
-  return p.status === "done" && p.result ? { status: p.status, result: p.result } : { status: p.status };
+  const status = effectiveStatus(p, now);
+  return status === "done" && p.result ? { status, result: p.result } : { status };
 }
 
 /** Everyone else's view: the result only once done. */
@@ -50,14 +77,15 @@ export const load = internalQuery({
     const check = await ctx.db.get(checkId);
     const listing = check ? await ctx.db.get(check.listingId) : null;
     if (!check || !listing || check.status !== "pending") return null;
-    const today = utcDay(Date.now()) * 86_400_000;
+    // Checks that were off cost nothing, so only the others count towards the platform's cap.
     const ranToday = await ctx.db
       .query("photoChecks")
-      .withIndex("by_created", (q) => q.gte("createdAt", today))
-      .take(DAILY_CAP + 1);
+      .withIndex("by_created", (q) => q.gte("createdAt", dayStart(Date.now())))
+      .filter((q) => q.and(q.neq(q.field("status"), "off"), q.neq(q.field("_id"), checkId)))
+      .take(DAILY_CAP);
     const urls = await Promise.all(listing.photoIds.map((id) => ctx.storage.getUrl(id)));
     return {
-      overCap: ranToday.filter((p) => p.status !== "off" && p._id !== checkId).length >= DAILY_CAP,
+      overCap: ranToday.length >= DAILY_CAP,
       residue: listing.residue,
       residueName: listing.residueName,
       photoUrls: urls.filter((u): u is string => u !== null),
@@ -69,7 +97,7 @@ export const save = internalMutation({
   args: {
     checkId: v.id("photoChecks"),
     status: v.union(v.literal("done"), v.literal("failed"), v.literal("off")),
-    result: v.optional(v.any()),
+    result: v.optional(photoCheckResultValidator),
     model: v.optional(v.string()),
     costUsd: v.optional(v.number()),
     attempts: v.number(),
@@ -79,7 +107,7 @@ export const save = internalMutation({
     if (!check) return null;
     await ctx.db.patch(checkId, {
       status,
-      result: status === "done" ? (result as PhotoCheckResult) : undefined,
+      result: status === "done" ? result : undefined,
       model,
       costUsd: (check.costUsd ?? 0) + (costUsd ?? 0),
       attempts: check.attempts + attempts,
@@ -90,10 +118,11 @@ export const save = internalMutation({
 });
 
 /** One OpenRouter call: the parsed answer and its cost, or null. */
-async function ask(key: string, model: string, prompt: string, photoUrls: string[]) {
+async function ask(key: string, model: string, residue: string, residueName: string | undefined, photoUrls: string[]) {
   const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
     body: JSON.stringify({
       model,
       max_tokens: 700,
@@ -101,11 +130,11 @@ async function ask(key: string, model: string, prompt: string, photoUrls: string
       response_format: PHOTO_SCHEMA,
       usage: { include: true },
       messages: [
-        { role: "system", content: prompt },
+        { role: "system", content: photoCheckPrompt(residue) },
         {
           role: "user",
           content: [
-            { type: "text", text: "Here are the lot's photos." },
+            { type: "text", text: `${photoCheckData(residue, residueName)}\nHere are the lot's photos.` },
             ...photoUrls.map((url) => ({ type: "image_url", image_url: { url } })),
           ],
         },
@@ -133,11 +162,10 @@ export const run = internalAction({
       await ctx.runMutation(internal.photoCheck.save, { checkId, status: "off", attempts: 0 });
       return;
     }
-    const prompt = photoCheckPrompt(lot.residue, lot.residueName);
     let cost = 0;
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
       try {
-        const out = await ask(cfg.key, cfg.model, prompt, lot.photoUrls);
+        const out = await ask(cfg.key, cfg.model, lot.residue, lot.residueName, lot.photoUrls);
         cost += out.cost;
         if (out.result) {
           await ctx.runMutation(internal.photoCheck.save, {
@@ -151,14 +179,14 @@ export const run = internalAction({
           return;
         }
       } catch (e) {
-        console.error("Photo check: call failed", e instanceof Error ? e.message : "unknown");
+        console.error("Photo check: call failed", e instanceof Error ? e.name : "unknown");
       }
     }
     await ctx.runMutation(internal.photoCheck.save, { checkId, status: "failed", model: cfg.model, costUsd: cost, attempts: ATTEMPTS });
   },
 });
 
-/** The farmer presses "Try again" on a failed check (3 times a UTC day per lot). */
+/** The farmer presses "Try again" on a failed (or stuck) check of an open lot: 3 times a UTC day per lot. */
 export const retry = mutation({
   args: { listingId: v.id("listings") },
   handler: async (ctx, { listingId }) => {
@@ -166,12 +194,14 @@ export const retry = mutation({
     if (!listing) throw new ConvexError(MARKET_REFUSE.noListing);
     const { company } = await requireMember(ctx, listing.companyId, "manager", MARKET_REFUSE.role);
     if (company.kind !== "farm") throw new ConvexError(MARKET_REFUSE.farmOnly);
+    if (listing.status !== "open") throw new ConvexError(MARKET_REFUSE.closed);
+    const now = Date.now();
     const check = await checkFor(ctx, listingId);
-    if (!check || check.status !== "failed") throw new ConvexError(AI_REFUSE.notFailed);
-    const today = utcDay(Date.now());
+    if (!check || effectiveStatus(check, now) !== "failed") throw new ConvexError(AI_REFUSE.notFailed);
+    const today = utcDay(now);
     const used = check.retryDay === today ? (check.retries ?? 0) : 0;
     if (used >= RETRIES_PER_DAY) throw new ConvexError(AI_REFUSE.retries);
-    await ctx.db.patch(check._id, { status: "pending", retryDay: today, retries: used + 1 });
+    await ctx.db.patch(check._id, { status: "pending", queuedAt: now, retryDay: today, retries: used + 1 });
     await ctx.scheduler.runAfter(0, internal.photoCheck.run, { checkId: check._id });
     return null;
   },

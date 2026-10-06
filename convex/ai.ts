@@ -42,9 +42,10 @@ export const settings = query({
     const c = await resolveConfig(ctx);
     const now = new Date();
     const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+    // By when each check finished, so a retry this month counts this month.
     const checks = await ctx.db
       .query("photoChecks")
-      .withIndex("by_created", (q) => q.gte("createdAt", monthStart))
+      .withIndex("by_finished", (q) => q.gte("finishedAt", monthStart))
       .collect();
     let done = 0;
     let failed = 0;

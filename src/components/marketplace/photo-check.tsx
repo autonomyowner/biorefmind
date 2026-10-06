@@ -12,6 +12,9 @@ import type { PhotoCheckResult } from "../../../convex/lib/ai";
 const fill = (text: string, values: Record<string, string | number>) =>
   text.replace(/\{(\w+)\}/g, (_, k: string) => String(values[k] ?? ""));
 
+/** "Pomegranate peels" → "pomegranate peels" inside an English sentence; Arabic has no case. */
+const inSentence = (residue: string) => residue.charAt(0).toLocaleLowerCase("en") + residue.slice(1);
+
 const MATCH_ICON = { yes: CheckCircle2, unsure: CircleHelp, no: XCircle } as const;
 const MATCH_TONE = { yes: "text-[#12a26a]", unsure: "text-violet", no: "text-[#c2410c]" } as const;
 
@@ -27,7 +30,7 @@ export function PhotoCheckLine({ check, residue, className }: { check: PhotoChec
     >
       <Icon className={cn("size-4 shrink-0", MATCH_TONE[check.match])} strokeWidth={2} />
       <span className="min-w-0 truncate">
-        <span className="font-semibold text-foreground">{fill(t.match[check.match], { residue })}</span>
+        <span className="font-semibold text-foreground">{fill(t.match[check.match], { residue: inSentence(residue) })}</span>
         {" · "}
         {t.state[check.state]}
         {" · "}
@@ -66,7 +69,7 @@ export function PhotoCheckBox({
       <p className="mt-2 flex items-start gap-2">
         <Icon className={cn("mt-px size-4 shrink-0", MATCH_TONE[check.match])} strokeWidth={2} />
         <span>
-          <span className="font-semibold text-foreground">{fill(t.match[check.match], { residue })}</span>
+          <span className="font-semibold text-foreground">{fill(t.match[check.match], { residue: inSentence(residue) })}</span>
           {" · "}
           {t.state[check.state]}
           <span className="mt-0.5 block text-[#2e2a6b]/85">{check.seen[locale]}</span>
