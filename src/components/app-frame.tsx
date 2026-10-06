@@ -249,22 +249,35 @@ function GroupLabel({ children, className }: { children: React.ReactNode; classN
 export function FrameSkeleton() {
   return (
     <div className="flex min-h-dvh flex-1" aria-busy="true">
-      <aside className="hidden w-64 shrink-0 border-e border-white/70 bg-card/60 p-4 md:block">
+      <aside className="hidden w-64 shrink-0 flex-col border-e border-white/70 bg-card/60 p-4 md:flex">
         <span className="mb-6 block h-8 w-36 animate-pulse rounded-xl bg-white/70" />
-        {[0, 1, 2].map((i) => (
-          <span key={i} className="mb-2 block h-10 animate-pulse rounded-xl bg-white/50" />
+        <span className="mb-2 ms-3 block h-3 w-12 animate-pulse rounded bg-white/60" />
+        {[0, 1, 2, 3, 4].map((i) => (
+          <span key={i} className={cn("mb-1.5 block h-10 animate-pulse rounded-xl", i === 0 ? "bg-white/75" : "bg-white/45")} />
         ))}
+        <span className="mt-4 mb-2 ms-3 block h-3 w-16 animate-pulse rounded bg-white/60" />
+        <span className="block h-10 animate-pulse rounded-xl bg-white/45" />
+        <span className="mt-auto block h-16 animate-pulse rounded-2xl bg-white/55" />
       </aside>
       <div className="flex-1">
-        <div className="h-16 border-b border-white/70" />
+        <div className="flex h-16 items-center justify-between gap-3 border-b border-white/70 px-4 sm:px-6">
+          <span className="block h-7 w-40 animate-pulse rounded-lg bg-white/60" />
+          <span className="flex items-center gap-2">
+            <span className="block h-10 w-10 animate-pulse rounded-full bg-white/55 md:w-56" />
+            <span className="block size-10 animate-pulse rounded-full bg-white/60" />
+          </span>
+        </div>
         <div className="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-8">
           <span className="block h-10 w-64 animate-pulse rounded-xl bg-white/60" />
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
-              <span key={i} className="block h-28 animate-pulse rounded-[24px] bg-white/55" />
+              <span key={i} className={cn("block h-32 animate-pulse rounded-[24px]", i === 0 ? "bg-[#04173a]/15" : "bg-white/55")} />
             ))}
           </div>
-          <span className="block h-64 animate-pulse rounded-[28px] bg-white/50" />
+          <div className="grid gap-5 lg:grid-cols-3">
+            <span className="block h-64 animate-pulse rounded-[28px] bg-white/50 lg:col-span-2" />
+            <span className="block h-64 animate-pulse rounded-[28px] bg-white/50" />
+          </div>
         </div>
       </div>
     </div>

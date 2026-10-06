@@ -6,13 +6,14 @@ import { Search, TestTubes } from "lucide-react";
 import { FadeIn } from "@/components/motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabDirectory } from "@/components/dashboard/lab-directory";
-import { LabTests } from "@/components/dashboard/labtests/my-requests";
+import { LabTests, useMyLabRequests } from "@/components/dashboard/labtests/my-requests";
 import { DASH, withGuest } from "@/components/dashboard/links";
 import { dashboardMessages } from "@/components/dashboard/messages";
 import { pagesMessages } from "@/components/dashboard/pages-messages";
 import { useDashboard } from "@/components/dashboard/shell";
 import { useMessages } from "@/i18n/provider";
 import { PageHeader } from "./page-header";
+import { PanelSkeleton } from "./simple";
 
 type Tab = "tests" | "find";
 
@@ -26,6 +27,7 @@ export function LabsPage() {
   const t = useMessages(pagesMessages);
   const d = useMessages(dashboardMessages);
   const tab: Tab = useSearchParams().get("tab") === "find" ? "find" : "tests";
+  const requests = useMyLabRequests();
 
   function choose(next: unknown) {
     const href = next === "find" ? `${DASH.labs}?tab=find` : DASH.labs;
@@ -47,9 +49,7 @@ export function LabsPage() {
           </TabsList>
         </FadeIn>
         <TabsContent value="tests">
-          <FadeIn index={2}>
-            <LabTests />
-          </FadeIn>
+          <FadeIn index={2}>{requests === undefined ? <PanelSkeleton /> : <LabTests />}</FadeIn>
         </TabsContent>
         <TabsContent value="find">
           <FadeIn index={2}>

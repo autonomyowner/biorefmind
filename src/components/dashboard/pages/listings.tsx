@@ -5,18 +5,20 @@ import { useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { FadeIn } from "@/components/motion";
-import { MyListings } from "@/components/dashboard/market";
+import { MyListings, useMyListings } from "@/components/dashboard/market";
 import { dashboardMessages } from "@/components/dashboard/messages";
 import { pagesMessages } from "@/components/dashboard/pages-messages";
 import { useDashboard } from "@/components/dashboard/shell";
 import { useMessages } from "@/i18n/provider";
 import { HEADER_PRIMARY, PageHeader } from "./page-header";
+import { PanelSkeleton } from "./simple";
 
 /** Listings (farm): the lots and the offers on them. `?new=1` opens the new-listing form on arrival. */
 export function ListingsPage() {
   const { workspace, guest } = useDashboard();
   const t = useMessages(pagesMessages);
   const nav = useMessages(dashboardMessages).nav.pages;
+  const listings = useMyListings();
   const canSell = !guest && workspace.role !== "inspector";
   const wantsNew = useSearchParams().get("new") === "1";
   const [adding, setAdding] = useState(canSell && wantsNew);
@@ -34,7 +36,7 @@ export function ListingsPage() {
         }
       />
       <FadeIn index={1}>
-        <MyListings adding={adding} onAddingChange={setAdding} />
+        {listings === undefined ? <PanelSkeleton /> : <MyListings adding={adding} onAddingChange={setAdding} />}
       </FadeIn>
     </>
   );
