@@ -17,12 +17,14 @@ import {
   Mail,
   Phone,
   Search,
+  Sparkles,
   Sprout,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AiSection } from "@/components/admin/ai-section";
 import { AppFrame, FrameSkeleton } from "@/components/app-frame";
 import { CurrencySwitch, Price, useCurrency } from "@/components/currency";
 import { CountUp, FadeIn } from "@/components/motion";
@@ -66,9 +68,10 @@ const NAV = [
   { href: "#market", label: "Marketplace", icon: HandCoins },
   { href: "#labwork", label: "Lab requests", icon: FlaskConical },
   { href: "#requests", label: "Enterprise requests", icon: Inbox },
+  { href: "#ai", label: "AI", icon: Sparkles },
 ];
 
-/** Admin dashboard: figures, sign-ups, accounts, lab billing, enterprise requests. Others see "Page not found". */
+/** Admin dashboard: figures, sign-ups, accounts, lab billing, enterprise requests, AI settings. Others see "Page not found". */
 export function AdminPage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : "skip") as Viewer | undefined;
@@ -215,6 +218,7 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
       <MarketSection />
       <LabWorkSection />
       <RequestsSection requests={requests} />
+      <AiSection />
     </>
   );
 }
