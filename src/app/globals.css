@@ -183,3 +183,23 @@
     animation: none !important;
   }
 }
+
+/* Printing (the certificate of analysis at /verify/<code>): a plain white A4 sheet in navy ink.
+   The page size and the "Report … / Page x of y" margin boxes are set by the certificate page itself. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .cert-sheet a {
+    color: inherit;
+  }
+  .cert-sheet tr,
+  .cert-sheet h2 {
+    break-inside: avoid;
+  }
+}
