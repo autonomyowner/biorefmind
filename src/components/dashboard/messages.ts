@@ -109,7 +109,7 @@ export const dashboardMessages = defineMessages({
         labs: "المختبرات",
         requests: "الطلبات",
         prices: "الأسعار",
-        analytics: "الإحصاءات",
+        analytics: "التحليلات",
         plan: "الاشتراك",
         settings: "الإعدادات",
       },

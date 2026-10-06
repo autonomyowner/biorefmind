@@ -31,9 +31,10 @@ export function PageTitle({ title }: { title: string }) {
   );
 }
 
-/** Opens the command palette: a small search field on wide screens, an icon on phones. */
-export function SearchButton({ onOpen }: { onOpen: () => void }) {
+/** Opens the command palette: a search field at the start of the bar on wide screens, an icon on phones. */
+export function SearchButton({ onOpen, variant }: { onOpen: () => void; variant: "field" | "icon" }) {
   const t = useMessages(pagesMessages);
+  const field = variant === "field";
   return (
     <button
       type="button"
@@ -42,14 +43,18 @@ export function SearchButton({ onOpen }: { onOpen: () => void }) {
       aria-keyshortcuts="Control+K Meta+K"
       className={cn(
         "inline-flex h-10 items-center gap-2 rounded-full border border-foreground/15 bg-white/55 text-[14px] text-muted-foreground transition-colors hover:bg-white",
-        "w-10 justify-center md:w-56 md:justify-start md:px-3.5",
+        field ? "w-72 justify-start px-3.5 lg:w-80" : "w-10 justify-center",
       )}
     >
       <Search className="size-4 shrink-0" />
-      <span className="hidden flex-1 text-start md:inline">{t.frame.search}</span>
-      <kbd dir="ltr" className="hidden rounded-md border border-foreground/10 bg-white/80 px-1.5 py-0.5 font-sans text-[11px] text-foreground/60 md:inline">
-        ⌘K
-      </kbd>
+      {field ? (
+        <>
+          <span className="flex-1 text-start">{t.frame.search}</span>
+          <kbd dir="ltr" className="rounded-md border border-foreground/10 bg-white/80 px-1.5 py-0.5 font-sans text-[11px] text-foreground/60">
+            ⌘K
+          </kbd>
+        </>
+      ) : null}
     </button>
   );
 }

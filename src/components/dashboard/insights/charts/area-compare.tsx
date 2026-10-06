@@ -11,10 +11,11 @@ import { COLORS, EASE, compactNumber, useSvgId, useWidth } from "./shared";
 const H = 260;
 const PAD = { top: 14, right: 10, bottom: 30, left: 46 };
 
-/** Which day labels to print under the axis: about five, evenly spread (all of them for a week). */
-function labelIndexes(n: number): number[] {
-  if (n <= 7) return Array.from({ length: n }, (_, i) => i);
-  return [...new Set([0, 1, 2, 3, 4].map((i) => Math.round((i * (n - 1)) / 4)))];
+/** Which day labels to print under the axis: up to `max` (the caller allows about 72 px each), evenly spread, first and last included. */
+function labelIndexes(n: number, max: number): number[] {
+  const slots = Math.max(2, Math.min(n, max));
+  if (slots >= n) return Array.from({ length: n }, (_, i) => i);
+  return [...new Set(Array.from({ length: slots }, (_, i) => Math.round((i * (n - 1)) / (slots - 1))))];
 }
 
 /**
@@ -120,7 +121,7 @@ export function AreaCompare({
                 );
               })}
 
-              {labelIndexes(n).map((i) => (
+              {labelIndexes(n, Math.min(n <= 7 ? 7 : 5, Math.floor(iw / 72))).map((i) => (
                 <text
                   key={i}
                   x={xAt(i)}

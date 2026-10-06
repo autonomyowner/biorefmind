@@ -119,19 +119,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     if (!allowed) router.replace(withGuest(DASH.overview, guest));
   }, [allowed, guest, router]);
 
-  // Old one-page links (/dashboard#sales) open their page, once the account's pages are known.
+  // Old one-page links (/dashboard#sales) open their page, once the account's pages are known,
+  // also when only the hash changes while already on the Overview.
   const onOverview = page === "overview";
   useEffect(() => {
     if (!pages || !onOverview) return;
-    const target = forwardHash(window.location.hash, pages);
-    if (target) router.replace(withGuest(target, guest));
+    const forward = () => {
+      const target = forwardHash(window.location.hash, pages);
+      if (target) router.replace(withGuest(target, guest));
+    };
+    forward();
+    window.addEventListener("hashchange", forward);
+    return () => window.removeEventListener("hashchange", forward);
   }, [pages, onOverview, guest, router]);
 
-  // ⌘K / Ctrl+K opens the command palette (and closes it again).
+  // ⌘K / Ctrl+K opens the command palette (and closes it again). Listening from the first paint:
+  // a press while the account still loads opens the palette as soon as the frame shows.
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const ready = Boolean(value);
   useEffect(() => {
-    if (!ready) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -140,7 +145,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [ready]);
+  }, []);
 
   if (!value || !pages) return <FrameSkeleton />;
 
@@ -179,9 +184,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
+  // Like the reference: search at the start of the bar on wide screens (the page carries its own
+  // title); on phones the bar shows the title and a search icon.
+  const headerStart = (
+    <>
+      <div className="min-w-0 md:hidden">
+        <PageTitle title={title} />
+      </div>
+      <div className="hidden md:block">
+        <SearchButton variant="field" onOpen={() => setPaletteOpen(true)} />
+      </div>
+    </>
+  );
   const headerEnd = (
     <>
-      <SearchButton onOpen={() => setPaletteOpen(true)} />
+      <div className="md:hidden">
+        <SearchButton variant="icon" onOpen={() => setPaletteOpen(true)} />
+      </div>
       <LanguageSwitch className="hidden h-10 sm:inline-flex" />
       <AvatarMenu onSignOut={signOut} />
     </>
@@ -198,7 +217,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             closeLabel={t.nav.closeMenu}
             extra={adminLink}
             footer={identity}
-            headerStart={<PageTitle title={title} />}
+            headerStart={headerStart}
             headerEnd={headerEnd}
           >
             {allowed ? children : null}
