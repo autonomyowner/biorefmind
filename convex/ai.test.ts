@@ -335,7 +335,8 @@ describe("admin AI settings", () => {
       keyMasked: "sk-or-…0000",
       model: DEFAULT_MODEL,
       photoCheck: true,
-      month: { done: 0, failed: 0, costUsd: 0 },
+      resultsReader: true,
+      month: { done: 0, failed: 0, reads: 0, costUsd: 0 },
     });
 
     await expect(boss.mutation(api.ai.saveKey, { key: "nope" })).rejects.toThrow(AI_REFUSE.key);
@@ -351,7 +352,7 @@ describe("admin AI settings", () => {
     await runChecks(t);
     expect(authOf(0)).toBe("Bearer sk-or-v1-savedkey1234567890abcd");
     expect(bodyOf(0).model).toBe("openai/gpt-5-mini");
-    expect((await boss.query(api.ai.settings, {})).month).toEqual({ done: 1, failed: 0, costUsd: 0.0025 });
+    expect((await boss.query(api.ai.settings, {})).month).toEqual({ done: 1, failed: 0, reads: 0, costUsd: 0.0025 });
 
     await boss.mutation(api.ai.removeKey, {});
     expect(await boss.query(api.ai.settings, {})).toMatchObject({ keySource: "env", keyMasked: "sk-or-…0000" });
