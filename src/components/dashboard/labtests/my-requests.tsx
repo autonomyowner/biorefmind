@@ -282,7 +282,7 @@ function RequestCard({ request: r, listing, sale }: { request: MyLabRequest; lis
           <p className="font-medium text-foreground">{t.list.contact}</p>
           {r.labAddress ? (
             <p className="mt-0.5 flex items-start gap-1.5">
-              <MapPin className="mt-0.5 size-3.5 shrink-0" /> <span className="min-w-0 break-words">{r.labAddress}</span>
+              <MapPin className="mt-0.5 size-3.5 shrink-0" /> <bdi className="min-w-0 break-words">{r.labAddress}</bdi>
             </p>
           ) : null}
           {r.labHours ? (

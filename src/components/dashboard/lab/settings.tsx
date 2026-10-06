@@ -153,13 +153,13 @@ export function LabSettings({ id }: { id?: string }) {
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
           <Field label={t.settings.address} className="sm:col-span-2">
-            <input disabled={disabled} value={address} maxLength={200} onChange={(e) => setAddress(e.target.value)} placeholder={t.settings.addressPlaceholder} className={FIELD} />
+            <input disabled={disabled} value={address} maxLength={200} onChange={(e) => setAddress(e.target.value)} placeholder={t.settings.addressPlaceholder} dir="auto" className={FIELD} />
           </Field>
           <Field label={t.settings.hours}>
-            <input disabled={disabled} value={hours} maxLength={120} onChange={(e) => setHours(e.target.value)} placeholder={t.settings.hoursPlaceholder} className={FIELD} />
+            <input disabled={disabled} value={hours} maxLength={120} onChange={(e) => setHours(e.target.value)} placeholder={t.settings.hoursPlaceholder} dir="auto" className={FIELD} />
           </Field>
           <Field label={t.settings.retention}>
-            <input disabled={disabled} value={retention} maxLength={80} onChange={(e) => setRetention(e.target.value)} placeholder={t.settings.retentionPlaceholder} className={FIELD} />
+            <input disabled={disabled} value={retention} maxLength={80} onChange={(e) => setRetention(e.target.value)} placeholder={t.settings.retentionPlaceholder} dir="auto" className={FIELD} />
           </Field>
         </div>
 

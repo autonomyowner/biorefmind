@@ -139,7 +139,7 @@ function LabWorkDetails({ lab, onRequest }: { lab: DirectoryLab; onRequest: () =
               <MapPin className="mt-0.5 size-3.5 shrink-0" />
               <span className="min-w-0 break-words">
                 <span className="sr-only">{t.directory.address}: </span>
-                {lab.address}
+                <bdi>{lab.address}</bdi>
               </span>
             </p>
           ) : null}

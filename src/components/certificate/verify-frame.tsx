@@ -16,7 +16,7 @@ export async function VerifyFrame({ children }: { children: React.ReactNode }) {
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-[480px] bg-[radial-gradient(ellipse_45%_60%_at_50%_30%,rgba(120,150,255,0.26),transparent_70%)]"
         />
-        <SiteHeader signedIn={signedIn} />
+        <SiteHeader signedIn={signedIn} current="none" />
       </div>
       <main className="relative flex-1">{children}</main>
       <div className="print:hidden">

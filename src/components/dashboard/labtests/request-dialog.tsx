@@ -363,7 +363,7 @@ function RequestForm({ lab, onDone }: { lab: DirectoryLab; onDone: () => void })
           </div>
           {delivery === "dropoff" ? (
             <div className="mt-2.5 rounded-xl bg-white/60 px-4 py-3 text-[14px] leading-relaxed">
-              {lab.address ? <p className="font-medium">{lab.address}</p> : <p className="text-muted-foreground">{t.dialog.noAddress}</p>}
+              {lab.address ? <p className="font-medium [unicode-bidi:plaintext]">{lab.address}</p> : <p className="text-muted-foreground">{t.dialog.noAddress}</p>}
               {lab.hours ? <p className="mt-0.5 text-muted-foreground">{lab.hours}</p> : null}
             </div>
           ) : (
