@@ -253,6 +253,56 @@ describe("results reader", () => {
     });
   });
 
+  test("files too big are refused before anything is read", async () => {
+    stubFetch(() => ok());
+    const t = newBackend();
+    const { lab, requestId } = await receivedRequest(t);
+    await expect(lab.as.action(api.labAi.readResults, { requestId, files: [await upload(t, "image/jpeg", 9_000_000)] })).rejects.toThrow(
+      READ_REFUSE.fileType,
+    );
+    const four = [];
+    for (let i = 0; i < 3; i++) four.push(await upload(t, "image/jpeg", 4_500_000)); // 13.5 MB together
+    await expect(lab.as.action(api.labAi.readResults, { requestId, files: four })).rejects.toThrow(READ_REFUSE.fileType);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("a reading whose action died is closed and its pages deleted after 15 minutes", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const t = newBackend();
+      const { lab, requestId } = await receivedRequest(t);
+      const file = await upload(t);
+      // The state `start` leaves (claimed page, pending reading, scheduled safety net), then the action dies.
+      await t.run(async (ctx) => {
+        const { internal } = await import("./_generated/api");
+        await ctx.db.insert("photoClaims", { storageId: file, companyId: lab.id });
+        const readId = await ctx.db.insert("aiReads", { labId: lab.id, requestId, status: "pending", createdAt: Date.now() });
+        await ctx.scheduler.runAfter(15 * 60_000, internal.labAi.expire, { readId, files: [file] });
+      });
+      vi.advanceTimersByTime(16 * 60_000);
+      await t.finishInProgressScheduledFunctions();
+      await t.run(async (ctx) => {
+        expect(await ctx.storage.get(file)).toBeNull();
+        expect(await ctx.db.query("aiReads").collect()).toMatchObject([{ status: "failed" }]);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("the upload address refuses early when the reader is off or the day is used up", async () => {
+    const t = newBackend();
+    const { lab, requestId } = await receivedRequest(t);
+    const boss = await member(t, "boss@biorefmind.com");
+    await boss.mutation(api.ai.update, { resultsReader: false });
+    await expect(lab.as.mutation(api.labAi.uploadUrl, { requestId })).rejects.toThrow(READ_REFUSE.off);
+    await boss.mutation(api.ai.update, { resultsReader: true });
+    await t.run(async (ctx) => {
+      for (let i = 0; i < LAB_DAILY_READS; i++) await ctx.db.insert("aiReads", { labId: lab.id, requestId, status: "done", createdAt: Date.now() });
+    });
+    await expect(lab.as.mutation(api.labAi.uploadUrl, { requestId })).rejects.toThrow(READ_REFUSE.limit);
+  });
+
   test("the upload address is for lab members only", async () => {
     const t = newBackend();
     const { lab, farm, requestId } = await receivedRequest(t);

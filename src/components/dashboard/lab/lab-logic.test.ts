@@ -136,6 +136,14 @@ describe("applyReading", () => {
     expect(filled).toEqual(["item:moisture", "item:punicalagin", `line:${form.panels.heavy_metals.lines[0].key}`, "testedFrom", "testedTo"]);
   });
 
+  test("a value the analyst already typed is never overwritten", () => {
+    const start = base();
+    start.items.moisture = { ...start.items.moisture, value: "10.1" };
+    const { form, filled } = applyReading(start, { items: [{ analysis: "moisture", value: 9.4 }], panels: [], notes: [] });
+    expect(form.items.moisture.value).toBe("10.1");
+    expect(filled).toEqual([]);
+  });
+
   test("lines the analyst already typed are kept; analyses the form doesn't have are ignored", () => {
     const start = base();
     start.panels.heavy_metals.lines = [newLine({ name: "Cadmium (Cd)", value: "0.01" })];

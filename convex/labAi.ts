@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
-import { action, internalMutation, mutation } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { action, internalMutation, mutation, type MutationCtx } from "./_generated/server";
 import { resolveConfig } from "./ai";
 import { getRequest, requireLab } from "./labwork";
 import { OPENROUTER_URL, utcDay } from "./lib/ai";
@@ -25,13 +26,31 @@ import { MARKET_REFUSE } from "./lib/market";
 
 const ATTEMPTS = 2;
 
-/** Where the lab uploads its pages (analysts and above, while the request is open). */
+/** Together, pages may weigh this much (the action holds them in memory to send them). */
+const MAX_TOTAL_BYTES = 12_000_000;
+const MAX_FILE_BYTES = 8_000_000;
+/** A reading still pending this long after it started is closed and its pages deleted. */
+const EXPIRE_AFTER_MS = 15 * 60_000;
+
+/** Who may read, and whether the reader is on and the lab has readings left today. */
+async function guard(ctx: MutationCtx, req: Doc<"labRequests">) {
+  const { company } = await requireLab(ctx, req.labId, "inspector");
+  if (req.status !== "received") throw new ConvexError(LAB_REFUSE.closed);
+  const cfg = await resolveConfig(ctx);
+  if (!cfg.resultsReader || !cfg.key) throw new ConvexError(READ_REFUSE.off);
+  const today = await ctx.db
+    .query("aiReads")
+    .withIndex("by_lab_created", (q) => q.eq("labId", company._id).gte("createdAt", utcDay(Date.now()) * 86_400_000))
+    .take(LAB_DAILY_READS);
+  if (today.length >= LAB_DAILY_READS) throw new ConvexError(READ_REFUSE.limit);
+  return { company, key: cfg.key, model: cfg.model };
+}
+
+/** Where the lab uploads its pages. Refuses before any upload when the reader can't run. */
 export const uploadUrl = mutation({
   args: { requestId: v.id("labRequests") },
   handler: async (ctx, { requestId }) => {
-    const req = await getRequest(ctx, requestId);
-    await requireLab(ctx, req.labId, "inspector");
-    if (req.status !== "received") throw new ConvexError(LAB_REFUSE.closed);
+    await guard(ctx, await getRequest(ctx, requestId));
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -41,16 +60,8 @@ export const start = internalMutation({
   args: { requestId: v.id("labRequests"), files: v.array(v.id("_storage")) },
   handler: async (ctx, { requestId, files }) => {
     const req = await getRequest(ctx, requestId);
-    const { company } = await requireLab(ctx, req.labId, "inspector");
-    if (req.status !== "received") throw new ConvexError(LAB_REFUSE.closed);
-    const cfg = await resolveConfig(ctx);
-    if (!cfg.resultsReader || !cfg.key) throw new ConvexError(READ_REFUSE.off);
+    const { company, key, model } = await guard(ctx, req);
     const now = Date.now();
-    const today = await ctx.db
-      .query("aiReads")
-      .withIndex("by_lab_created", (q) => q.eq("labId", company._id).gte("createdAt", utcDay(now) * 86_400_000))
-      .take(LAB_DAILY_READS);
-    if (today.length >= LAB_DAILY_READS) throw new ConvexError(READ_REFUSE.limit);
 
     const ids = [...new Set(files)];
     if (ids.length === 0 || ids.length > MAX_PAGES) throw new ConvexError(READ_REFUSE.files);
@@ -65,12 +76,18 @@ export const start = internalMutation({
       if (!meta || claimed) throw new ConvexError(MARKET_REFUSE.photoMissing);
       metas.push({ storageId: id, size: meta.size });
     }
+    // Sizes before anything is downloaded: the exact type check (from the bytes) comes in the action.
+    if (metas.some((m) => m.size > MAX_FILE_BYTES) || metas.reduce((n, m) => n + m.size, 0) > MAX_TOTAL_BYTES) {
+      throw new ConvexError(READ_REFUSE.fileType);
+    }
     for (const m of metas) await ctx.db.insert("photoClaims", { storageId: m.storageId, companyId: company._id });
     const readId = await ctx.db.insert("aiReads", { labId: company._id, requestId, status: "pending", createdAt: now });
+    // If the action dies (memory, deploy), this still closes the reading and deletes the pages.
+    await ctx.scheduler.runAfter(EXPIRE_AFTER_MS, internal.labAi.expire, { readId, files: metas.map((m) => m.storageId) });
     return {
       readId,
-      key: cfg.key,
-      model: cfg.model,
+      key,
+      model,
       analyses: req.analyses.map((a) => a.analysis),
       receivedAt: req.receivedAt!,
       files: metas.map((m) => m.storageId),
@@ -103,6 +120,17 @@ export const finish = internalMutation({
         await ctx.storage.delete(id);
       }
     }
+    return null;
+  },
+});
+
+/** Safety net scheduled by `start`: a reading still pending is marked failed and its pages deleted. */
+export const expire = internalMutation({
+  args: { readId: v.id("aiReads"), files: v.array(v.id("_storage")) },
+  handler: async (ctx, { readId, files }) => {
+    const read = await ctx.db.get(readId);
+    if (read?.status !== "pending") return null;
+    await ctx.runMutation(internal.labAi.finish, { readId, status: "failed", costUsd: 0, files });
     return null;
   },
 });

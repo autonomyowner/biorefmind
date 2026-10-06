@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Plus, ScanText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -103,8 +103,13 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
     });
   const ai = (key: string) => (aiFilled.has(key) ? AI_FILLED : undefined);
 
+  // The reading takes 10–60 s: merge into the form as it is now, not as it was when "Read" was pressed.
+  const latest = useRef(form);
+  useEffect(() => {
+    latest.current = form;
+  }, [form]);
   function onRead(reading: LabReading) {
-    const { form: next, filled } = applyReading(form, reading);
+    const { form: next, filled } = applyReading(latest.current, reading);
     setForm(next);
     setAiFilled(new Set(filled));
     setAiRead({ count: filled.filter((k) => k.startsWith("item:") || k.startsWith("line:")).length, notes: reading.notes });
@@ -221,7 +226,7 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
                   dir="ltr"
                   value={form.items[a].uncertainty}
                   onChange={(e) => setItem(a, { uncertainty: e.target.value })}
-                  className={cn(FIELD, "rtl:text-end", ai(`item:${a}`))}
+                  className={cn(FIELD, "rtl:text-end", form.items[a].uncertainty ? ai(`item:${a}`) : undefined)}
                 />
               </Field>
               <Field label={t.results.method} className="col-span-2 sm:col-span-3">
