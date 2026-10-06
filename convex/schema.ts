@@ -368,6 +368,7 @@ export default defineSchema({
     steps: v.array(v.object({ tool: v.string(), detail: v.optional(v.string()) })),
     cards: v.array(storedCardValidator),
     status: v.union(v.literal("done"), v.literal("streaming"), v.literal("failed")),
+    attempt: v.optional(v.number()), // which run may write (a retry starts attempt 2, …); missing = 1
     costUsd: v.optional(v.number()),
     createdAt: v.number(),
   })

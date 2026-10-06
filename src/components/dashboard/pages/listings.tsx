@@ -53,7 +53,15 @@ export function ListingsPage() {
         }
       />
       <FadeIn index={1}>
-        {listings === undefined ? <PanelSkeleton /> : <MyListings adding={adding} onAddingChange={setAdding} draft={draft} />}
+        {listings === undefined ? <PanelSkeleton /> : <MyListings
+            adding={adding}
+            onAddingChange={(open) => {
+              setAdding(open);
+              // A posted or cancelled draft never comes back with the next "New listing".
+              if (!open) setDraft(null);
+            }}
+            draft={draft}
+          />}
       </FadeIn>
     </>
   );

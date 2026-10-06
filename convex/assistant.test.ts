@@ -343,6 +343,54 @@ describe("photos and cards", () => {
   });
 });
 
+describe("runs", () => {
+  test("only the latest question's photos go to the model", async () => {
+    script(() => say("First."), () => say("Second."));
+    const t = newBackend();
+    const farm = await company(t, "farm", "farm@x.dz", "Ferme Saïd");
+    const p = await photo(t);
+    const { threadId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "Look", photoIds: [p] });
+    await settle(t);
+    await farm.as.mutation(api.assistant.send, { companyId: farm.id, threadId, text: "And now?", photoIds: [] });
+    await settle(t);
+    expect(JSON.stringify(bodyOf(1).messages)).not.toContain("data:image");
+  });
+
+  test("an old attempt can't write into a retried answer", async () => {
+    script(() => new Response("down", { status: 503 }), () => say("New attempt."));
+    const t = newBackend();
+    const farm = await company(t, "farm", "farm@x.dz", "Ferme Saïd");
+    const { threadId, messageId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "hi", photoIds: [] });
+    await settle(t);
+    await farm.as.mutation(api.assistant.retry, { messageId });
+    // A late write from attempt 1 arrives while attempt 2 runs.
+    await t.run(async (ctx) => {
+      const { internal } = await import("./_generated/api");
+      await ctx.runMutation(internal.assistant.write, { messageId, attempt: 1, text: "stale text" });
+      await ctx.runMutation(internal.assistant.finish, { messageId, attempt: 1, text: "stale", status: "done", costUsd: 5 });
+    });
+    await settle(t);
+    const answer = (await farm.as.query(api.assistant.messages, { threadId }))!.at(-1)!;
+    expect(answer).toMatchObject({ text: "New attempt.", status: "done" });
+    await t.run(async (ctx) => {
+      expect((await ctx.db.get(messageId))?.costUsd).toBeLessThan(1);
+    });
+  });
+
+  test("a factory's lab request keeps the lot it bought; read_sheet runs once per answer", async () => {
+    const t = newBackend();
+    const seller = await company(t, "farm", "seller@x.dz", "Ferme Nord");
+    const lotId = await seller.as.mutation(api.market.createListing, { companyId: seller.id, residue: "olive_pomace", quantityKg: 500, priceDzdPerKg: 9, photoIds: [] });
+    const buyer = await company(t, "factory", "buyer@x.dz", "Usine Est");
+    const offerId = await buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId: lotId, quantityKg: 500, priceDzdPerKg: 9 });
+    await seller.as.mutation(api.market.respond, { offerId, accept: true });
+    script(() => call("propose_lab_request", { analyses: ["moisture"], listing_id: lotId }), () => say("Here."));
+    const { threadId } = await buyer.as.mutation(api.assistant.send, { companyId: buyer.id, text: "Test it", photoIds: [] });
+    await settle(t);
+    expect((await buyer.as.query(api.assistant.messages, { threadId }))![1].cards).toEqual([{ type: "lab_request", analyses: ["moisture"], listingId: lotId }]);
+  });
+});
+
 describe("admin", () => {
   test("questions and spend show in the month's figures", async () => {
     script(() => say("Hi", 0.002));

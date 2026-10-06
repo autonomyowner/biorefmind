@@ -46,6 +46,12 @@ describe("StreamReader", () => {
     ]);
   });
 
+  test("a tool call without an id gets one", () => {
+    const r = new StreamReader();
+    r.push(sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "my_sales", arguments: "{}" } }] } }] }));
+    expect(r.toolCalls()[0].id).toBe("call_0");
+  });
+
   test("comment lines and keep-alives are ignored", () => {
     const r = new StreamReader();
     expect(r.push(": OPENROUTER PROCESSING\n\n" + sse({ choices: [{ delta: { content: "ok" } }] }))).toEqual(["ok"]);

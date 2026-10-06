@@ -15,7 +15,7 @@ export type Draft = { text: string; photos: Blob[] };
 export type ComposerHandle = { set: (text: string, askPhoto: boolean) => void; addFiles: (files: File[]) => void };
 
 const MAX_PHOTOS = 4;
-const IMAGE = /^image\/(jpeg|png|webp|heic|heif)$/;
+const IMAGE = /^image\/(jpeg|png|webp)$/;
 type Pic = { key: string; blob: Blob; url: string };
 let seq = 0;
 
@@ -58,7 +58,13 @@ export const Composer = forwardRef<ComposerHandle, { busy: boolean; disabled: bo
       const blob = await shrinkImage(f, 1600);
       added.push({ key: `a${++seq}`, blob, url: URL.createObjectURL(blob) });
     }
-    if (added.length) setPics((cur) => [...cur, ...added].slice(0, MAX_PHOTOS));
+    if (added.length) {
+      setPics((cur) => {
+        const next = [...cur, ...added];
+        next.slice(MAX_PHOTOS).forEach((p) => URL.revokeObjectURL(p.url));
+        return next.slice(0, MAX_PHOTOS);
+      });
+    }
   }
 
   useImperativeHandle(ref, () => ({
@@ -89,8 +95,11 @@ export const Composer = forwardRef<ComposerHandle, { busy: boolean; disabled: bo
     const ok = await onSend({ text: text.trim(), photos: pics.map((p) => p.blob) });
     setSending(false);
     if (ok) {
-      pics.forEach((p) => URL.revokeObjectURL(p.url));
-      setPics([]);
+      // Everything shown when it was sent (and anything added meanwhile) goes.
+      setPics((cur) => {
+        cur.forEach((p) => URL.revokeObjectURL(p.url));
+        return [];
+      });
       setText("");
     }
   }
@@ -138,7 +147,7 @@ export const Composer = forwardRef<ComposerHandle, { busy: boolean; disabled: bo
         <input
           ref={input}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic"
+          accept="image/jpeg,image/png,image/webp"
           multiple
           hidden
           onChange={(e) => {

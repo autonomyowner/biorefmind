@@ -29,6 +29,7 @@ import {
   PHOTOS_PER_MESSAGE,
   QUESTIONS_PER_DAY,
   StreamReader,
+  RUN_DEADLINE_MS,
   STUCK_AFTER_MS,
   systemPrompt,
   titleFrom,
@@ -85,11 +86,14 @@ export const messages = query({
     const thread = await ctx.db.get(threadId);
     if (!thread || thread.userId !== user._id || !(await findMembership(ctx, thread.companyId, user._id))) return null;
     const now = Date.now();
-    const rows = await ctx.db
-      .query("aiMessages")
-      .withIndex("by_thread", (q) => q.eq("threadId", threadId))
-      .order("asc")
-      .take(200);
+    // The latest 60 messages (the page re-reads them while an answer streams).
+    const rows = (
+      await ctx.db
+        .query("aiMessages")
+        .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+        .order("desc")
+        .take(60)
+    ).reverse();
     const out = [];
     for (const m of rows) {
       const photos = [];
@@ -199,8 +203,8 @@ export const send = mutation({
     if (thread) await ctx.db.patch(thread._id, { updatedAt: now });
     const base = { threadId, companyId: company._id, steps: [], cards: [] };
     await ctx.db.insert("aiMessages", { ...base, role: "user", text, photoIds, status: "done", createdAt: now });
-    const messageId = await ctx.db.insert("aiMessages", { ...base, role: "assistant", text: "", photoIds: [], status: "streaming", createdAt: now + 1 });
-    await ctx.scheduler.runAfter(0, internal.assistant.run, { messageId });
+    const messageId = await ctx.db.insert("aiMessages", { ...base, role: "assistant", text: "", photoIds: [], status: "streaming", attempt: 1, createdAt: now + 1 });
+    await ctx.scheduler.runAfter(0, internal.assistant.run, { messageId, attempt: 1 });
     return { threadId, messageId };
   },
 });
@@ -219,8 +223,10 @@ export const retry = mutation({
       .order("desc")
       .first();
     if (msg.role !== "assistant" || last?._id !== messageId || statusOf(msg, Date.now()) !== "failed") throw new ConvexError(ASSIST_REFUSE.busy);
-    await ctx.db.patch(messageId, { text: "", steps: [], cards: [], status: "streaming", createdAt: Date.now() });
-    await ctx.scheduler.runAfter(0, internal.assistant.run, { messageId });
+    // A new attempt: anything the old run still writes is ignored.
+    const attempt = (msg.attempt ?? 1) + 1;
+    await ctx.db.patch(messageId, { text: "", steps: [], cards: [], status: "streaming", attempt, createdAt: Date.now() });
+    await ctx.scheduler.runAfter(0, internal.assistant.run, { messageId, attempt });
     return null;
   },
 });
@@ -263,11 +269,15 @@ export const remove = mutation({
 
 /* ---------- The run (internal) ---------- */
 
+/** Only the current attempt of a streaming answer may write into it. */
+const current = (m: Doc<"aiMessages"> | null, attempt: number): m is Doc<"aiMessages"> =>
+  !!m && m.status === "streaming" && (m.attempt ?? 1) === attempt;
+
 export const load = internalQuery({
-  args: { messageId: v.id("aiMessages") },
-  handler: async (ctx, { messageId }) => {
+  args: { messageId: v.id("aiMessages"), attempt: v.number() },
+  handler: async (ctx, { messageId, attempt }) => {
     const msg = await ctx.db.get(messageId);
-    if (!msg || msg.status !== "streaming") return null;
+    if (!current(msg, attempt)) return null;
     const [thread, company] = await Promise.all([ctx.db.get(msg.threadId), ctx.db.get(msg.companyId)]);
     const user = thread ? await ctx.db.get(thread.userId) : null;
     if (!thread || !company || !user) return null;
@@ -295,32 +305,48 @@ export const load = internalQuery({
 });
 
 export const write = internalMutation({
-  args: { messageId: v.id("aiMessages"), text: v.string() },
-  handler: async (ctx, { messageId, text }) => {
+  args: { messageId: v.id("aiMessages"), attempt: v.number(), text: v.string() },
+  handler: async (ctx, { messageId, attempt, text }) => {
     const m = await ctx.db.get(messageId);
-    if (m?.status === "streaming") await ctx.db.patch(messageId, { text: cleanAnswer(text) });
+    if (current(m, attempt)) await ctx.db.patch(messageId, { text: cleanAnswer(text) });
     return null;
   },
 });
 
 export const step = internalMutation({
-  args: { messageId: v.id("aiMessages"), tool: v.string(), detail: v.optional(v.string()) },
-  handler: async (ctx, { messageId, tool, detail }) => {
+  args: { messageId: v.id("aiMessages"), attempt: v.number(), tool: v.string(), detail: v.optional(v.string()) },
+  handler: async (ctx, { messageId, attempt, tool, detail }) => {
     const m = await ctx.db.get(messageId);
-    if (m) await ctx.db.patch(messageId, { steps: [...m.steps, detail === undefined ? { tool } : { tool, detail }] });
+    if (current(m, attempt)) await ctx.db.patch(messageId, { steps: [...m.steps, detail === undefined ? { tool } : { tool, detail }] });
     return null;
   },
 });
 
 export const finish = internalMutation({
-  args: { messageId: v.id("aiMessages"), text: v.string(), status: v.union(v.literal("done"), v.literal("failed")), costUsd: v.number() },
-  handler: async (ctx, { messageId, text, status, costUsd }) => {
+  args: {
+    messageId: v.id("aiMessages"),
+    attempt: v.number(),
+    text: v.string(),
+    status: v.union(v.literal("done"), v.literal("failed")),
+    costUsd: v.number(),
+  },
+  handler: async (ctx, { messageId, attempt, text, status, costUsd }) => {
     const m = await ctx.db.get(messageId);
-    if (!m) return null;
+    if (!current(m, attempt)) return null;
     await ctx.db.patch(messageId, { text: cleanAnswer(text), status, costUsd: (m.costUsd ?? 0) + costUsd });
     return null;
   },
 });
+
+/** A factory may name a lot it bought from in a lab request. */
+async function boughtFrom(ctx: QueryCtx, buyerId: Id<"companies">, listingId: Id<"listings">) {
+  const sales = await ctx.db
+    .query("sales")
+    .withIndex("by_buyer", (q) => q.eq("buyerId", buyerId))
+    .order("desc")
+    .take(200);
+  return sales.some((s) => s.listingId === listingId);
+}
 
 async function findRequest(ctx: QueryCtx, labId: Id<"companies">, sampleNo: string) {
   const rows = await ctx.db
@@ -336,12 +362,13 @@ async function findRequest(ctx: QueryCtx, labId: Id<"companies">, sampleNo: stri
  * an id that isn't this workspace's or isn't open, the wrong account type, or results without a reading.
  */
 export const addCard = internalMutation({
-  args: { messageId: v.id("aiMessages"), name: v.string(), args: v.string(), reading: v.optional(readingValidator) },
-  handler: async (ctx, { messageId, name, args, reading }): Promise<boolean> => {
+  args: { messageId: v.id("aiMessages"), attempt: v.number(), name: v.string(), args: v.string(), reading: v.optional(readingValidator) },
+  handler: async (ctx, { messageId, attempt, name, args, reading }): Promise<boolean> => {
     const msg = await ctx.db.get(messageId);
-    const company = msg ? await ctx.db.get(msg.companyId) : null;
+    if (!current(msg, attempt)) return false;
+    const company = await ctx.db.get(msg.companyId);
     const c = cleanCard(name, args);
-    if (!msg || !company || !c) return false;
+    if (!company || !c) return false;
     let stored: StoredCard | null = null;
     if (c.type === "listing" && company.kind === "farm") {
       const photoIds: Id<"_storage">[] = [];
@@ -372,7 +399,7 @@ export const addCard = internalMutation({
         type: "lab_request",
         analyses: c.analyses,
         ...(lab && lab.kind === "lab" && labListed(lab, Date.now()) ? { labId: lab._id } : {}),
-        ...(lot && lot.companyId === company._id ? { listingId: lot._id } : {}),
+        ...(lot && (lot.companyId === company._id || (await boughtFrom(ctx, company._id, lot._id))) ? { listingId: lot._id } : {}),
       };
     } else if (c.type === "offer" && company.kind === "factory") {
       const listingId = ctx.db.normalizeId("listings", c.listingId);
@@ -456,20 +483,23 @@ type ChatMessage =
   | { role: "tool"; tool_call_id: string; content: string };
 
 export const run = internalAction({
-  args: { messageId: v.id("aiMessages") },
-  handler: async (ctx, { messageId }) => {
-    const job = await ctx.runQuery(internal.assistant.load, { messageId });
+  args: { messageId: v.id("aiMessages"), attempt: v.optional(v.number()) },
+  handler: async (ctx, { messageId, attempt: given }) => {
+    const attempt = given ?? 1;
+    const started = Date.now();
+    const job = await ctx.runQuery(internal.assistant.load, { messageId, attempt });
     if (!job) return;
+    const at = { messageId, attempt };
     if (!job.key) {
-      await ctx.runMutation(internal.assistant.finish, { messageId, text: "", status: "failed", costUsd: 0 });
+      await ctx.runMutation(internal.assistant.finish, { ...at, text: "", status: "failed", costUsd: 0 });
       return;
     }
     let text = "";
     let cost = 0;
     try {
-      // Photos of the last two questions that had photos go inline (sniffed: images only).
+      // Only the latest question's photos go inline (sniffed: images only); earlier ones read as "(photos)".
       const images = new Map<string, string>();
-      for (const m of job.history.filter((x) => x.role === "user" && x.photoIds.length).slice(-2)) {
+      for (const m of job.history.filter((x) => x.role === "user").slice(-1)) {
         for (const id of m.photoIds) {
           const blob = await ctx.storage.get(id);
           if (!blob) continue;
@@ -496,11 +526,14 @@ export const run = internalAction({
       const tools = toolsFor(job.kind);
       const readings = new Map<string, Reading>();
 
+      let sheetRead = false;
       for (let round = 0; round <= TOOL_ROUNDS; round++) {
+        const left = RUN_DEADLINE_MS - (Date.now() - started);
+        if (left < 5_000) break;
         const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
           method: "POST",
           headers: { Authorization: `Bearer ${job.key}`, "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+          signal: AbortSignal.timeout(Math.min(CALL_TIMEOUT_MS, left)),
           body: JSON.stringify({
             model: job.model,
             stream: true,
@@ -522,8 +555,8 @@ export const run = internalAction({
           const { value, done } = await stream.read();
           if (done) break;
           for (const piece of reader.push(decoder.decode(value, { stream: true }))) roundText += piece;
-          if (roundText && Date.now() - lastWrite > 300) {
-            await ctx.runMutation(internal.assistant.write, { messageId, text: text + roundText });
+          if (roundText && Date.now() - lastWrite > 500) {
+            await ctx.runMutation(internal.assistant.write, { ...at, text: text + roundText });
             lastWrite = Date.now();
           }
         }
@@ -543,8 +576,8 @@ export const run = internalAction({
           let result: string;
           if (c.name.startsWith("propose_")) {
             const reqNo = c.name === "propose_results" ? argOf(args, "request_id").trim().toUpperCase() : "";
-            const ok: boolean = await ctx.runMutation(internal.assistant.addCard, { messageId, name: c.name, args, reading: reqNo ? readings.get(reqNo) : undefined });
-            await ctx.runMutation(internal.assistant.step, { messageId, tool: ok ? c.name : `${c.name}:skipped` });
+            const ok: boolean = await ctx.runMutation(internal.assistant.addCard, { ...at, name: c.name, args, reading: reqNo ? readings.get(reqNo) : undefined });
+            await ctx.runMutation(internal.assistant.step, { ...at, tool: ok ? c.name : `${c.name}:skipped` });
             result = JSON.stringify(
               ok
                 ? { shown: true, note: "A card is now shown under your answer. Tell the person what it opens; nothing is saved until they confirm." }
@@ -552,20 +585,25 @@ export const run = internalAction({
             );
           } else if (c.name === "read_sheet" && job.kind === "lab") {
             const reqNo = argOf(args, "request_id");
-            result = await readSheet(ctx, { companyId: job.companyId, key: job.key, model: job.model }, reqNo, sheetPages, readings, (n) => (cost += n));
-            await ctx.runMutation(internal.assistant.step, { messageId, tool: "read_sheet", detail: reqNo || undefined });
+            if (sheetRead) {
+              result = JSON.stringify({ error: "One sheet reading per answer. Use the values already read." });
+            } else {
+              sheetRead = true;
+              result = await readSheet(ctx, { companyId: job.companyId, key: job.key, model: job.model }, reqNo, sheetPages, readings, (n) => (cost += n));
+              await ctx.runMutation(internal.assistant.step, { ...at, tool: "read_sheet", detail: reqNo || undefined });
+            }
           } else {
             result = await ctx.runQuery(internal.assistantTools.run, { companyId: job.companyId, name: c.name, args });
-            await ctx.runMutation(internal.assistant.step, { messageId, tool: c.name, detail: countOf(result) });
+            await ctx.runMutation(internal.assistant.step, { ...at, tool: c.name, detail: countOf(result) });
           }
           convo.push({ role: "tool", tool_call_id: c.id, content: result });
         }
       }
       text = text.trim();
-      await ctx.runMutation(internal.assistant.finish, { messageId, text, status: text ? "done" : "failed", costUsd: cost });
+      await ctx.runMutation(internal.assistant.finish, { ...at, text, status: text ? "done" : "failed", costUsd: cost });
     } catch (e) {
       console.error("Assistant: run failed", e instanceof Error ? e.message.slice(0, 80) : "unknown");
-      await ctx.runMutation(internal.assistant.finish, { messageId, text: "", status: "failed", costUsd: cost });
+      await ctx.runMutation(internal.assistant.finish, { ...at, text: "", status: "failed", costUsd: cost });
     }
   },
 });

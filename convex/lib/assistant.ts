@@ -10,7 +10,7 @@ import { cleanPrice, cleanQuantity, cleanResidue, maskPhones } from "./market";
 export const ASSIST_REFUSE = {
   off: "The assistant is switched off.",
   empty: "Type a question or add a photo (up to 2000 characters).",
-  photos: "Add up to 4 photos (JPEG, PNG or WebP, up to 5 MB each).",
+  photos: "Add up to 4 photos (JPEG, PNG or WebP, up to 2 MB each).",
   limit: "Your workspace has used today's 60 questions. Please try again tomorrow.",
   photoLimit: "Your workspace has used today's 20 photos. Please try again tomorrow.",
   busy: "Please wait for the current answer to finish.",
@@ -22,11 +22,13 @@ export const ASSIST_REFUSE = {
 export const QUESTIONS_PER_DAY = 60;
 export const PHOTOS_PER_DAY = 20;
 export const PHOTOS_PER_MESSAGE = 4;
-export const MAX_PHOTO_BYTES = 5_000_000;
+export const MAX_PHOTO_BYTES = 2_000_000; // the browser sends ~300 KB; this bounds direct API calls
 export const MAX_QUESTION = 2000;
 export const HISTORY_MESSAGES = 12;
 export const TOOL_ROUNDS = 5;
 export const CALL_TIMEOUT_MS = 60_000;
+/** A whole answer stops by this time, well before it would be shown as failed (STUCK_AFTER_MS). */
+export const RUN_DEADLINE_MS = 150_000;
 /** An answer still streaming after this long is shown as failed (the run died). */
 export const STUCK_AFTER_MS = 3 * 60_000;
 
@@ -311,7 +313,8 @@ export class StreamReader {
   }
 
   toolCalls(): ToolCall[] {
-    return [...this.calls.entries()].sort(([a], [b]) => a - b).map(([, c]) => c);
+    // Some providers leave the id out; the next request needs one to match the tool result.
+    return [...this.calls.entries()].sort(([a], [b]) => a - b).map(([i, c]) => (c.id ? c : { ...c, id: `call_${i}` }));
   }
 }
 

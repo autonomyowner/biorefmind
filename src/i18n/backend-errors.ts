@@ -46,7 +46,7 @@ const AR: Record<string, string> = {
   // Assistant (convex/lib/assistant.ts)
   "The assistant is switched off.": "المساعد متوقف حاليًا.",
   "Type a question or add a photo (up to 2000 characters).": "اكتب سؤالًا أو أضف صورة (حتى 2000 حرف).",
-  "Add up to 4 photos (JPEG, PNG or WebP, up to 5 MB each).": "أضف حتى 4 صور (JPEG أو PNG أو WebP، حتى 5 ميغابايت لكل صورة).",
+  "Add up to 4 photos (JPEG, PNG or WebP, up to 2 MB each).": "أضف حتى 4 صور (JPEG أو PNG أو WebP، حتى 2 ميغابايت لكل صورة).",
   "Your workspace has used today's 60 questions. Please try again tomorrow.": "استخدمت مساحة عملك الأسئلة الستين المتاحة اليوم. حاول مجددًا غدًا.",
   "Your workspace has used today's 20 photos. Please try again tomorrow.": "استخدمت مساحة عملك الصور العشرين المتاحة اليوم. حاول مجددًا غدًا.",
   "Please wait for the current answer to finish.": "يرجى الانتظار حتى تكتمل الإجابة الحالية.",
