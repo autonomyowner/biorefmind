@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation } from "convex/react";
 import { PauseCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -8,6 +9,8 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { useDashboard } from "@/components/dashboard/shell";
+import { DASH } from "@/components/dashboard/links";
+import { useDashHref } from "@/components/dashboard/use-dash-href";
 import { Panel } from "@/components/dashboard/profile-card";
 import { fill } from "@/components/dashboard/messages";
 import { labMessages } from "@/components/dashboard/lab/lab-messages";
@@ -53,6 +56,7 @@ export function LabSettings({ id }: { id?: string }) {
   const blocked = useGuestBlock();
   const { canManage } = useLabRole();
   const update = useMutation(api.labs.updateSettings);
+  const href = useDashHref();
 
   // Catalog order; legacy "contamination" already reads as heavy metals (companies.mine).
   const services = ANALYSIS_KEYS.filter((k) => workspace.services?.includes(k));
@@ -107,9 +111,9 @@ export function LabSettings({ id }: { id?: string }) {
           <p className="-mt-2 mb-3 text-[14px] text-muted-foreground">{t.settings.intro}</p>
           {services.length === 0 ? (
             <p className="rounded-xl bg-white/60 px-3 py-2.5 text-[14px] text-muted-foreground">
-              <a href="#profile" className="underline underline-offset-4">
+              <Link href={href(DASH.settings)} className="underline underline-offset-4">
                 {t.settings.noServices}
-              </a>
+              </Link>
             </p>
           ) : (
             <ul className="space-y-2">
