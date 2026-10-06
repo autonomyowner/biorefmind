@@ -24,6 +24,7 @@ import {
 import { LanguageSwitch } from "@/components/language-switch";
 import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
 import { forwardHash } from "@/components/dashboard/forward-hash";
+import { WithBadges, type Badges } from "@/components/dashboard/frame/badges";
 import { CommandPalette } from "@/components/dashboard/frame/command-palette";
 import { AvatarMenu, PageTitle, SearchButton, initialsOf } from "@/components/dashboard/frame/top-bar";
 import { PAGES, pageOfPath } from "@/components/dashboard/frame/pages";
@@ -143,57 +144,67 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!value || !pages) return <FrameSkeleton />;
 
-  const items: FrameItem[] = pages.map((p) => ({
-    href: withGuest(DASH[p], guest),
-    label: t.nav.pages[p],
-    icon: PAGE_ICON[p],
-    group: p === "settings" ? "general" : "menu",
-  }));
+  const items = (badges: Badges): FrameItem[] =>
+    pages.map((p) => ({
+      href: withGuest(DASH[p], guest),
+      label: t.nav.pages[p],
+      icon: PAGE_ICON[p],
+      badge: badges[p],
+      group: p === "settings" ? "general" : "menu",
+    }));
   const title = t.nav.pages[page ?? "overview"];
+
+  const adminLink = value.viewer.isAdmin ? (
+    <Link
+      href="/admin"
+      className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-foreground/80 transition-colors hover:bg-white/70"
+    >
+      <ShieldCheck className="size-[18px]" strokeWidth={1.8} />
+      {t.nav.admin}
+    </Link>
+  ) : null;
+
+  const identity = (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
+      <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
+        {initialsOf(value.workspace.name)}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">{value.workspace.name}</span>
+        <span className="flex items-center gap-1 truncate text-muted-foreground">
+          {value.workspace.region ? <MapPin className="size-3.5 shrink-0 text-azure" /> : null}
+          {value.workspace.region || t.kinds[value.workspace.kind]}
+        </span>
+      </span>
+    </div>
+  );
+
+  const headerEnd = (
+    <>
+      <SearchButton onOpen={() => setPaletteOpen(true)} />
+      <LanguageSwitch className="hidden h-10 sm:inline-flex" />
+      <AvatarMenu onSignOut={signOut} />
+    </>
+  );
 
   return (
     <DashboardContext value={value}>
-      <AppFrame
-        items={items}
-        groupLabels={{ menu: t.nav.groupMenu, general: t.nav.groupGeneral }}
-        menuLabel={t.nav.menu}
-        closeLabel={t.nav.closeMenu}
-        extra={
-          value.viewer.isAdmin ? (
-            <Link
-              href="/admin"
-              className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-foreground/80 transition-colors hover:bg-white/70"
-            >
-              <ShieldCheck className="size-[18px]" strokeWidth={1.8} />
-              {t.nav.admin}
-            </Link>
-          ) : null
-        }
-        footer={
-          <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
-            <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
-              {initialsOf(value.workspace.name)}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-semibold">{value.workspace.name}</span>
-              <span className="flex items-center gap-1 truncate text-muted-foreground">
-                {value.workspace.region ? <MapPin className="size-3.5 shrink-0 text-azure" /> : null}
-                {value.workspace.region || t.kinds[value.workspace.kind]}
-              </span>
-            </span>
-          </div>
-        }
-        headerStart={<PageTitle title={title} />}
-        headerEnd={
-          <>
-            <SearchButton onOpen={() => setPaletteOpen(true)} />
-            <LanguageSwitch className="hidden h-10 sm:inline-flex" />
-            <AvatarMenu onSignOut={signOut} />
-          </>
-        }
-      >
-        {allowed ? children : null}
-      </AppFrame>
+      <WithBadges>
+        {(badges) => (
+          <AppFrame
+            items={items(badges)}
+            groupLabels={{ menu: t.nav.groupMenu, general: t.nav.groupGeneral }}
+            menuLabel={t.nav.menu}
+            closeLabel={t.nav.closeMenu}
+            extra={adminLink}
+            footer={identity}
+            headerStart={<PageTitle title={title} />}
+            headerEnd={headerEnd}
+          >
+            {allowed ? children : null}
+          </AppFrame>
+        )}
+      </WithBadges>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onSignOut={signOut} />
     </DashboardContext>
   );
