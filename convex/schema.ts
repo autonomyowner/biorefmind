@@ -311,6 +311,7 @@ export default defineSchema({
     openrouterKey: v.optional(v.string()), // never returned to any client; falls back to env OPENROUTER_API_KEY
     model: v.optional(v.string()),
     photoCheck: v.boolean(),
+    resultsReader: v.optional(v.boolean()), // lab results reader; missing = on
     updatedAt: v.number(),
     updatedBy: v.id("users"),
   }),
@@ -333,6 +334,18 @@ export default defineSchema({
     .index("by_listing", ["listingId"])
     .index("by_created", ["createdAt"])
     .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_finished", ["finishedAt"]),
+
+  /** Each time a lab asked the AI to read its results sheet (for its daily limit and the admin's spend). */
+  aiReads: defineTable({
+    labId: v.id("companies"),
+    requestId: v.id("labRequests"),
+    status: v.union(v.literal("pending"), v.literal("done"), v.literal("failed")),
+    costUsd: v.optional(v.number()),
+    createdAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_lab_created", ["labId", "createdAt"])
     .index("by_finished", ["finishedAt"]),
 
   /** AI assistant conversation, one running thread per user per company. */

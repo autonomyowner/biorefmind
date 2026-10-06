@@ -43,6 +43,12 @@ const AR: Record<string, string> = {
   "Write the model as provider/model, for example google/gemini-3.8-flash.": "اكتب النموذج بالشكل provider/model، مثل google/gemini-3.8-flash.",
   "This photo check is not waiting for a retry.": "فحص الصور هذا لا ينتظر إعادة المحاولة.",
   "You can try again 3 times a day. Please try tomorrow.": "يمكنك إعادة المحاولة 3 مرات في اليوم. حاول غدًا.",
+  // Lab results reader (convex/lib/aiRead.ts)
+  "The results reader is switched off.": "قارئ النتائج متوقف حاليًا.",
+  "Add up to 4 photos, or one PDF.": "أضف حتى 4 صور، أو ملف PDF واحدًا.",
+  "Use photos (JPEG, PNG or WebP, up to 5 MB each) or one PDF up to 8 MB.": "استخدم صورًا (JPEG أو PNG أو WebP، حتى 5 ميغابايت لكل صورة) أو ملف PDF واحدًا حتى 8 ميغابايت.",
+  "Your lab has used today's 30 readings. Please type the values or try again tomorrow.": "استخدم مختبرك القراءات الثلاثين المتاحة اليوم. يرجى كتابة القيم يدويًا أو المحاولة غدًا.",
+  "The reader couldn't read these pages. Try a clearer photo, or type the values.": "تعذّرت قراءة هذه الصفحات. جرّب صورة أوضح، أو اكتب القيم يدويًا.",
   // Lab requests (convex/lib/labwork.ts)
   "The address can be up to 200 characters.": "يمكن أن يصل العنوان إلى 200 حرف.",
   "Opening hours can be up to 120 characters.": "يمكن أن تصل ساعات العمل إلى 120 حرفًا.",

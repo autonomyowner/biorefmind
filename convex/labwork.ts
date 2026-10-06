@@ -39,7 +39,7 @@ function maskSample(sample: Doc<"labRequests">["sample"]): Doc<"labRequests">["s
   return { ...sample, label: maskPhones(sample.label), packaging: maskPhones(sample.packaging), notes: maskPhones(sample.notes) };
 }
 
-async function getRequest(ctx: QueryCtx | MutationCtx, requestId: Id<"labRequests">) {
+export async function getRequest(ctx: QueryCtx | MutationCtx, requestId: Id<"labRequests">) {
   const req = await ctx.db.get(requestId);
   if (!req) throw new ConvexError(LAB_REFUSE.noRequest);
   return req;
@@ -57,7 +57,7 @@ async function requireClient(ctx: MutationCtx, req: Doc<"labRequests">) {
 }
 
 /** A member of the request's lab with at least `minRole`. */
-async function requireLab(ctx: QueryCtx | MutationCtx, labId: Id<"companies">, minRole: "manager" | "inspector") {
+export async function requireLab(ctx: QueryCtx | MutationCtx, labId: Id<"companies">, minRole: "manager" | "inspector") {
   const m = await requireMember(ctx, labId, minRole, LAB_REFUSE.role);
   if (m.company.kind !== "lab") throw new ConvexError(LAB_REFUSE.notLab);
   return m;

@@ -134,13 +134,14 @@ const MAX_TEXT = 160;
 /** Links and bare domains: the model's text is public, so it may not point anywhere. */
 const LINK = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|dz|fr|io|app|example|info|biz|xyz|me|co)\b\S*/gi;
 
-function cleanText(text: unknown): string | null {
+/** Model text made safe to show: links and phone numbers removed, one line, at most `max` characters. */
+export function cleanText(text: unknown, max = MAX_TEXT): string | null {
   if (typeof text !== "string") return null;
-  const s = maskPhones(text.replace(LINK, " ").replace(/\s+/g, " ").trim()).slice(0, MAX_TEXT).trim();
+  const s = maskPhones(text.replace(LINK, " ").replace(/\s+/g, " ").trim()).slice(0, max).trim();
   return s ? s : null;
 }
 
-function cleanPair(v: unknown): Bilingual | null {
+export function cleanPair(v: unknown): Bilingual | null {
   if (!v || typeof v !== "object") return null;
   const { en, ar } = v as Record<string, unknown>;
   const e = cleanText(en);

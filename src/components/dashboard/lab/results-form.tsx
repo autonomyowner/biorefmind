@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, ScanText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useDashboard } from "@/components/dashboard/shell";
 import { labMessages } from "@/components/dashboard/lab/lab-messages";
+import { ReadSheet } from "@/components/dashboard/lab/read-sheet";
+import { fill } from "@/components/dashboard/messages";
 import {
+  applyReading,
   isPanel,
   makeForm,
   newLine,
@@ -19,13 +22,16 @@ import {
   type ResultsForm,
 } from "@/components/dashboard/lab/lab-logic";
 import { AREA, Confirm, Field, FIELD, PRIMARY, QUIET, useFail, useGuestBlock, useLabRole } from "@/components/dashboard/lab/ui";
-import { useMessages } from "@/i18n/provider";
+import { useLocale, useMessages } from "@/i18n/provider";
 import { api } from "@/lib/backend";
 import { ANALYSIS_METHODS, ANALYSIS_UNITS, catalogLabels, labelOf } from "@/lib/catalog-labels";
-import type { LabQueueRow, LabResults } from "@/lib/types";
+import type { LabQueueRow, LabReading, LabResults } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Mode = "release" | "amend";
+
+/** A field the results reader filled, until the analyst edits it. */
+const AI_FILLED = "border-violet/60 bg-violet/[0.07] ring-2 ring-violet/15";
 
 /**
  * Entering results for a sample in the lab. "release" works from the saved draft; "amend" starts from the
@@ -85,12 +91,40 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<"draft" | "release" | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const locale = useLocale();
+  const [aiFilled, setAiFilled] = useState<ReadonlySet<string>>(new Set());
+  const [aiRead, setAiRead] = useState<{ count: number; notes: LabReading["notes"] } | null>(null);
+  const seen = (key: string) =>
+    setAiFilled((s) => {
+      if (!s.has(key)) return s;
+      const next = new Set(s);
+      next.delete(key);
+      return next;
+    });
+  const ai = (key: string) => (aiFilled.has(key) ? AI_FILLED : undefined);
 
-  const setItem = (a: string, patch: Partial<ItemState>) => setForm((f) => ({ ...f, items: { ...f.items, [a]: { ...f.items[a], ...patch } } }));
+  // The reading takes 10–60 s: merge into the form as it is now, not as it was when "Read" was pressed.
+  const latest = useRef(form);
+  useEffect(() => {
+    latest.current = form;
+  }, [form]);
+  function onRead(reading: LabReading) {
+    const { form: next, filled } = applyReading(latest.current, reading);
+    setForm(next);
+    setAiFilled(new Set(filled));
+    setAiRead({ count: filled.filter((k) => k.startsWith("item:") || k.startsWith("line:")).length, notes: reading.notes });
+  }
+
+  const setItem = (a: string, patch: Partial<ItemState>) => {
+    seen(`item:${a}`);
+    setForm((f) => ({ ...f, items: { ...f.items, [a]: { ...f.items[a], ...patch } } }));
+  };
   const setPanel = (a: string, fn: (p: ResultsForm["panels"][string]) => ResultsForm["panels"][string]) =>
     setForm((f) => ({ ...f, panels: { ...f.panels, [a]: fn(f.panels[a]) } }));
-  const setLine = (a: string, key: string, patch: Partial<LineState>) =>
+  const setLine = (a: string, key: string, patch: Partial<LineState>) => {
+    seen(`line:${key}`);
     setPanel(a, (p) => ({ ...p, lines: p.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) }));
+  };
 
   async function onDraft() {
     if (blocked()) return;
@@ -130,6 +164,26 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
     <div className="space-y-4">
       <p className="text-[16px] font-semibold">{mode === "amend" ? t.results.amendTitle : t.results.title}</p>
 
+      {mode === "release" ? <ReadSheet requestId={row.requestId} onRead={onRead} /> : null}
+      {aiRead ? (
+        <div role="status" className="rounded-2xl border border-violet/20 bg-white/80 p-3.5 text-[13px] leading-relaxed text-[#2e2a6b]">
+          <p className="flex items-start gap-2 font-medium">
+            <ScanText className="mt-0.5 size-4 shrink-0 text-violet" />
+            {aiRead.count > 0 ? fill(t.reader.done, { n: aiRead.count }) : t.reader.none}
+          </p>
+          {aiRead.notes.length > 0 ? (
+            <>
+              <p className="mt-2 ps-6 font-semibold">{t.reader.notes}</p>
+              <ul className="mt-1 list-disc space-y-0.5 ps-10">
+                {aiRead.notes.map((n, i) => (
+                  <li key={i}>{n[locale]}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       {analyses.map((a) =>
         isPanel(a) ? (
           <PanelBlock
@@ -140,6 +194,7 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
             onLine={(key, patch) => setLine(a, key, patch)}
             onAdd={() => setPanel(a, (p) => ({ ...p, lines: [...p.lines, newLine()] }))}
             onRemove={(key) => setPanel(a, (p) => ({ ...p, lines: p.lines.filter((l) => l.key !== key) }))}
+            aiFilled={aiFilled}
           />
         ) : (
           <fieldset key={a} className="min-w-0 rounded-2xl border border-white bg-white/60 p-3.5 sm:p-4">
@@ -161,7 +216,8 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
                   value={form.items[a].value}
                   onChange={(e) => setItem(a, { value: e.target.value })}
                   placeholder={form.items[a].qualifier === "nd" ? "–" : a === "mold" ? "2500" : "0.0"}
-                  className={cn(FIELD, "rtl:text-end")}
+                  title={aiFilled.has(`item:${a}`) ? t.reader.filledHint : undefined}
+                  className={cn(FIELD, "rtl:text-end", ai(`item:${a}`))}
                 />
               </Field>
               <Field label={t.results.uncertainty} className="col-span-2 sm:col-span-1">
@@ -170,7 +226,7 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
                   dir="ltr"
                   value={form.items[a].uncertainty}
                   onChange={(e) => setItem(a, { uncertainty: e.target.value })}
-                  className={cn(FIELD, "rtl:text-end")}
+                  className={cn(FIELD, "rtl:text-end", form.items[a].uncertainty ? ai(`item:${a}`) : undefined)}
                 />
               </Field>
               <Field label={t.results.method} className="col-span-2 sm:col-span-3">
@@ -183,10 +239,28 @@ function FormBody({ row, mode, from, onDone }: { row: LabQueueRow; mode: Mode; f
 
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2.5">
         <Field label={t.results.testedFrom}>
-          <input type="date" dir="ltr" value={form.testedFrom} onChange={(e) => setForm((f) => ({ ...f, testedFrom: e.target.value }))} className={FIELD} />
+          <input
+            type="date"
+            dir="ltr"
+            value={form.testedFrom}
+            onChange={(e) => {
+              seen("testedFrom");
+              setForm((f) => ({ ...f, testedFrom: e.target.value }));
+            }}
+            className={cn(FIELD, ai("testedFrom"))}
+          />
         </Field>
         <Field label={t.results.testedTo}>
-          <input type="date" dir="ltr" value={form.testedTo} onChange={(e) => setForm((f) => ({ ...f, testedTo: e.target.value }))} className={FIELD} />
+          <input
+            type="date"
+            dir="ltr"
+            value={form.testedTo}
+            onChange={(e) => {
+              seen("testedTo");
+              setForm((f) => ({ ...f, testedTo: e.target.value }));
+            }}
+            className={cn(FIELD, ai("testedTo"))}
+          />
         </Field>
       </div>
       <Field label={t.results.deviations}>
@@ -251,7 +325,9 @@ function PanelBlock({
   onLine,
   onAdd,
   onRemove,
+  aiFilled,
 }: {
+  aiFilled: ReadonlySet<string>;
   title: string;
   panel: ResultsForm["panels"][string];
   onMethod: (m: string) => void;
@@ -270,8 +346,9 @@ function PanelBlock({
       <ul className="mt-3 space-y-2.5">
         {panel.lines.map((l, i) => {
           const canJudge = l.limit.trim() !== "" && l.limitRef.trim() !== "";
+          const byAi = aiFilled.has(`line:${l.key}`);
           return (
-            <li key={l.key} className="rounded-xl bg-[#eef2ff]/70 p-3">
+            <li key={l.key} title={byAi ? t.reader.filledHint : undefined} className={cn("rounded-xl bg-[#eef2ff]/70 p-3", byAi && AI_FILLED)}>
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:grid-cols-[minmax(0,1.6fr)_7.5rem_minmax(0,1fr)_minmax(0,0.8fr)]">
                 <Field label={t.results.lineName} className="col-span-2 sm:col-span-1">
                   <input dir="auto" value={l.name} maxLength={80} placeholder={t.results.namePlaceholder} onChange={(e) => onLine(l.key, { name: e.target.value })} className={FIELD} />

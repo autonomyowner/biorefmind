@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { DAY, defaultDue, fromDateInput, makeForm, monthStats, newLine, tabOf, toDateInput, toResults } from "./lab-logic";
+import { applyReading, DAY, defaultDue, fromDateInput, makeForm, monthStats, newLine, tabOf, toDateInput, toResults } from "./lab-logic";
 
 const NOW = new Date(2026, 9, 15, 10).getTime(); // 15 Oct 2026, local time
 const LAST_MONTH = new Date(2026, 8, 20).getTime();
@@ -107,5 +107,54 @@ describe("results form", () => {
     expect(f.testedFrom).toBe("2026-10-10");
     expect(f.deviations).toBe("Late arrival");
     expect(toResults(f, analyses).items).toEqual([{ analysis: "mold", value: 2000, qualifier: "<", method: "DG18" }]);
+  });
+});
+
+describe("applyReading", () => {
+  const methods = { moisture: "Oven 105 °C", punicalagin: "HPLC-DAD", heavy_metals: "ICP-OES" };
+  const base = () =>
+    makeForm({ analyses: ["moisture", "punicalagin", "heavy_metals"], methods, receivedAt: NOW - 3 * DAY, now: NOW });
+
+  test("fills values, qualifiers, uncertainty, panel lines and dates; keeps methods; lists what it filled", () => {
+    const { form, filled } = applyReading(base(), {
+      items: [
+        { analysis: "moisture", value: 9.4, uncertainty: 0.3 },
+        { analysis: "punicalagin", value: 0, qualifier: "nd" },
+      ],
+      panels: [{ analysis: "heavy_metals", lines: [{ name: "Lead (Pb)", value: 0.05, qualifier: "<", unit: "mg/kg" }] }],
+      testedFrom: "2026-10-13",
+      testedTo: "2026-10-14",
+      notes: [],
+    });
+    expect(form.items.moisture).toEqual({ value: "9.4", qualifier: "", uncertainty: "0.3", method: "Oven 105 °C" });
+    expect(form.items.punicalagin).toEqual({ value: "", qualifier: "nd", uncertainty: "", method: "HPLC-DAD" });
+    // The empty starter line is replaced; limits and verdicts stay for the analyst.
+    expect(form.panels.heavy_metals.lines).toHaveLength(1);
+    expect(form.panels.heavy_metals.lines[0]).toMatchObject({ name: "Lead (Pb)", value: "0.05", qualifier: "<", unit: "mg/kg", limit: "", limitRef: "", pass: "" });
+    expect(form.panels.heavy_metals.method).toBe("ICP-OES");
+    expect([form.testedFrom, form.testedTo]).toEqual(["2026-10-13", "2026-10-14"]);
+    expect(filled).toEqual(["item:moisture", "item:punicalagin", `line:${form.panels.heavy_metals.lines[0].key}`, "testedFrom", "testedTo"]);
+  });
+
+  test("a value the analyst already typed is never overwritten", () => {
+    const start = base();
+    start.items.moisture = { ...start.items.moisture, value: "10.1" };
+    const { form, filled } = applyReading(start, { items: [{ analysis: "moisture", value: 9.4 }], panels: [], notes: [] });
+    expect(form.items.moisture.value).toBe("10.1");
+    expect(filled).toEqual([]);
+  });
+
+  test("lines the analyst already typed are kept; analyses the form doesn't have are ignored", () => {
+    const start = base();
+    start.panels.heavy_metals.lines = [newLine({ name: "Cadmium (Cd)", value: "0.01" })];
+    const { form, filled } = applyReading(start, {
+      items: [{ analysis: "pectin", value: 20 }],
+      panels: [{ analysis: "heavy_metals", lines: [{ name: "Lead (Pb)", value: 0.05, unit: "mg/kg" }] }],
+      notes: [],
+    });
+    expect(form.panels.heavy_metals.lines.map((l) => l.name)).toEqual(["Cadmium (Cd)", "Lead (Pb)"]);
+    expect(form.items.pectin).toBeUndefined();
+    expect(filled).toHaveLength(1);
+    expect(form.testedFrom).toBe(start.testedFrom);
   });
 });

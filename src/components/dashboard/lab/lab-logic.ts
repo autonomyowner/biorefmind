@@ -1,4 +1,4 @@
-import type { LabResults } from "@/lib/types";
+import type { LabReading, LabResults } from "@/lib/types";
 import { PANEL_ANALYSES } from "../../../../convex/lib/catalog";
 
 // Pure helpers for the lab workspace (no React), so they can be tested on their own.
@@ -237,4 +237,45 @@ export function toResults(form: ResultsForm, analyses: readonly string[]): LabRe
   };
   if (form.deviations.trim()) results.deviations = form.deviations.trim();
   return results;
+}
+
+/**
+ * Puts what the results reader read into the form. Methods, limits and verdicts are never touched; values and
+ * lines the analyst already typed are kept (never overwritten). `filled` lists the fields it set ("item:moisture", "line:<key>", "testedFrom"…),
+ * so the form can highlight them until the analyst edits them.
+ */
+export function applyReading(form: ResultsForm, reading: LabReading): { form: ResultsForm; filled: string[] } {
+  const done: string[] = [];
+  const items = { ...form.items };
+  for (const it of reading.items) {
+    const cur = items[it.analysis];
+    if (!cur || filled(cur)) continue;
+    items[it.analysis] = {
+      ...cur,
+      value: it.qualifier === "nd" ? "" : String(it.value),
+      qualifier: it.qualifier ?? "",
+      uncertainty: it.uncertainty === undefined ? "" : String(it.uncertainty),
+    };
+    done.push(`item:${it.analysis}`);
+  }
+  const panels = { ...form.panels };
+  for (const p of reading.panels) {
+    const cur = panels[p.analysis];
+    if (!cur) continue;
+    const added = p.lines.map((l) =>
+      newLine({ name: l.name, value: l.qualifier === "nd" ? "" : String(l.value), qualifier: l.qualifier ?? "", unit: l.unit }),
+    );
+    panels[p.analysis] = { ...cur, lines: [...cur.lines.filter((l) => !lineEmpty(l)), ...added] };
+    for (const l of added) done.push(`line:${l.key}`);
+  }
+  const next = { ...form, items, panels };
+  if (reading.testedFrom) {
+    next.testedFrom = reading.testedFrom;
+    done.push("testedFrom");
+  }
+  if (reading.testedTo) {
+    next.testedTo = reading.testedTo;
+    done.push("testedTo");
+  }
+  return { form: next, filled: done };
 }

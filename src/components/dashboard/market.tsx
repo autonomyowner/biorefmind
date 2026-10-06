@@ -23,6 +23,7 @@ import { api } from "@/lib/backend";
 import { LOT_RESIDUE_KEYS, RESIDUE_KEYS, catalogLabels, labelOf, residueLabel } from "@/lib/catalog-labels";
 import { errorMessage } from "@/lib/errors";
 import { formatDzd, formatKg, MARKET_FEE_RATE } from "@/lib/pricing";
+import { shrinkImage } from "@/lib/shrink-image";
 import type { MarketListing, MyListing, MyOffer, Sale } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -290,23 +291,6 @@ export function MyListings({ id, adding: addingProp, onAddingChange }: { id?: st
 
 type Upload = { key: string; preview: string; storageId?: Id<"_storage"> };
 
-/** Phone photos are large: shrink to 1600 px JPEG before upload. Falls back to the original. */
-async function shrink(file: File): Promise<Blob> {
-  try {
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-    if (scale === 1 && file.size < 1_500_000) return file;
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext("2d")?.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-    return blob ?? file;
-  } catch {
-    return file;
-  }
-}
-
 function NewListingForm({ onDone }: { onDone: () => void }) {
   const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
@@ -335,7 +319,7 @@ function NewListingForm({ onDone }: { onDone: () => void }) {
       const key = `${file.name}-${file.size}-${Math.random()}`;
       setPhotos((p) => [...p, { key, preview: URL.createObjectURL(file) }]);
       try {
-        const [url, blob] = await Promise.all([uploadUrl({ companyId: workspace.companyId }), shrink(file)]);
+        const [url, blob] = await Promise.all([uploadUrl({ companyId: workspace.companyId }), shrinkImage(file)]);
         const res = await fetch(url, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob });
         if (!res.ok) throw new Error("upload");
         const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };

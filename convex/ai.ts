@@ -13,7 +13,7 @@ async function settingsRow(ctx: QueryCtx | MutationCtx) {
 }
 
 /** The key and model every AI call uses: the admin's saved key first, then the server setting. */
-async function resolveConfig(ctx: QueryCtx) {
+export async function resolveConfig(ctx: QueryCtx) {
   const row = await settingsRow(ctx);
   const envKey = process.env.OPENROUTER_API_KEY || undefined;
   const key = row?.openrouterKey ?? envKey;
@@ -22,6 +22,7 @@ async function resolveConfig(ctx: QueryCtx) {
     keySource: (row?.openrouterKey ? "saved" : envKey ? "env" : "none") as "saved" | "env" | "none",
     model: row?.model ?? (process.env.AI_MODEL || DEFAULT_MODEL),
     photoCheck: row?.photoCheck ?? true,
+    resultsReader: row?.resultsReader ?? true,
   };
 }
 
@@ -34,7 +35,7 @@ export const config = internalQuery({
   },
 });
 
-/** The admin's view: masked key, model, switch and this month's photo checks. */
+/** The admin's view: masked key, model, switches, and this month's photo checks, readings and spend. */
 export const settings = query({
   args: {},
   handler: async (ctx) => {
@@ -55,12 +56,18 @@ export const settings = query({
       if (p.status === "failed") failed++;
       costUsd += p.costUsd ?? 0;
     }
+    const reads = await ctx.db
+      .query("aiReads")
+      .withIndex("by_finished", (q) => q.gte("finishedAt", monthStart))
+      .collect();
+    for (const r of reads) costUsd += r.costUsd ?? 0;
     return {
       keySource: c.keySource,
       keyMasked: maskKey(c.key),
       model: c.model,
       photoCheck: c.photoCheck,
-      month: { done, failed, costUsd: Math.round(costUsd * 10_000) / 10_000 },
+      resultsReader: c.resultsReader,
+      month: { done, failed, reads: reads.filter((r) => r.status === "done").length, costUsd: Math.round(costUsd * 10_000) / 10_000 },
     };
   },
 });
@@ -68,7 +75,7 @@ export const settings = query({
 async function upsert(
   ctx: MutationCtx,
   userId: Id<"users">,
-  patch: { openrouterKey?: string | undefined; model?: string; photoCheck?: boolean },
+  patch: { openrouterKey?: string | undefined; model?: string; photoCheck?: boolean; resultsReader?: boolean },
 ) {
   const row = await settingsRow(ctx);
   const stamp = { updatedAt: Date.now(), updatedBy: userId };
@@ -96,12 +103,13 @@ export const removeKey = mutation({
 });
 
 export const update = mutation({
-  args: { model: v.optional(v.string()), photoCheck: v.optional(v.boolean()) },
-  handler: async (ctx, { model, photoCheck }) => {
+  args: { model: v.optional(v.string()), photoCheck: v.optional(v.boolean()), resultsReader: v.optional(v.boolean()) },
+  handler: async (ctx, { model, photoCheck, resultsReader }) => {
     const user = await requireAdmin(ctx);
     await upsert(ctx, user._id, {
       ...(model !== undefined ? { model: cleanModel(model) } : {}),
       ...(photoCheck !== undefined ? { photoCheck } : {}),
+      ...(resultsReader !== undefined ? { resultsReader } : {}),
     });
     return null;
   },
