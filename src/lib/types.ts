@@ -129,6 +129,7 @@ export type MyListing = FunctionReturnType<typeof api.market.myListings>[number]
 export type ListingOffer = MyListing["offers"][number];
 export type MarketListing = FunctionReturnType<typeof api.market.browse>[number];
 export type PublicLot = FunctionReturnType<typeof api.market.publicLots>[number];
+export type LabReading = FunctionReturnType<typeof api.labAi.readResults>;
 export type MyOffer = FunctionReturnType<typeof api.market.myOffers>[number];
 export type Sale = FunctionReturnType<typeof api.market.mySales>[number];
 export type AdminSales = FunctionReturnType<typeof api.admin.sales>;
