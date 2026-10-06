@@ -118,7 +118,7 @@ Owner: companies and labs must not get farmers' numbers, so nobody bypasses the 
 - Free text: `cleanNote` (listing notes, offer messages) refuses Algerian phone numbers (`hasPhone`/`maskPhones` in `convex/lib/market.ts`: +213/00213 + 9 digits, or 0 + 8–9 digits with spaces/dots/dashes, Arabic-Indic digits too); older notes and messages are masked "•••" when read.
 - Admin: both phones on each sale (`admin.sales` `sellerPhone`/`buyerPhone`) and a new "Lab requests" section (`admin.labRequests`, latest 50 with lab and client phones).
 - 205 tests, both type checks, lint, build. Dev Convex pushed. Chrome on dev 20/20 (notes and offer messages with numbers refused in plain words, both Sales pages without phone or call link, lab request with a number typed in the label → lab sees "Lot A •••" and the BiorefMind note, admin sees all phones, Arabic 360 px, marketplace intro). Script: session scratchpad `phones-smoke.mjs`. Smoke accounts "Smoke Farm/Factory/Lab mux0…" stay on dev.
-- Ship order: Convex prod first (new `admin.labRequests`; old website still reads `otherPhone`, which becomes empty → the old Sales page shows an empty call link for the ~1 minute until Vercel deploys), then `main`.
+- Ship order: Convex prod first (new `admin.labRequests`; the old website calls `.replace` on `otherPhone`, so for the ~1 minute until Vercel deploys the old Sales page shows the dashboard error page; acceptable while prod has almost no sales), then `main`.
 
 ## Production (shipped 2026-10-02)
 - Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
