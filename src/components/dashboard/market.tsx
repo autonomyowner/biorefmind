@@ -45,6 +45,8 @@ const NOW = Date.UTC(2026, 9, 4);
 const SAMPLE_LISTINGS: MyListing[] = [
   {
     listingId: "g1" as Id<"listings">,
+    category: "residue",
+    withdrawnReason: undefined,
     residue: "pomegranate_peels",
     residueName: undefined,
     quantityKg: 1200,
@@ -82,6 +84,8 @@ const SAMPLE_LISTINGS: MyListing[] = [
   },
   {
     listingId: "g2" as Id<"listings">,
+    category: "residue",
+    withdrawnReason: undefined,
     residue: "olive_pomace",
     residueName: undefined,
     quantityKg: 3000,
@@ -106,6 +110,8 @@ const SAMPLE_SALES: Sale[] = [
     priceDzdPerKg: 6,
     totalDzd: 18_000,
     feeDzd: 900,
+    sellerFeeDzd: 900,
+    category: "residue",
     side: "sold",
     otherName: "Bio-Énergie Est",
     otherRegion: "Constantine",

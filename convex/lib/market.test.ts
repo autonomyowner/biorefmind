@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { cleanNote, cleanPrice, cleanQuantity, cleanResidue, hasPhone, MARKET_REFUSE, maskPhones, offerFits, saleAmounts } from "./market";
-import { MARKET_FEE_RATE } from "./pricing";
+import { cleanNote, cleanPrice, cleanProduct, cleanQuantity, cleanResidue, hasPhone, MARKET_REFUSE, maskPhones, offerFits, saleAmounts } from "./market";
+import { MARKET_FEE_RATE, SELLER_FEE_RATE } from "./pricing";
 
 describe("cleanQuantity", () => {
   test("whole kilograms from 1 to 10,000,000", () => {
@@ -50,12 +50,27 @@ describe("cleanResidue", () => {
   });
 });
 
+describe("cleanProduct", () => {
+  test("residues by default, from the residue list (corn husks included)", () => {
+    expect(cleanProduct(undefined, "corn_husks", undefined)).toEqual({ category: "residue", residue: "corn_husks" });
+    expect(cleanProduct("residue", "olive_pomace", "x")).toEqual({ category: "residue", residue: "olive_pomace" });
+    expect(() => cleanProduct("residue", "mushrooms", undefined)).toThrow(MARKET_REFUSE.residue);
+  });
+  test("fresh produce from its own list, or typed", () => {
+    expect(cleanProduct("fresh", "mushrooms", undefined)).toEqual({ category: "fresh", residue: "mushrooms" });
+    expect(cleanProduct("fresh", "other", " Courgettes ")).toEqual({ category: "fresh", residue: "other", residueName: "Courgettes" });
+    expect(() => cleanProduct("fresh", "olive_pomace", undefined)).toThrow(MARKET_REFUSE.product);
+    expect(() => cleanProduct("fresh", "other", "x")).toThrow(MARKET_REFUSE.residueName);
+  });
+});
+
 describe("saleAmounts", () => {
-  test("total is quantity × price; buyer fee is 5% of it, to the dinar", () => {
+  test("total is quantity × price; buyer and seller each pay 5% of it, to the dinar", () => {
     expect(MARKET_FEE_RATE).toBe(0.05);
-    expect(saleAmounts(2000, 15)).toEqual({ totalDzd: 30_000, feeDzd: 1500 });
-    expect(saleAmounts(333, 1.5)).toEqual({ totalDzd: 499.5, feeDzd: 25 });
-    expect(saleAmounts(1, 0.01)).toEqual({ totalDzd: 0.01, feeDzd: 0 });
+    expect(SELLER_FEE_RATE).toBe(0.05);
+    expect(saleAmounts(2000, 15)).toEqual({ totalDzd: 30_000, feeDzd: 1500, sellerFeeDzd: 1500 });
+    expect(saleAmounts(333, 1.5)).toEqual({ totalDzd: 499.5, feeDzd: 25, sellerFeeDzd: 25 });
+    expect(saleAmounts(1, 0.01)).toEqual({ totalDzd: 0.01, feeDzd: 0, sellerFeeDzd: 0 });
   });
 });
 

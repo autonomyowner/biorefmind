@@ -55,6 +55,9 @@ export const labResultsDoc = v.object({
   deviations: v.optional(v.string()),
 });
 
+/** What a lot is (2026-10-11): leftovers or fresh produce. */
+export const category = v.union(v.literal("residue"), v.literal("fresh"));
+
 export const labSample = v.object({
   residue: v.string(),
   residueName: v.optional(v.string()),
@@ -108,10 +111,14 @@ export default defineSchema({
     paused: v.optional(v.boolean()), // "pause new requests"
     prices: v.optional(v.array(labPrice)),
     requestSeq: v.optional(v.number()), // last number used for lab sample numbers
+    // The one "house" farm that owns the lots BiorefMind posts for offline farmers (2026-10-11). Not an account.
+    house: v.optional(v.boolean()),
+    partnerSeq: v.optional(v.number()), // house: last partner farm number given
     createdAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
-    .index("by_kind", ["kind"]),
+    .index("by_kind", ["kind"])
+    .index("by_house", ["house"]),
 
   /** A factory asking for enterprise pricing; read on the admin page. */
   enterpriseRequests: defineTable({
@@ -124,7 +131,8 @@ export default defineSchema({
   /** A lot a farm puts up for sale. Prices in DA per kg. Design: specs/2026-10-04-marketplace-design.md */
   listings: defineTable({
     companyId: v.id("companies"), // the farm selling
-    residue: v.string(), // key from lib/catalog RESIDUES, or "other"
+    category: v.optional(category), // missing = residue
+    residue: v.string(), // product key: lib/catalog RESIDUES or FRESH_PRODUCE (by category), or "other"
     residueName: v.optional(v.string()), // the farmer's own words, only with "other"
     quantityKg: v.number(), // as listed
     remainingKg: v.number(), // goes down with each sale; 0 → sold
@@ -134,6 +142,10 @@ export default defineSchema({
     photoIds: v.array(v.id("_storage")),
     labRequestId: v.optional(v.id("labRequests")), // lab results the farm chose to show on this lot
     status: v.union(v.literal("open"), v.literal("sold"), v.literal("withdrawn")),
+    // Posted by BiorefMind for a farmer who is not on the platform (house company). Admin only, never public.
+    managed: v.optional(v.object({ farmerName: v.string(), farmerPhone: v.optional(v.string()), privateNote: v.optional(v.string()) })),
+    partnerNo: v.optional(v.number()), // the public name: "BiorefMind partner farm #N"
+    withdrawnReason: v.optional(v.string()), // the admin took the lot down (moderation)
     createdBy: v.id("users"),
     createdAt: v.number(),
   })
@@ -156,23 +168,58 @@ export default defineSchema({
     .index("by_listing", ["listingId"])
     .index("by_buyer", ["buyerId", "createdAt"]),
 
-  /** An accepted offer. The buyer owes BiorefMind `feeDzd` on top of `totalDzd`. */
+  /**
+   * An accepted offer. The buyer owes BiorefMind `feeDzd` on top of `totalDzd`; the seller owes
+   * `sellerFeeDzd` out of it (missing on sales before 2026-10-11 = 0).
+   */
   sales: defineTable({
     listingId: v.id("listings"),
     offerId: v.id("offers"),
     sellerId: v.id("companies"),
     buyerId: v.id("companies"),
+    category: v.optional(category),
     residue: v.string(),
     residueName: v.optional(v.string()),
     quantityKg: v.number(),
     priceDzdPerKg: v.number(),
     totalDzd: v.number(),
     feeDzd: v.number(),
+    sellerFeeDzd: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_seller", ["sellerId", "createdAt"])
     .index("by_buyer", ["buyerId", "createdAt"])
     .index("by_created", ["createdAt"]),
+
+  /** Someone interested in a lot BiorefMind sells for a farmer (no sign-in needed). Read on the admin page. */
+  inquiries: defineTable({
+    listingId: v.id("listings"),
+    name: v.string(),
+    phone: v.string(),
+    phoneDigits: v.string(), // for the per-phone daily limit
+    email: v.optional(v.string()),
+    company: v.optional(v.string()),
+    quantityKg: v.optional(v.number()),
+    message: v.optional(v.string()),
+    userId: v.optional(v.id("users")), // when sent signed in
+    status: v.union(v.literal("new"), v.literal("contacted"), v.literal("closed")),
+    adminNote: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_created", ["createdAt"])
+    .index("by_status", ["status", "createdAt"])
+    .index("by_listing", ["listingId"])
+    .index("by_phone", ["phoneDigits", "createdAt"]),
+
+  /** Every admin action, for the admin page's Activity list. */
+  adminLog: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    action: v.string(), // e.g. "lot.create", "lab.extend", "inquiry.contacted"
+    detail: v.string(),
+    createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
 
   /** A farm or factory asking a lab to analyse one sample. Design: specs/2026-10-06-lab-requests-design.md */
   labRequests: defineTable({

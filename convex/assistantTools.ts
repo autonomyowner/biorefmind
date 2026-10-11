@@ -30,11 +30,14 @@ async function searchLots(ctx: QueryCtx, a: ReturnType<typeof cleanToolArgs>) {
     .slice(0, 15)
     .map((l) => ({
       lot_id: l.listingId,
+      category: l.category, // "residue" or "fresh" produce
       residue: residueOf(l),
       kg_available: l.remainingKg,
       price_dzd_per_kg: l.priceDzdPerKg,
       region: l.region,
-      seller: l.sellerName,
+      seller: l.managed
+        ? `BiorefMind partner farm #${l.partnerNo} (sold through BiorefMind: no offers; the buyer sends "I'm interested" on the public marketplace page)`
+        : l.sellerName,
       posted: day(l.createdAt),
       ai_photo_check: l.photoCheck ? { looks_like_declared: l.photoCheck.match, state: l.photoCheck.state, concerns: l.photoCheck.concerns } : undefined,
       lab_tested: l.lab ? { lab: l.lab.labName, score: l.lab.score, route: l.lab.route } : undefined,

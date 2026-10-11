@@ -23,7 +23,28 @@ export const RESIDUES = [
   "grape_marc",
   "date_pits",
   "corn_silk",
+  "corn_husks",
 ] as const;
+
+/** Fresh produce a farm can sell (2026-10-11), besides residues. Same "other" + typed name rule. */
+export const FRESH_PRODUCE = [
+  "mushrooms",
+  "pomegranates",
+  "tomatoes",
+  "potatoes",
+  "onions",
+  "peppers",
+  "citrus",
+  "dates",
+  "olives",
+  "grapes",
+  "apples",
+  "figs",
+] as const;
+
+/** What a lot is: a residue (leftovers) or fresh produce. Missing in storage = residue. */
+export const CATEGORIES = ["residue", "fresh"] as const;
+export type Category = (typeof CATEGORIES)[number];
 
 export type Analysis = (typeof ANALYSES)[number];
 export type Residue = (typeof RESIDUES)[number];
