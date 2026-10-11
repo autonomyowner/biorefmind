@@ -1,8 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import { logAdmin, requireAdmin } from "./admin";
-import { cleanRegion } from "./lib/accounts";
+import { cleanRegion, isAdmin, REFUSE } from "./lib/accounts";
 import { cleanInquiry, cleanText, INQUIRY_REFUSE, MAX_HOUSE_PHOTOS, partnerKey } from "./lib/inquiries";
 import { cleanNote, cleanPrice, cleanProduct, cleanQuantity, MARKET_REFUSE } from "./lib/market";
 import { queuePhotoCheck } from "./photoCheck";
@@ -58,75 +58,115 @@ export const uploadUrl = mutation({
   },
 });
 
+const lotArgs = {
+  category: v.optional(v.string()),
+  residue: v.string(),
+  residueName: v.optional(v.string()),
+  quantityKg: v.number(),
+  priceDzdPerKg: v.number(),
+  region: v.string(),
+  note: v.optional(v.string()),
+  photoIds: v.array(v.id("_storage")),
+  farmerName: v.string(),
+  farmerPhone: v.optional(v.string()),
+  privateNote: v.optional(v.string()),
+};
+
 export const create = mutation({
-  args: {
-    category: v.optional(v.string()),
-    residue: v.string(),
-    residueName: v.optional(v.string()),
-    quantityKg: v.number(),
-    priceDzdPerKg: v.number(),
-    region: v.string(),
-    note: v.optional(v.string()),
-    photoIds: v.array(v.id("_storage")),
-    farmerName: v.string(),
-    farmerPhone: v.optional(v.string()),
-    privateNote: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
-    const { category, residue, residueName } = cleanProduct(args.category, args.residue, args.residueName);
-    const quantityKg = cleanQuantity(args.quantityKg);
-    const priceDzdPerKg = cleanPrice(args.priceDzdPerKg);
-    const region = cleanRegion(args.region);
-    const note = cleanNote(args.note);
-    const managed = cleanFarmer(args);
-    const photoIds = [...new Set(args.photoIds)];
-    if (photoIds.length > MAX_HOUSE_PHOTOS) throw new ConvexError(INQUIRY_REFUSE.photos);
+  args: lotArgs,
+  handler: async (ctx, args) => createHouseLot(ctx, await requireAdmin(ctx), args),
+});
 
-    const house = await houseCompany(ctx, admin);
-    for (const storageId of photoIds) {
-      const claimed = await ctx.db
-        .query("photoClaims")
-        .withIndex("by_storage", (q) => q.eq("storageId", storageId))
-        .first();
-      if (claimed || !(await ctx.db.system.get(storageId))) throw new ConvexError(MARKET_REFUSE.photoMissing);
-      await ctx.db.insert("photoClaims", { storageId, companyId: house._id });
-    }
-
-    // One partner number per farmer: reuse the number of this farmer's earlier lots.
-    const key = partnerKey(managed);
-    const earlier = await ctx.db
-      .query("listings")
-      .withIndex("by_company", (q) => q.eq("companyId", house._id))
-      .collect();
-    let partnerNo = earlier.find((l) => l.managed && partnerKey(l.managed) === key)?.partnerNo;
-    if (partnerNo === undefined) {
-      partnerNo = (house.partnerSeq ?? 0) + 1;
-      await ctx.db.patch(house._id, { partnerSeq: partnerNo });
-    }
-
-    const listingId = await ctx.db.insert("listings", {
-      companyId: house._id,
-      category,
-      residue,
-      residueName,
-      quantityKg,
-      remainingKg: quantityKg,
-      priceDzdPerKg,
-      region,
-      note,
-      photoIds,
-      status: "open",
-      managed,
-      partnerNo,
-      createdBy: admin._id,
-      createdAt: Date.now(),
-    });
-    if (photoIds.length > 0) await queuePhotoCheck(ctx, listingId, house._id);
-    await logAdmin(ctx, admin, "lot.create", `${label({ residue, residueName })} · ${quantityKg} kg · partner farm #${partnerNo} (${managed.farmerName})`);
-    return listingId;
+/**
+ * The same, from the command line (`npx convex run adminLots:importLot`), on behalf of an admin's account:
+ * used to post the products the owner collected from farmers. Not callable from the website.
+ */
+export const importLot = internalMutation({
+  args: { ...lotArgs, adminEmail: v.string() },
+  handler: async (ctx, { adminEmail, ...args }) => {
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", adminEmail.trim().toLowerCase()))
+      .unique();
+    if (!admin || !isAdmin(admin.email)) throw new ConvexError(REFUSE.admin);
+    return await createHouseLot(ctx, admin, args);
   },
 });
+
+export const importUploadUrl = internalMutation({
+  args: {},
+  handler: async (ctx) => await ctx.storage.generateUploadUrl(),
+});
+
+async function createHouseLot(
+  ctx: MutationCtx,
+  admin: Doc<"users">,
+  args: {
+    category?: string;
+    residue: string;
+    residueName?: string;
+    quantityKg: number;
+    priceDzdPerKg: number;
+    region: string;
+    note?: string;
+    photoIds: Id<"_storage">[];
+    farmerName: string;
+    farmerPhone?: string;
+    privateNote?: string;
+  },
+) {
+  const { category, residue, residueName } = cleanProduct(args.category, args.residue, args.residueName);
+  const quantityKg = cleanQuantity(args.quantityKg);
+  const priceDzdPerKg = cleanPrice(args.priceDzdPerKg);
+  const region = cleanRegion(args.region);
+  const note = cleanNote(args.note);
+  const managed = cleanFarmer(args);
+  const photoIds = [...new Set(args.photoIds)];
+  if (photoIds.length > MAX_HOUSE_PHOTOS) throw new ConvexError(INQUIRY_REFUSE.photos);
+
+  const house = await houseCompany(ctx, admin);
+  for (const storageId of photoIds) {
+    const claimed = await ctx.db
+      .query("photoClaims")
+      .withIndex("by_storage", (q) => q.eq("storageId", storageId))
+      .first();
+    if (claimed || !(await ctx.db.system.get(storageId))) throw new ConvexError(MARKET_REFUSE.photoMissing);
+    await ctx.db.insert("photoClaims", { storageId, companyId: house._id });
+  }
+
+  // One partner number per farmer: reuse the number of this farmer's earlier lots.
+  const key = partnerKey(managed);
+  const earlier = await ctx.db
+    .query("listings")
+    .withIndex("by_company", (q) => q.eq("companyId", house._id))
+    .collect();
+  let partnerNo = earlier.find((l) => l.managed && partnerKey(l.managed) === key)?.partnerNo;
+  if (partnerNo === undefined) {
+    partnerNo = (house.partnerSeq ?? 0) + 1;
+    await ctx.db.patch(house._id, { partnerSeq: partnerNo });
+  }
+
+  const listingId = await ctx.db.insert("listings", {
+    companyId: house._id,
+    category,
+    residue,
+    residueName,
+    quantityKg,
+    remainingKg: quantityKg,
+    priceDzdPerKg,
+    region,
+    note,
+    photoIds,
+    status: "open",
+    managed,
+    partnerNo,
+    createdBy: admin._id,
+    createdAt: Date.now(),
+  });
+  if (photoIds.length > 0) await queuePhotoCheck(ctx, listingId, house._id);
+  await logAdmin(ctx, admin, "lot.create", `${label({ residue, residueName })} · ${quantityKg} kg · partner farm #${partnerNo} (${managed.farmerName})`);
+  return listingId;
+}
 
 export const update = mutation({
   args: {

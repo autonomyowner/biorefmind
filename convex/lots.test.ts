@@ -2,7 +2,7 @@
 import { convexTest } from "convex-test";
 import betterAuthTest from "@convex-dev/better-auth/test";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { api, components } from "./_generated/api";
+import { api, components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
@@ -167,6 +167,18 @@ describe("BiorefMind lots (hidden names)", () => {
     // Others can't use the admin functions.
     await expect(buyer.as.query(api.adminLots.list, {})).rejects.toThrow("Only BiorefMind admins can do this.");
     await expect(buyer.as.mutation(api.adminLots.create, { ...houseLot, photoIds: [] })).rejects.toThrow("Only BiorefMind admins can do this.");
+  });
+
+  test("the command-line import posts on behalf of an admin account, and only an admin's", async () => {
+    const t = newBackend();
+    await member(t, "boss@biorefmind.com", "Boss");
+    await member(t, "nobody@x.dz");
+    const p = await photo(t);
+    const listingId = await t.mutation(internal.adminLots.importLot, { ...houseLot, photoIds: [p], adminEmail: " Boss@BiorefMind.com " });
+    expect(await t.query(api.market.publicLots, {})).toMatchObject([{ listingId, managed: true, partnerNo: 1 }]);
+    await expect(t.mutation(internal.adminLots.importLot, { ...houseLot, photoIds: [], adminEmail: "nobody@x.dz" })).rejects.toThrow(
+      "Only BiorefMind admins can do this.",
+    );
   });
 
   test("at most 3 photos; edit, mark sold, reopen and withdraw are logged", async () => {
