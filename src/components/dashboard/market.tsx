@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, HandCoins, Headset, ImagePlus, MapPin, PackageSearch, Plus, Receipt, Sprout, Store, X } from "lucide-react";
+import { Check, HandCoins, Handshake, Headset, ImagePlus, MapPin, PackageSearch, Plus, Receipt, Sprout, Store, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,18 @@ import { FarmerPhotoCheck } from "@/components/dashboard/farmer-photo-check";
 import { localizeBackendError } from "@/i18n/backend-errors";
 import { useLocale, useMessages } from "@/i18n/provider";
 import { api } from "@/lib/backend";
-import { LOT_RESIDUE_KEYS, RESIDUE_KEYS, catalogLabels, labelOf, residueLabel } from "@/lib/catalog-labels";
+import { FreshBadge, InterestForm, SellerName } from "@/components/marketplace/interest-form";
+import { interestMessages } from "@/components/marketplace/interest-messages";
+import {
+  FRESH_KEYS,
+  LOT_FRESH_KEYS,
+  LOT_RESIDUE_KEYS,
+  RESIDUE_KEYS,
+  catalogLabels,
+  labelOf,
+  residueLabel,
+  type Category,
+} from "@/lib/catalog-labels";
 import { errorMessage } from "@/lib/errors";
 import { formatDzd, formatKg, MARKET_FEE_RATE } from "@/lib/pricing";
 import { shrinkImage } from "@/lib/shrink-image";
@@ -186,12 +197,25 @@ function LotPhoto({ urls, alt, className }: { urls: string[]; alt: string; class
   );
 }
 
-/** Choosing one residue from the catalog; as a filter (`withAll`) it also offers "other". */
-function ResiduePicker({ value, onChange, withAll }: { value: string | null; onChange: (k: string | null) => void; withAll?: string }) {
+/** Choosing one product from a category's list; as a filter (`withAll`) it also offers "All" and "other". */
+function ResiduePicker({
+  value,
+  onChange,
+  withAll,
+  category = "residue",
+  label,
+}: {
+  value: string | null;
+  onChange: (k: string | null) => void;
+  withAll?: string;
+  category?: Category;
+  label?: string;
+}) {
   const labels = useMessages(catalogLabels);
-  const keys: (string | null)[] = withAll ? [null, ...LOT_RESIDUE_KEYS] : [...RESIDUE_KEYS];
+  const list = category === "fresh" ? (withAll ? LOT_FRESH_KEYS : FRESH_KEYS) : withAll ? LOT_RESIDUE_KEYS : RESIDUE_KEYS;
+  const keys: (string | null)[] = withAll ? [null, ...list] : [...list];
   return (
-    <div className="flex flex-wrap gap-2">
+    <div role={label ? "group" : undefined} aria-label={label} className="flex flex-wrap gap-2">
       {keys.map((k) => {
         const on = value === k;
         return (
@@ -210,6 +234,38 @@ function ResiduePicker({ value, onChange, withAll }: { value: string | null; onC
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** A small row of mutually exclusive choices (residue / fresh produce). */
+function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { key: T; label: string }[];
+  value: T;
+  onChange: (k: T) => void;
+  label: string;
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex w-fit max-w-full rounded-full border border-foreground/10 bg-white/60 p-1">
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          aria-pressed={value === o.key}
+          onClick={() => onChange(o.key)}
+          className={cn(
+            "h-8 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
+            value === o.key ? "bg-primary text-primary-foreground" : "text-foreground/70 hover:text-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -241,6 +297,7 @@ export function useMyListings(): MyListing[] | undefined {
 
 /** A new listing prepared elsewhere (the assistant's card): photos already uploaded. */
 export type ListingDraft = {
+  category?: Category;
   residue: string;
   residueName?: string;
   quantityKg?: number;
@@ -328,6 +385,9 @@ function NewListingForm({ onDone, draft }: { onDone: () => void; draft?: Listing
   const create = useMutation(api.market.createListing);
   const uploadUrl = useMutation(api.market.generateUploadUrl);
 
+  const [category, setCategory] = useState<Category>(
+    draft?.category ?? ((FRESH_KEYS as readonly string[]).includes(draft?.residue ?? "") ? "fresh" : "residue"),
+  );
   const [residue, setResidue] = useState<string | null>(draft && draft.residue !== "other" ? draft.residue : null);
   const [custom, setCustom] = useState(draft?.residue === "other" ? (draft.residueName ?? "") : ""); // typed residue; wins over the chips
   const [quantity, setQuantity] = useState(draft?.quantityKg !== undefined ? String(draft.quantityKg) : "");
@@ -366,6 +426,7 @@ function NewListingForm({ onDone, draft }: { onDone: () => void; draft?: Listing
     try {
       await create({
         companyId: workspace.companyId,
+        category,
         ...(custom.trim() ? { residue: "other", residueName: custom } : { residue: residue ?? "" }),
         quantityKg: num(quantity),
         priceDzdPerKg: num(price),
@@ -385,9 +446,25 @@ function NewListingForm({ onDone, draft }: { onDone: () => void; draft?: Listing
   return (
     <form onSubmit={submit} className="mb-5 space-y-4 rounded-2xl border border-white bg-white/55 p-4 sm:p-5">
       <p className="text-[16px] font-semibold">{t.form.title}</p>
+      <div>
+        <p className="mb-2 text-[14px] font-medium">{t.form.kind}</p>
+        <Segmented
+          label={t.form.kind}
+          value={category}
+          onChange={(c) => {
+            setCategory(c);
+            setResidue(null); // the other list has other keys
+          }}
+          options={[
+            { key: "residue", label: t.form.kinds.residue },
+            { key: "fresh", label: t.form.kinds.fresh },
+          ]}
+        />
+      </div>
       <fieldset>
-        <legend className="mb-2 text-[14px] font-medium">{t.form.residue}</legend>
+        <legend className="mb-2 text-[14px] font-medium">{t.form.product[category]}</legend>
         <ResiduePicker
+          category={category}
           value={custom.trim() ? null : residue}
           onChange={(k) => {
             setResidue(k);
@@ -400,7 +477,7 @@ function NewListingForm({ onDone, draft }: { onDone: () => void; draft?: Listing
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
             maxLength={80}
-            placeholder={t.form.residueOtherPlaceholder}
+            placeholder={t.form.otherPlaceholder[category]}
             className={cn(FIELD, "mt-1.5 text-foreground")}
           />
         </label>
@@ -516,6 +593,7 @@ function ListingCard({ listing: l }: { listing: MyListing }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-[16px] font-semibold">{name}</p>
+            {l.category === "fresh" ? <FreshBadge /> : null}
             <Chip tone={tone}>{t.listings.status[l.status]}</Chip>
           </div>
           <p className="mt-1 text-[15px]">
@@ -531,6 +609,11 @@ function ListingCard({ listing: l }: { listing: MyListing }) {
         </div>
       </div>
       {l.note ? <p className="mt-3 text-[14px] leading-relaxed text-foreground/80">{l.note}</p> : null}
+      {l.status === "withdrawn" && l.withdrawnReason ? (
+        <p className="mt-3 rounded-xl bg-[#fff1d6] px-3 py-2 text-[13px] leading-relaxed text-[#8a4f08]">
+          {fill(t.listings.takenDown, { reason: l.withdrawnReason })}
+        </p>
+      ) : null}
       {l.photoCheck && l.status === "open" ? <FarmerPhotoCheck listingId={l.listingId} check={l.photoCheck} residue={name} canAct={canAct} /> : null}
 
       {l.status === "open" ? (
@@ -629,9 +712,10 @@ function OfferRow({ offer: o, canAct }: { offer: MyListing["offers"][number]; ca
 
 /* ---------- Factory: browse and offer ---------- */
 
-export function useOpenListings(residue: string | null = null): MarketListing[] | undefined {
+export function useOpenListings(residue: string | null = null, category: Category | null = null): MarketListing[] | undefined {
   const { guest } = useDashboard();
-  const live = useQuery(api.market.browse, guest ? "skip" : residue ? { residue } : {});
+  const args = { ...(residue ? { residue } : {}), ...(category ? { category } : {}) };
+  const live = useQuery(api.market.browse, guest ? "skip" : args);
   return guest ? [] : live;
 }
 
@@ -640,14 +724,27 @@ export type OfferDraft = { listingId: string; quantityKg?: number; priceDzdPerKg
 
 export function BrowseListings({ id, offer }: { id?: string; offer?: OfferDraft | null }) {
   const t = useMessages(marketMessages);
+  const [category, setCategory] = useState<Category | "all">("all");
   const [residue, setResidue] = useState<string | null>(null);
-  const listings = useOpenListings(residue);
+  const listings = useOpenListings(residue, category === "all" ? null : category);
 
   return (
     <Panel id={id} title={t.browse.title}>
       <p className="-mt-2 mb-4 text-[14px] text-muted-foreground">{t.browse.body}</p>
-      <div className="mb-5">
-        <ResiduePicker value={residue} onChange={setResidue} withAll={t.browse.all} />
+      <div className="mb-5 space-y-3">
+        <Segmented
+          label={t.browse.categoryLabel}
+          value={category}
+          onChange={(c) => {
+            setCategory(c);
+            setResidue(null);
+          }}
+          options={(["all", "fresh", "residue"] as const).map((k) => ({ key: k, label: t.browse.categories[k] }))}
+        />
+        {/* Products only within a category: "Other" exists in both lists. */}
+        {category !== "all" ? (
+          <ResiduePicker category={category} value={residue} onChange={setResidue} withAll={t.browse.all} label={t.browse.productLabel} />
+        ) : null}
       </div>
       {listings === undefined ? (
         <Spinner className="flex py-8" />
@@ -667,11 +764,13 @@ export function BrowseListings({ id, offer }: { id?: string; offer?: OfferDraft 
 function MarketCard({ listing: l, draft }: { listing: MarketListing; draft?: OfferDraft }) {
   const { workspace } = useDashboard();
   const t = useMessages(marketMessages);
+  const ti = useMessages(interestMessages);
   const labels = useMessages(catalogLabels);
   const f = useFormat();
   const [offering, setOffering] = useState(false);
+  const [asking, setAsking] = useState(false);
   const name = residueLabel(labels.residues, l);
-  const canBuy = workspace.kind === "factory" && workspace.role !== "inspector";
+  const canBuy = workspace.kind === "factory" && workspace.role !== "inspector" && !l.managed;
 
   // An offer prepared by the assistant opens this card's form, once, and brings the card into view.
   const [usedDraft, setUsedDraft] = useState<OfferDraft | undefined>();
@@ -687,20 +786,36 @@ function MarketCard({ listing: l, draft }: { listing: MarketListing; draft?: Off
   return (
     <li ref={item} className={cn(CARD, "flex flex-col", usedDraft && "ring-2 ring-violet/40")}>
       <LotPhoto urls={l.photoUrls} alt={name} className="aspect-[4/3] w-full" />
-      <p className="mt-3 truncate text-[16px] font-semibold">{name}</p>
+      <div className="mt-3 flex min-w-0 items-center gap-2">
+        <p className="truncate text-[16px] font-semibold">{name}</p>
+        {l.category === "fresh" ? <FreshBadge /> : null}
+      </div>
       <p className="mt-0.5 text-[15px]">
         <span className="font-semibold" dir="ltr">{f.dzd(l.priceDzdPerKg)}</span> <span className="text-muted-foreground">{t.perKg}</span>
       </p>
       <p className="mt-1 text-[13px] text-muted-foreground">{fill(t.browse.available, { kg: f.kg(l.remainingKg) })}</p>
-      <p className="mt-0.5 flex items-center gap-1 truncate text-[13px] text-muted-foreground">
-        <MapPin className="size-3.5 shrink-0" /> {l.region} · {fill(t.browse.from, { name: l.sellerName })}
+      <p className="mt-0.5 flex min-w-0 items-center gap-1 text-[13px] text-muted-foreground">
+        <MapPin className="size-3.5 shrink-0" />
+        <span className="shrink-0">{l.region} ·</span>
+        {l.managed ? <SellerName lot={l} /> : <span className="truncate">{fill(t.browse.from, { name: l.sellerName })}</span>}
       </p>
       {l.note ? <p className="mt-2 line-clamp-3 text-[14px] leading-relaxed text-foreground/80">{l.note}</p> : null}
       {/* Browse has no detail view, so the card carries the disclaimer and the certificate link. */}
       {l.lab ? <LabBadge lab={l.lab} detail className="mt-3" /> : null}
       {l.photoCheck ? <PhotoCheckBox check={l.photoCheck} residue={name} className="mt-3" /> : null}
       <div className="mt-auto pt-3">
-        {offering ? (
+        {l.managed ? (
+          asking ? (
+            <InterestForm lot={l} lotName={name} defaultCompany={workspace.name} stacked onCancel={() => setAsking(false)} className="p-3" />
+          ) : (
+            <>
+              <p className="mb-2.5 text-[13px] leading-relaxed text-muted-foreground">{ti.note}</p>
+              <button type="button" onClick={() => setAsking(true)} className={cn(PRIMARY, "w-full")}>
+                <Handshake className="size-4" /> {ti.cta}
+              </button>
+            </>
+          )
+        ) : offering ? (
           <OfferForm listing={l} draft={usedDraft} onDone={() => setOffering(false)} />
         ) : canBuy ? (
           <button type="button" onClick={() => setOffering(true)} className={cn(PRIMARY, "w-full")}>
@@ -882,7 +997,10 @@ export function SalesPanel({ id }: { id?: string }) {
             <li key={s.saleId} className={CARD}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-semibold">{residueLabel(labels.residues, s)}</p>
+                  <p className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-[15px] font-semibold">{residueLabel(labels.residues, s)}</span>
+                    {s.category === "fresh" ? <FreshBadge /> : null}
+                  </p>
                   <p className="truncate text-[13px] text-muted-foreground">
                     {fill(s.side === "sold" ? t.sales.sold : t.sales.bought, { name: s.otherName })} · {s.otherRegion}
                   </p>
@@ -895,6 +1013,12 @@ export function SalesPanel({ id }: { id?: string }) {
                 <p className="text-[13px] text-muted-foreground">{f.date(s.createdAt)}</p>
               </div>
               {s.side === "bought" ? <p className="mt-1 text-[13px] text-muted-foreground">{fill(t.sales.fee, { fee: f.dzd(s.feeDzd) })}</p> : null}
+              {s.side === "sold" ? (
+                <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[13px]">
+                  <span className="text-muted-foreground">{fill(t.sales.sellerFee, { fee: f.dzd(s.sellerFeeDzd) })}</span>
+                  <span className="font-semibold">{fill(t.sales.receive, { net: f.dzd(Math.round((s.totalDzd - s.sellerFeeDzd) * 100) / 100) })}</span>
+                </p>
+              ) : null}
               <p className="mt-2.5 flex items-start gap-2 rounded-xl bg-[#eef2ff] px-3 py-2 text-[13px] leading-relaxed text-[#24366a]">
                 <Headset className="mt-0.5 size-4 shrink-0 text-azure" /> {t.sales.connect}
               </p>

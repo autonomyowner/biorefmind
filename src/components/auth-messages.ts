@@ -21,7 +21,7 @@ export const authMessages = defineMessages({
     chooseTitle: "I am a…",
     change: "Change",
     kinds: {
-      farm: { title: "Farmer", body: "Sell what's left of your harvest.", price: "Free · buyers pay the 5% fee" },
+      farm: { title: "Farmer", body: "Sell fresh produce and what's left of your harvest.", price: "Free to list · 5% when you sell" },
       lab: { title: "Lab", body: "List your analyses for farmers and factories.", price: "{price}/month after a 14-day free trial" },
       factory: { title: "Factory", body: "Buy residues and book lab analyses.", price: "Custom pricing" },
     },
@@ -30,7 +30,7 @@ export const authMessages = defineMessages({
     phone: "Phone number",
     servicesLabel: "Analyses your lab offers",
     buysLabel: "What do you buy? (optional)",
-    perks: ["Free for farmers", "14-day free trial for labs", "Every batch scored"],
+    perks: ["Free listing for farmers", "14-day free trial for labs", "Every batch scored"],
     errors: {
       email: "Please enter a valid email address.",
       password: "Please enter your password.",
@@ -66,7 +66,7 @@ export const authMessages = defineMessages({
     chooseTitle: "أنا…",
     change: "تغيير",
     kinds: {
-      farm: { title: "مزارع", body: "بِع ما تبقّى من محصولك.", price: "مجاني · يدفع المشتري عمولة 5%" },
+      farm: { title: "مزارع", body: "بِع منتجاتك الطازجة وما تبقّى من محصولك.", price: "إدراج مجاني · 5% عند البيع" },
       lab: { title: "مختبر", body: "اعرض تحاليلك للمزارعين والمصانع.", price: "{price} شهريًا بعد تجربة مجانية 14 يومًا" },
       factory: { title: "مصنع", body: "اشترِ المخلفات واحجز تحاليل المختبرات.", price: "تسعير حسب الطلب" },
     },
@@ -75,7 +75,7 @@ export const authMessages = defineMessages({
     phone: "رقم الهاتف",
     servicesLabel: "التحاليل التي يقدّمها مختبرك",
     buysLabel: "ماذا تشتري؟ (اختياري)",
-    perks: ["مجاني للمزارعين", "تجربة مجانية 14 يومًا للمختبرات", "كل دفعة مُقيّمة"],
+    perks: ["إدراج مجاني للمزارعين", "تجربة مجانية 14 يومًا للمختبرات", "كل دفعة مُقيّمة"],
     errors: {
       email: "يرجى إدخال بريد إلكتروني صحيح.",
       password: "يرجى إدخال كلمة المرور.",
