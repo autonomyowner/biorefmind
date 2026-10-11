@@ -1,22 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { ArrowRight, CalendarDays, Check, MapPin, PackageSearch, Scale, ShieldCheck, Sprout, Store, X } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Handshake, MapPin, PackageSearch, Scale, ShieldCheck, Sprout, Store, X } from "lucide-react";
 
 // The kit's own close button carries English screen-reader text, so the dialog uses its bare Close part.
 import { Dialog, DialogClose as DialogClosePrimitive, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CountUp } from "@/components/motion";
 import { LabBadge } from "@/components/marketplace/lab-badge";
 import { PhotoCheckBox, PhotoCheckLine } from "@/components/marketplace/photo-check";
+import { FreshBadge, InterestForm, SellerName } from "@/components/marketplace/interest-form";
+import { interestMessages } from "@/components/marketplace/interest-messages";
 import { marketplaceMessages } from "@/components/marketplace/messages";
 import { useLocale, useMessages } from "@/i18n/provider";
 import type { Locale } from "@/i18n/locale";
 import { api } from "@/lib/backend";
-import { LOT_RESIDUE_KEYS, catalogLabels, labelOf, residueLabel } from "@/lib/catalog-labels";
+import {
+  FRESH_KEYS,
+  LOT_FRESH_KEYS,
+  LOT_RESIDUE_KEYS,
+  RESIDUE_KEYS,
+  catalogLabels,
+  labelOf,
+  residueLabel,
+  type Category,
+} from "@/lib/catalog-labels";
 import { formatDzd, formatKg } from "@/lib/pricing";
 import type { PublicLot } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -41,6 +52,15 @@ function formatDay(ms: number, locale: Locale) {
   }).format(ms);
 }
 
+type CatFilter = "all" | Category;
+const CATS: CatFilter[] = ["all", "fresh", "residue"];
+type Product = { category: Category; residue: string };
+
+function matches(l: PublicLot, cat: CatFilter, product: Product | null): boolean {
+  if (product) return l.category === product.category && l.residue === product.residue;
+  return cat === "all" || l.category === cat;
+}
+
 function sortLots(lots: PublicLot[], sort: Sort): PublicLot[] {
   if (sort === "newest") return lots;
   const out = [...lots];
@@ -57,39 +77,93 @@ function sortLots(lots: PublicLot[], sort: Sort): PublicLot[] {
 export function MarketBoard({ initial, signedIn }: { initial: PublicLot[] | null; signedIn: boolean }) {
   const t = useMessages(marketplaceMessages);
   const labels = useMessages(catalogLabels);
-  const [residue, setResidue] = useState<string | null>(null);
+  const [cat, setCat] = useState<CatFilter>("all");
+  const [product, setProduct] = useState<Product | null>(null);
   const [sort, setSort] = useState<Sort>("newest");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [interest, setInterest] = useState(false);
 
   const all = useQuery(api.market.publicLots, {}) ?? initial ?? undefined;
-  // A residue has its own query (it reaches past the newest 100); until it answers, filter what we have.
-  const oneLive = useQuery(api.market.publicLots, residue ? { residue } : "skip");
-  const shown = residue ? (oneLive ?? all?.filter((l) => l.residue === residue)) : all;
+  // A filter has its own query (it reaches past the newest 100); until it answers, filter what we have.
+  const args = product ? { category: product.category, residue: product.residue } : cat !== "all" ? { category: cat } : null;
+  const oneLive = useQuery(api.market.publicLots, args ?? "skip");
+  const shown = args ? (oneLive ?? all?.filter((l) => matches(l, cat, product))) : all;
   const lots = useMemo(() => (shown ? sortLots(shown, sort) : undefined), [shown, sort]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    for (const l of all ?? []) c[l.residue] = (c[l.residue] ?? 0) + 1;
+    for (const l of all ?? []) {
+      c[`${l.category}:${l.residue}`] = (c[`${l.category}:${l.residue}`] ?? 0) + 1;
+      c[l.category] = (c[l.category] ?? 0) + 1;
+    }
     return c;
   }, [all]);
+  // Within a category every product is offered; under "Everything", only products with an open lot
+  // ("Other" is left out there: it would show twice).
+  const chips: Product[] =
+    cat === "residue"
+      ? LOT_RESIDUE_KEYS.map((residue) => ({ category: "residue", residue }))
+      : cat === "fresh"
+        ? LOT_FRESH_KEYS.map((residue) => ({ category: "fresh", residue }))
+        : [
+            ...RESIDUE_KEYS.map((residue): Product => ({ category: "residue", residue })),
+            ...FRESH_KEYS.map((residue): Product => ({ category: "fresh", residue })),
+          ].filter((p) => (counts[`${p.category}:${p.residue}`] ?? 0) > 0);
   const selected = openId ? ([...(all ?? []), ...(oneLive ?? [])].find((l) => l.listingId === openId) ?? null) : null;
   const offerHref = signedIn ? "/dashboard/browse" : "/signup?as=factory";
+  const open = (id: string, wantsInterest: boolean) => {
+    setInterest(wantsInterest);
+    setOpenId(id);
+  };
+  const showAll = () => {
+    setCat("all");
+    setProduct(null);
+  };
 
   return (
     <MotionConfig reducedMotion="user">
       <Stats lots={all} />
 
-      <div className="mt-12 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div role="group" aria-label={t.categoryLabel} className="mt-12 flex w-fit max-w-full rounded-full border border-white/80 bg-white/45 p-1">
+        {CATS.map((c) => {
+          const n = c === "all" ? (all?.length ?? 0) : (counts[c] ?? 0);
+          return (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={cat === c}
+              onClick={() => {
+                setCat(c);
+                setProduct(null);
+              }}
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap transition-colors sm:px-4 sm:text-[14px]",
+                cat === c ? "btn-navy" : "text-foreground/70 hover:text-foreground",
+              )}
+            >
+              {t.categories[c]}
+              {all && n > 0 ? (
+                <span dir="ltr" className={cn("hidden text-[12px] tabular-nums sm:inline", cat === c ? "text-white/70" : "text-azure")}>
+                  {n}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div role="group" aria-label={t.filterLabel} className="flex flex-wrap gap-2">
-          {[null, ...LOT_RESIDUE_KEYS].map((k) => {
-            const on = residue === k;
-            const n = k ? (counts[k] ?? 0) : (all?.length ?? 0);
+          {[null, ...chips].map((p) => {
+            const on = p ? product?.category === p.category && product.residue === p.residue : product === null;
+            const n = p ? (counts[`${p.category}:${p.residue}`] ?? 0) : cat === "all" ? (all?.length ?? 0) : (counts[cat] ?? 0);
+            const k = p?.residue;
             return (
               <button
-                key={k ?? "all"}
+                key={p ? `${p.category}:${p.residue}` : "all"}
                 type="button"
                 aria-pressed={on}
-                onClick={() => setResidue(k)}
+                onClick={() => setProduct(p)}
                 className={cn(
                   "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
                   on
@@ -137,22 +211,32 @@ export function MarketBoard({ initial, signedIn }: { initial: PublicLot[] | null
         {lots === undefined ? (
           <SkeletonGrid label={t.loading} />
         ) : lots.length === 0 ? (
-          <Empty residue={residue ? labelOf(labels.residues, residue) : null} onShowAll={() => setResidue(null)} />
+          <Empty
+            title={product ? fill(t.emptyResidue, { residue: labelOf(labels.residues, product.residue) }) : cat !== "all" ? t.emptyCategory[cat] : null}
+            onShowAll={showAll}
+          />
         ) : (
           <motion.ul layout className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(3,minmax(0,1fr))]">
             <AnimatePresence initial={false} mode="popLayout">
               {lots.map((l, i) => (
-                <LotCard key={l.listingId} lot={l} index={i} offerHref={offerHref} onOpen={() => setOpenId(l.listingId)} />
+                <LotCard
+                  key={l.listingId}
+                  lot={l}
+                  index={i}
+                  offerHref={offerHref}
+                  onOpen={() => open(l.listingId, false)}
+                  onInterest={() => open(l.listingId, true)}
+                />
               ))}
             </AnimatePresence>
           </motion.ul>
         )}
-        {all && all.length >= CAP && !residue ? (
+        {all && all.length >= CAP && !args ? (
           <p className="mt-6 text-center text-[13px] text-muted-foreground">{t.capped}</p>
         ) : null}
       </div>
 
-      <LotDialog lot={selected} offerHref={offerHref} onClose={() => setOpenId(null)} />
+      <LotDialog lot={selected} offerHref={offerHref} interest={interest} onClose={() => setOpenId(null)} />
     </MotionConfig>
   );
 }
@@ -226,7 +310,36 @@ function OfferLink({ href, className }: { href: string; className?: string }) {
   );
 }
 
-function LotCard({ lot: l, index, offerHref, onOpen }: { lot: PublicLot; index: number; offerHref: string; onOpen: () => void }) {
+function InterestButton({ onClick, className }: { onClick: () => void; className?: string }) {
+  const t = useMessages(interestMessages);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "btn-navy inline-flex h-11 items-center justify-center gap-2.5 rounded-full px-5 text-[15px] font-semibold transition-[filter] hover:brightness-125",
+        className,
+      )}
+    >
+      <Handshake className="size-4" strokeWidth={2} />
+      {t.cta}
+    </button>
+  );
+}
+
+function LotCard({
+  lot: l,
+  index,
+  offerHref,
+  onOpen,
+  onInterest,
+}: {
+  lot: PublicLot;
+  index: number;
+  offerHref: string;
+  onOpen: () => void;
+  onInterest: () => void;
+}) {
   const t = useMessages(marketplaceMessages);
   const labels = useMessages(catalogLabels);
   const locale = useLocale();
@@ -252,6 +365,7 @@ function LotCard({ lot: l, index, offerHref, onOpen }: { lot: PublicLot; index: 
             <span>{formatDzd(l.priceDzdPerKg, locale)}</span>
             <span className="text-muted-foreground">{t.perKg}</span>
           </span>
+          {l.category === "fresh" ? <FreshBadge className="absolute end-3 top-3 border border-white/80" /> : null}
           {l.photoUrls.length > 1 ? (
             <span dir="ltr" className="absolute end-3 bottom-3 rounded-full bg-black/55 px-2.5 py-0.5 text-[12px] font-medium text-white">
               +{l.photoUrls.length - 1}
@@ -276,7 +390,7 @@ function LotCard({ lot: l, index, offerHref, onOpen }: { lot: PublicLot; index: 
           <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[14px] text-muted-foreground">
             <span className="inline-flex min-w-0 items-center gap-1.5">
               <Store className="size-4 shrink-0 text-azure" strokeWidth={1.8} />
-              <span dir="auto" className="truncate">{l.sellerName}</span>
+              <SellerName lot={l} />
             </span>
             <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="size-4 shrink-0 text-azure" strokeWidth={1.8} />
@@ -291,7 +405,7 @@ function LotCard({ lot: l, index, offerHref, onOpen }: { lot: PublicLot; index: 
       {l.photoCheck ? <PhotoCheckLine check={l.photoCheck} residue={name} className="mx-2 mt-2" /> : null}
 
       <div className="mt-auto px-2 pt-4 pb-1">
-        <OfferLink href={offerHref} className="w-full" />
+        {l.managed ? <InterestButton onClick={onInterest} className="w-full" /> : <OfferLink href={offerHref} className="w-full" />}
       </div>
     </motion.li>
   );
@@ -311,7 +425,8 @@ function SkeletonGrid({ label }: { label: string }) {
   );
 }
 
-function Empty({ residue, onShowAll }: { residue: string | null; onShowAll: () => void }) {
+/** `title` is set when a filter is on (and offers "Show everything"); null for an empty marketplace. */
+function Empty({ title, onShowAll }: { title: string | null; onShowAll: () => void }) {
   const t = useMessages(marketplaceMessages);
   return (
     <div className="glass mx-auto flex max-w-[560px] flex-col items-center rounded-[28px] px-6 py-12 text-center">
@@ -319,10 +434,10 @@ function Empty({ residue, onShowAll }: { residue: string | null; onShowAll: () =
         <PackageSearch className="size-6" strokeWidth={1.8} />
       </span>
       <p className="mt-5 text-[20px] font-semibold tracking-[-0.015em]">
-        {residue ? fill(t.emptyResidue, { residue }) : t.emptyTitle}
+        {title ?? t.emptyTitle}
       </p>
       <p className="mt-2 max-w-[380px] text-[15px] leading-relaxed text-muted-foreground">{t.emptyBody}</p>
-      {residue ? (
+      {title ? (
         <button
           type="button"
           onClick={onShowAll}
@@ -337,7 +452,7 @@ function Empty({ residue, onShowAll }: { residue: string | null; onShowAll: () =
 
 /* ---------- Detail dialog ---------- */
 
-function LotDialog({ lot, offerHref, onClose }: { lot: PublicLot | null; offerHref: string; onClose: () => void }) {
+function LotDialog({ lot, offerHref, interest, onClose }: { lot: PublicLot | null; offerHref: string; interest: boolean; onClose: () => void }) {
   // Keep the last lot while the dialog animates closed.
   const [shown, setShown] = useState<PublicLot | null>(lot);
   if (lot && lot !== shown) setShown(lot);
@@ -347,22 +462,29 @@ function LotDialog({ lot, offerHref, onClose }: { lot: PublicLot | null; offerHr
         showCloseButton={false}
         className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto rounded-[28px] border border-white/80 bg-[#eef4fa] p-0 ring-0 sm:max-w-[860px]"
       >
-        {shown ? <LotDetail key={shown.listingId} lot={shown} offerHref={offerHref} /> : null}
+        {shown ? <LotDetail key={`${shown.listingId}-${interest}`} lot={shown} offerHref={offerHref} interest={interest} /> : null}
       </DialogContent>
     </Dialog>
   );
 }
 
-function LotDetail({ lot: l, offerHref }: { lot: PublicLot; offerHref: string }) {
+function LotDetail({ lot: l, offerHref, interest }: { lot: PublicLot; offerHref: string; interest: boolean }) {
   const t = useMessages(marketplaceMessages);
+  const ti = useMessages(interestMessages);
   const labels = useMessages(catalogLabels);
   const locale = useLocale();
   const [active, setActive] = useState(0);
+  const [asking, setAsking] = useState(interest && l.managed);
+  const form = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Opened from the card's "I'm interested": bring the form into view (on phones it sits below the photo).
+    if (interest && l.managed) form.current?.scrollIntoView({ block: "nearest" });
+  }, [interest, l.managed]);
   const name = residueLabel(labels.residues, l);
   const rows = [
     { icon: Scale, label: t.detail.available, value: <bdi>{formatKg(l.remainingKg, locale)}</bdi> },
     { icon: MapPin, label: t.detail.region, value: <bdi>{l.region || "–"}</bdi> },
-    { icon: Store, label: t.detail.seller, value: <bdi>{l.sellerName}</bdi> },
+    { icon: Store, label: t.detail.seller, value: <SellerName lot={l} className="justify-end" /> },
     { icon: CalendarDays, label: t.detail.posted, value: formatDay(l.createdAt, locale) },
   ];
 
@@ -399,8 +521,9 @@ function LotDetail({ lot: l, offerHref }: { lot: PublicLot; offerHref: string })
       </div>
 
       <div className="flex flex-col p-5 pt-2 sm:p-7 md:ps-3">
-        <div className="md:pe-10">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 md:pe-10">
           <DialogTitle className="text-[26px] font-semibold leading-tight tracking-[-0.025em]">{name}</DialogTitle>
+          {l.category === "fresh" ? <FreshBadge /> : null}
         </div>
         <p className="mt-2 text-[30px] font-semibold tracking-[-0.03em]">
           <span className="text-gradient">{formatDzd(l.priceDzdPerKg, locale)}</span>
@@ -430,11 +553,19 @@ function LotDetail({ lot: l, offerHref }: { lot: PublicLot; offerHref: string })
         <div className="mt-6 flex items-start gap-2.5 rounded-2xl bg-[#e6edff] p-3.5 text-[13px] leading-relaxed text-[#24366a]">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-azure" strokeWidth={1.8} />
           <p>
-            {t.contactNote} {t.feeNote}
+            {l.managed ? ti.note : t.contactNote} {t.feeNote}
           </p>
         </div>
 
-        <OfferLink href={offerHref} className="mt-6 w-full" />
+        {!l.managed ? (
+          <OfferLink href={offerHref} className="mt-6 w-full" />
+        ) : asking ? (
+          <div ref={form} className="mt-6">
+            <InterestForm lot={l} lotName={name} onCancel={() => setAsking(false)} />
+          </div>
+        ) : (
+          <InterestButton onClick={() => setAsking(true)} className="mt-6 w-full" />
+        )}
       </div>
     </div>
   );
