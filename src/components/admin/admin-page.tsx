@@ -10,42 +10,49 @@ import {
   Building2,
   CircleDollarSign,
   CreditCard,
+  Download,
   FlaskConical,
   HandCoins,
+  History,
   Inbox,
   LayoutDashboard,
   Mail,
+  MessageSquareHeart,
+  Package,
   Phone,
   Search,
   Sparkles,
   Sprout,
+  Store,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ActivitySection } from "@/components/admin/activity-section";
+import { ANALYSIS_EN, DAY, fmt, TelLink } from "@/components/admin/admin-shared";
+import { telHref, toCsv } from "@/components/admin/admin-utils";
 import { AiSection } from "@/components/admin/ai-section";
-import { AppFrame, FrameSkeleton } from "@/components/app-frame";
+import { HouseLotsSection } from "@/components/admin/house-lots-section";
+import { InquiriesSection } from "@/components/admin/inquiries-section";
+import { MarketSection } from "@/components/admin/market-section";
+import { ModerationSection } from "@/components/admin/moderation-section";
+import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
 import { CurrencySwitch, Price, useCurrency } from "@/components/currency";
 import { CountUp, FadeIn } from "@/components/motion";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/backend";
 import { errorMessage } from "@/lib/errors";
-import { catalogLabels, residueLabel } from "@/lib/catalog-labels";
-import { formatDzd, formatKg, formatPrice, LAB_PRICE_USD } from "@/lib/pricing";
-import type { AdminOverview, AdminSales, Kind, Viewer } from "@/lib/types";
+import { formatDzd, formatPrice, LAB_PRICE_USD } from "@/lib/pricing";
+import type { AdminOverview, AdminSales, AdminStats, Kind, Viewer } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Account = AdminOverview["accounts"][number];
+type Overview = AdminOverview & { stats: AdminStats };
 
 const KIND: Record<Kind, string> = { farm: "Farmer", lab: "Lab", factory: "Factory" };
 const KINDS: Record<Kind, string> = { farm: "Farmers", lab: "Labs", factory: "Factories" };
 const KIND_ICON: Record<Kind, LucideIcon> = { farm: Sprout, lab: FlaskConical, factory: Building2 };
-const DAY = 86_400_000;
-
-function fmt(ms?: number) {
-  return ms ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(ms) : "—";
-}
 
 /** When a lab's current period (trial or paid) ends. */
 function labEnd(a: Account): number {
@@ -61,21 +68,31 @@ function status(a: Account, now: number) {
   return `Trial ended ${fmt(a.trialEndsAt)}`;
 }
 
-const NAV = [
-  { href: "#top", label: "Overview", icon: LayoutDashboard },
-  { href: "#accounts", label: "Accounts", icon: Users },
-  { href: "#billing", label: "Lab billing", icon: CreditCard },
-  { href: "#market", label: "Marketplace", icon: HandCoins },
-  { href: "#labwork", label: "Lab requests", icon: FlaskConical },
-  { href: "#requests", label: "Enterprise requests", icon: Inbox },
-  { href: "#ai", label: "AI", icon: Sparkles },
-];
+/** The sidebar; the interest requests item shows how many are new. */
+function nav(newInquiries: number): FrameItem[] {
+  return [
+    { href: "#top", label: "Overview", icon: LayoutDashboard },
+    { href: "#interest", label: "Interest requests", icon: MessageSquareHeart, badge: newInquiries },
+    { href: "#lots", label: "BiorefMind lots", icon: Package },
+    { href: "#moderation", label: "All open lots", icon: Store },
+    { href: "#accounts", label: "Accounts", icon: Users },
+    { href: "#billing", label: "Lab billing", icon: CreditCard },
+    { href: "#market", label: "Marketplace", icon: HandCoins },
+    { href: "#labwork", label: "Lab requests", icon: FlaskConical },
+    { href: "#requests", label: "Enterprise requests", icon: Inbox },
+    { href: "#activity", label: "Activity", icon: History },
+    { href: "#ai", label: "AI", icon: Sparkles },
+  ];
+}
 
-/** Admin dashboard: figures, sign-ups, accounts, lab billing, enterprise requests, AI settings. Others see "Page not found". */
+/**
+ * Admin dashboard: figures, interest requests, BiorefMind lots, moderation, accounts, lab billing, marketplace,
+ * lab and enterprise requests, activity, AI settings. Others see "Page not found".
+ */
 export function AdminPage() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : "skip") as Viewer | undefined;
-  const overview = useQuery(api.admin.overview, viewer?.isAdmin ? {} : "skip") as AdminOverview | undefined;
+  const overview = useQuery(api.admin.overview, viewer?.isAdmin ? {} : "skip") as Overview | undefined;
   const [now] = useState(() => Date.now());
 
   if (isLoading || (isAuthenticated && viewer === undefined)) return <FrameSkeleton />;
@@ -92,7 +109,7 @@ export function AdminPage() {
 
   return (
     <AppFrame
-      items={NAV}
+      items={nav(overview?.stats.newInquiries ?? 0)}
       menuLabel="Menu"
       closeLabel="Close menu"
       homeHref="/admin"
@@ -124,8 +141,9 @@ export function AdminPage() {
   );
 }
 
-function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) {
-  const { accounts, requests } = overview;
+function AdminBody({ overview, now }: { overview: Overview; now: number }) {
+  const { accounts, requests, stats } = overview;
+  const sales = useQuery(api.admin.sales, {}) as AdminSales | undefined;
   const labs = accounts.filter((a) => a.kind === "lab");
   const paidLabs = labs.filter((a) => a.plan === "lab_paid" && (a.paidUntil ?? 0) > now).length;
   const trials = labs.filter((a) => a.plan === "lab_trial" && (a.trialEndsAt ?? 0) > now).length;
@@ -144,6 +162,23 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
     { icon: Sprout, label: "Farmers", value: <CountUp value={count("farm")} /> },
     { icon: FlaskConical, label: "Labs", value: <CountUp value={labs.length} />, note: `${paidLabs} paid · ${trials} on trial` },
     { icon: Building2, label: "Factories", value: <CountUp value={count("factory")} /> },
+  ];
+  const marketTiles: { icon: LucideIcon; label: string; value: React.ReactNode; note?: string; href: string }[] = [
+    { icon: Store, label: "Open lots", value: <CountUp value={stats.openLots} />, note: "On the marketplace now", href: "#moderation" },
+    {
+      icon: MessageSquareHeart,
+      label: "New interest requests",
+      value: <CountUp value={stats.newInquiries} />,
+      note: stats.newInquiries > 0 ? "Call them back" : "All answered",
+      href: "#interest",
+    },
+    {
+      icon: HandCoins,
+      label: "Fees earned",
+      value: sales ? formatDzd(sales.feeDzd + sales.sellerFeeDzd, "en") : "…",
+      note: sales ? `buyers ${formatDzd(sales.feeDzd, "en")} · sellers ${formatDzd(sales.sellerFeeDzd, "en")}` : undefined,
+      href: "#market",
+    },
   ];
 
   return (
@@ -172,11 +207,34 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
         ))}
       </ul>
 
+      <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 sm:mt-4 sm:grid-cols-[repeat(3,minmax(0,1fr))] sm:gap-4">
+        {marketTiles.map((s, i) => (
+          <FadeIn as="li" key={s.label} index={i + 5} className="min-w-0">
+            <a
+              href={s.href}
+              className={cn(
+                "glass flex min-w-0 items-center gap-4 rounded-[22px] p-4 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-22px_rgba(40,60,170,0.55)] sm:p-5",
+                s.href === "#interest" && stats.newInquiries > 0 && "ring-2 ring-azure/40",
+              )}
+            >
+              <span className="orb flex size-10 shrink-0 items-center justify-center rounded-full">
+                <s.icon className="size-4" strokeWidth={1.9} />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[26px] font-semibold leading-none tracking-[-0.03em] tabular-nums">{s.value}</span>
+                <span className="mt-1.5 block truncate text-[13px] text-muted-foreground">{s.label}</span>
+                {s.note ? <span className="mt-0.5 block truncate text-[12px] text-muted-foreground/80">{s.note}</span> : null}
+              </span>
+            </a>
+          </FadeIn>
+        ))}
+      </ul>
+
       <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <FadeIn index={5} className="glass rounded-[28px] p-5 sm:p-7">
+        <FadeIn index={8} className="glass rounded-[28px] p-5 sm:p-7">
           <SignupsChart accounts={accounts} now={now} />
         </FadeIn>
-        <FadeIn index={6} className="rounded-[28px] bg-[linear-gradient(135deg,#1b2f94_0%,#26208a_60%,#3d2bb0_100%)] p-5 text-white shadow-[0_24px_50px_-28px_rgba(40,40,170,0.9)] sm:p-7">
+        <FadeIn index={8} className="rounded-[28px] bg-[linear-gradient(135deg,#1b2f94_0%,#26208a_60%,#3d2bb0_100%)] p-5 text-white shadow-[0_24px_50px_-28px_rgba(40,40,170,0.9)] sm:p-7">
           <p className="flex items-center gap-2 text-[13px] text-white/70">
             <CircleDollarSign className="size-4" /> Lab revenue per month
           </p>
@@ -188,13 +246,13 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
             If every trial converts: <Price usd={(paidLabs + trials) * LAB_PRICE_USD} className="font-semibold text-white" />
           </p>
           <p className="mt-5 rounded-2xl bg-white/10 px-4 py-3 text-[13px] leading-relaxed text-white/75">
-            Fixed rate: $1 = 250 DA. Factories pay custom prices and the 5% deal fee, not counted here.
+            Fixed rate: $1 = 250 DA. Factories pay custom prices; marketplace fees (5% from buyers and 5% from sellers) are shown in Marketplace.
           </p>
         </FadeIn>
       </div>
 
       {attention.length > 0 ? (
-        <FadeIn index={7} className="glass mt-5 rounded-[28px] p-5 sm:p-7">
+        <FadeIn index={8} className="glass mt-5 rounded-[28px] p-5 sm:p-7">
           <h2 className="flex items-center gap-2 text-[19px] font-semibold">
             <BellRing className="size-5 text-violet" /> Needs attention
           </h2>
@@ -213,11 +271,15 @@ function AdminBody({ overview, now }: { overview: AdminOverview; now: number }) 
         </FadeIn>
       ) : null}
 
+      <InquiriesSection />
+      <HouseLotsSection />
+      <ModerationSection />
       <AccountsSection accounts={accounts} now={now} />
       <BillingSection labs={labs} now={now} />
       <MarketSection />
       <LabWorkSection />
       <RequestsSection requests={requests} />
+      <ActivitySection />
       <AiSection />
     </>
   );
@@ -321,6 +383,22 @@ function SignupsChart({ accounts, now }: { accounts: Account[]; now: number }) {
 
 /* ---------- Accounts ---------- */
 
+/** Downloads the accounts shown (after search and filter) as a CSV file; the BOM makes Excel read Arabic names. */
+function downloadAccountsCsv(rows: Account[], now: number) {
+  const csv = toCsv(
+    ["Type", "Name", "Owner email", "Region", "Phone", "Plan status", "Joined"],
+    rows.map((a) => [KIND[a.kind], a.name, a.ownerEmail, a.region, a.phone, status(a, now), new Date(a.createdAt).toISOString()]),
+  );
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `biorefmind-accounts-${new Date(now).toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function AccountsSection({ accounts, now }: { accounts: Account[]; now: number }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<Kind | null>(null);
@@ -337,17 +415,27 @@ function AccountsSection({ accounts, now }: { accounts: Account[]; now: number }
         <h2 className="text-[19px] font-semibold">
           Accounts <span className="text-muted-foreground tabular-nums">· {rows.length}</span>
         </h2>
-        <label className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, email, region, phone"
-            aria-label="Search accounts"
-            className="h-10 w-full rounded-full border border-foreground/15 bg-white/80 ps-9 pe-4 text-[14px] outline-none focus-visible:border-azure/60 focus-visible:ring-2 focus-visible:ring-azure/20"
-          />
-        </label>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <label className="relative min-w-0 flex-1 sm:w-72 sm:flex-none">
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, email, region, phone"
+              aria-label="Search accounts"
+              className="h-10 w-full rounded-full border border-foreground/15 bg-white/80 ps-9 pe-4 text-[14px] outline-none focus-visible:border-azure/60 focus-visible:ring-2 focus-visible:ring-azure/20"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => downloadAccountsCsv(rows, now)}
+            disabled={rows.length === 0}
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-foreground/15 bg-white/70 px-4 text-[13px] font-medium transition-colors hover:bg-white disabled:opacity-60"
+          >
+            <Download className="size-4" /> Export CSV
+          </button>
+        </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2 px-5 sm:px-7">
         {([null, "farm", "lab", "factory"] as const).map((k) => (
@@ -604,21 +692,7 @@ function EndPlan({ companyId, name }: { companyId: Account["companyId"]; name: s
   );
 }
 
-/* ---------- Marketplace ---------- */
-
-const RESIDUE_EN: Record<string, string> = catalogLabels.en.residues;
-const ANALYSIS_EN: Record<string, string> = catalogLabels.en.analyses;
-
-/** Every sale and the 5% fees buyers owe; billing them is piece 4. Amounts in dinars. */
-/** A phone number under a name, as a tap-to-call link. */
-function TelLink({ phone }: { phone: string }) {
-  if (!phone) return null;
-  return (
-    <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} dir="ltr" className="mt-0.5 flex items-center gap-1 text-[13px] text-azure">
-      <Phone className="size-3" /> {phone}
-    </a>
-  );
-}
+/* ---------- Lab requests ---------- */
 
 const LAB_STATUS: Record<string, string> = {
   requested: "Waiting for the lab",
@@ -681,76 +755,6 @@ function LabWorkSection() {
   );
 }
 
-function MarketSection() {
-  const sales = useQuery(api.admin.sales, {}) as AdminSales | undefined;
-  const figures = sales
-    ? [
-        { label: "Sales", value: <CountUp value={sales.count} /> },
-        { label: "Value traded", value: formatDzd(sales.totalDzd, "en") },
-        { label: "Fees owed by buyers (5%)", value: formatDzd(sales.feeDzd, "en") },
-      ]
-    : [];
-  return (
-    <section id="market" className="glass mt-5 scroll-mt-24 rounded-[28px] p-5 sm:p-7">
-      <h2 className="text-[19px] font-semibold">Marketplace</h2>
-      <p className="mt-1 text-[14px] text-muted-foreground">
-        Accepted offers between farmers and factories. Only BiorefMind sees the phones: call both sides to arrange pickup and
-        payment. Fees are not billed yet.
-      </p>
-      {!sales ? (
-        <Spinner className="flex py-8" />
-      ) : (
-        <>
-          <dl className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
-            {figures.map((f) => (
-              <div key={f.label} className="min-w-0 rounded-2xl border border-white bg-white/70 p-4">
-                <dt className="text-[13px] text-muted-foreground">{f.label}</dt>
-                <dd className="mt-1 truncate text-[24px] font-semibold tracking-[-0.02em] tabular-nums">{f.value}</dd>
-              </div>
-            ))}
-          </dl>
-          {sales.recent.length === 0 ? (
-            <p className="mt-4 rounded-2xl bg-white/50 px-4 py-6 text-center text-[15px] text-muted-foreground">No sales yet.</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-white bg-white/60">
-              <table className="w-full min-w-[640px] text-start text-[14px]">
-                <thead className="text-[13px] text-muted-foreground">
-                  <tr className="border-b border-foreground/10">
-                    {["Date", "Residue", "Seller", "Buyer", "Quantity", "Total", "Fee"].map((h) => (
-                      <th key={h} className="px-4 py-2.5 text-start font-medium">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sales.recent.map((s) => (
-                    <tr key={s.saleId} className="border-b border-foreground/5 last:border-0">
-                      <td className="whitespace-nowrap px-4 py-2.5">{fmt(s.createdAt)}</td>
-                      <td className="px-4 py-2.5">{residueLabel(RESIDUE_EN, s)}</td>
-                      <td className="px-4 py-2.5">
-                        {s.seller}
-                        <TelLink phone={s.sellerPhone} />
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {s.buyer}
-                        <TelLink phone={s.buyerPhone} />
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatKg(s.quantityKg, "en")}</td>
-                      <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{formatDzd(s.totalDzd, "en")}</td>
-                      <td className="whitespace-nowrap px-4 py-2.5 font-medium tabular-nums">{formatDzd(s.feeDzd, "en")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
-    </section>
-  );
-}
-
 /* ---------- Requests ---------- */
 
 function RequestsSection({ requests }: { requests: AdminOverview["requests"] }) {
@@ -775,7 +779,7 @@ function RequestsSection({ requests }: { requests: AdminOverview["requests"] }) 
                   <Mail className="size-3.5 shrink-0" /> <span className="truncate">{r.email}</span>
                 </a>
                 {r.phone ? (
-                  <a href={`tel:${r.phone.replace(/[^\d+]/g, "")}`} dir="ltr" className="inline-flex items-center gap-1.5 rounded-full bg-[#e6edff] px-3 py-1.5 text-[13px] font-medium text-azure">
+                  <a href={telHref(r.phone)} dir="ltr" className="inline-flex items-center gap-1.5 rounded-full bg-[#e6edff] px-3 py-1.5 text-[13px] font-medium text-azure">
                     <Phone className="size-3.5" /> {r.phone}
                   </a>
                 ) : null}
