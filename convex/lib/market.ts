@@ -1,7 +1,7 @@
 import { ConvexError } from "convex/values";
 import { pickKnown } from "./accounts";
-import { RESIDUES } from "./catalog";
-import { MARKET_FEE_RATE } from "./pricing";
+import { FRESH_PRODUCE, RESIDUES, type Category } from "./catalog";
+import { MARKET_FEE_RATE, SELLER_FEE_RATE } from "./pricing";
 
 export const MAX_LISTING_PHOTOS = 4;
 
@@ -13,6 +13,9 @@ export const MARKET_REFUSE = {
   farmOnly: "Only farm accounts can list residues.",
   factoryOnly: "Only factory accounts can make offers.",
   residue: "Choose a residue from the list.",
+  product: "Choose a product from the list.",
+  category: "Choose residue or fresh produce.",
+  managed: "This lot is sold through BiorefMind: send your interest instead.",
   residueName: "Type what you have (2 to 80 characters).",
   quantity: "Quantity must be a whole number of kilograms (1 to 10,000,000).",
   price: "Price must be between 0.01 and 100,000 DA per kg.",
@@ -52,6 +55,20 @@ export function cleanResidue(key: string, name: string | undefined): { residue: 
   const [residue] = pickKnown([key], RESIDUES);
   if (!residue) throw new ConvexError(MARKET_REFUSE.residue);
   return { residue };
+}
+
+/** A lot's category (residue unless "fresh") and its product key from that category's list, or "other" + typed name. */
+export function cleanProduct(
+  category: string | undefined,
+  key: string,
+  name: string | undefined,
+): { category: Category; residue: string; residueName?: string } {
+  if (category === undefined || category === "residue") return { category: "residue", ...cleanResidue(key, name) };
+  if (category !== "fresh") throw new ConvexError(MARKET_REFUSE.category);
+  if (key === OTHER_RESIDUE) return { category: "fresh", ...cleanResidue(key, name) };
+  const [residue] = pickKnown([key], FRESH_PRODUCE);
+  if (!residue) throw new ConvexError(MARKET_REFUSE.product);
+  return { category: "fresh", residue };
 }
 
 /*
@@ -95,10 +112,16 @@ export function cleanNote(raw: string | undefined): string | undefined {
   return s;
 }
 
-/** What a sale is worth, and BiorefMind's fee on it (paid by the buyer on top), to the dinar. */
-export function saleAmounts(quantityKg: number, priceDzdPerKg: number): { totalDzd: number; feeDzd: number } {
+/**
+ * What a sale is worth and BiorefMind's fees on it, to the dinar: `feeDzd` paid by the buyer on top,
+ * `sellerFeeDzd` taken from the seller's price.
+ */
+export function saleAmounts(
+  quantityKg: number,
+  priceDzdPerKg: number,
+): { totalDzd: number; feeDzd: number; sellerFeeDzd: number } {
   const totalDzd = round2(quantityKg * priceDzdPerKg);
-  return { totalDzd, feeDzd: Math.round(totalDzd * MARKET_FEE_RATE) };
+  return { totalDzd, feeDzd: Math.round(totalDzd * MARKET_FEE_RATE), sellerFeeDzd: Math.round(totalDzd * SELLER_FEE_RATE) };
 }
 
 /** A pending offer can still be accepted while it asks for no more than what is left. */

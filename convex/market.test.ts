@@ -208,6 +208,8 @@ describe("offers and sales", () => {
         priceDzdPerKg: 14,
         totalDzd: 28_000,
         feeDzd: 1400,
+        sellerFeeDzd: 1400,
+        category: "residue",
         otherName: "Peel Factory",
       },
     ]);
@@ -352,6 +354,8 @@ describe("public marketplace", () => {
     expect(lots[0].photoUrls).toHaveLength(1);
     expect(lots[1]).toEqual({
       listingId: open,
+      category: "residue",
+      managed: false,
       residue: "olive_pomace",
       remainingKg: 2000,
       priceDzdPerKg: 15,
@@ -443,11 +447,13 @@ describe("admin sales", () => {
     await expect(f.as.query(api.admin.sales, {})).rejects.toThrow("Only BiorefMind admins can do this.");
     const boss = await member(t, "boss@biorefmind.com");
     const s = await boss.query(api.admin.sales, {});
-    expect(s).toMatchObject({ count: 2, totalDzd: 33_000, feeDzd: 1650 });
+    expect(s).toMatchObject({ count: 2, totalDzd: 33_000, feeDzd: 1650, sellerFeeDzd: 1650 });
     expect(s.recent[0]).toMatchObject({
       residue: "date_pits",
+      category: "residue",
       totalDzd: 3000,
       feeDzd: 150,
+      sellerFeeDzd: 150,
       seller: "Ferme Saïd",
       sellerPhone: "+213 555 11 11 11",
       buyer: "Peel Factory",

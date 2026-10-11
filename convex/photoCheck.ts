@@ -86,6 +86,7 @@ export const load = internalQuery({
     const urls = await Promise.all(listing.photoIds.map((id) => ctx.storage.getUrl(id)));
     return {
       overCap: ranToday.length >= DAILY_CAP,
+      category: listing.category ?? "residue",
       residue: listing.residue,
       residueName: listing.residueName,
       photoUrls: urls.filter((u): u is string => u !== null),
@@ -118,7 +119,7 @@ export const save = internalMutation({
 });
 
 /** One OpenRouter call: the parsed answer and its cost, or null. */
-async function ask(key: string, model: string, residue: string, residueName: string | undefined, photoUrls: string[]) {
+async function ask(key: string, model: string, category: string, residue: string, residueName: string | undefined, photoUrls: string[]) {
   const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -130,7 +131,7 @@ async function ask(key: string, model: string, residue: string, residueName: str
       response_format: PHOTO_SCHEMA,
       usage: { include: true },
       messages: [
-        { role: "system", content: photoCheckPrompt(residue) },
+        { role: "system", content: photoCheckPrompt(residue, category) },
         {
           role: "user",
           content: [
@@ -165,7 +166,7 @@ export const run = internalAction({
     let cost = 0;
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
       try {
-        const out = await ask(cfg.key, cfg.model, lot.residue, lot.residueName, lot.photoUrls);
+        const out = await ask(cfg.key, cfg.model, lot.category, lot.residue, lot.residueName, lot.photoUrls);
         cost += out.cost;
         if (out.result) {
           await ctx.runMutation(internal.photoCheck.save, {

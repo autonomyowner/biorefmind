@@ -6,8 +6,8 @@ import { cleanRegion } from "./lib/accounts";
 import {
   cleanNote,
   cleanPrice,
+  cleanProduct,
   cleanQuantity,
-  cleanResidue,
   MARKET_REFUSE,
   maskPhones,
   MAX_LISTING_PHOTOS,
@@ -61,7 +61,8 @@ export const generateUploadUrl = mutation({
 export const createListing = mutation({
   args: {
     companyId: v.id("companies"),
-    residue: v.string(),
+    category: v.optional(v.string()), // "residue" (default) or "fresh"
+    residue: v.string(), // the product key from that category's list
     residueName: v.optional(v.string()), // only with residue "other"
     quantityKg: v.number(),
     priceDzdPerKg: v.number(),
@@ -71,7 +72,7 @@ export const createListing = mutation({
   },
   handler: async (ctx, args) => {
     const { user, company } = await requireSeller(ctx, args.companyId);
-    const { residue, residueName } = cleanResidue(args.residue, args.residueName);
+    const { category, residue, residueName } = cleanProduct(args.category, args.residue, args.residueName);
     const quantityKg = cleanQuantity(args.quantityKg);
     const priceDzdPerKg = cleanPrice(args.priceDzdPerKg);
     const region = args.region?.trim() ? cleanRegion(args.region) : (company.region ?? "");
@@ -92,6 +93,7 @@ export const createListing = mutation({
     }
     const listingId = await ctx.db.insert("listings", {
       companyId: company._id,
+      category,
       residue,
       residueName,
       quantityKg,
@@ -158,6 +160,7 @@ export const myListings = query({
       }
       out.push({
         listingId: l._id,
+        category: l.category ?? "residue",
         residue: l.residue,
         residueName: l.residueName,
         quantityKg: l.quantityKg,
@@ -166,6 +169,7 @@ export const myListings = query({
         region: l.region,
         note: l.note,
         status: l.status,
+        withdrawnReason: l.withdrawnReason,
         photoUrls: await photoUrls(ctx, l.photoIds),
         labRequestId: l.labRequestId,
         photoCheck: farmerView(await checkFor(ctx, l._id), Date.now()),
@@ -195,20 +199,28 @@ async function lotBadge(ctx: QueryCtx, l: Doc<"listings">, now: number, withCode
   };
 }
 
-/** Open lots, newest first (up to 100), optionally of one residue. No contact details. */
-export async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: boolean) {
+/**
+ * Open lots, newest first (up to 100), optionally of one product and/or one category. No contact details;
+ * lots BiorefMind posts for offline farmers carry a partner number instead of a name.
+ */
+export async function openLots(ctx: QueryCtx, residue: string | undefined, signedIn: boolean, category?: string) {
   const now = Date.now();
+  const filtered = Boolean(residue || category);
   const open = await ctx.db
     .query("listings")
     .withIndex("by_status", (q) => q.eq("status", "open"))
     .order("desc")
-    .take(residue ? 1000 : 100);
+    .take(filtered ? 1000 : 100);
   const out = [];
   for (const l of open) {
     if (residue && l.residue !== residue) continue;
-    const seller = await ctx.db.get(l.companyId);
+    if (category && (l.category ?? "residue") !== category) continue;
+    const seller = l.managed ? null : await ctx.db.get(l.companyId);
     out.push({
       listingId: l._id,
+      category: l.category ?? "residue",
+      managed: Boolean(l.managed),
+      partnerNo: l.managed ? l.partnerNo : undefined,
       residue: l.residue,
       residueName: l.residueName,
       remainingKg: l.remainingKg,
@@ -228,17 +240,17 @@ export async function openLots(ctx: QueryCtx, residue: string | undefined, signe
 
 /** Open lots for any signed-in account (the dashboard's Browse). */
 export const browse = query({
-  args: { residue: v.optional(v.string()) },
-  handler: async (ctx, { residue }) => {
+  args: { residue: v.optional(v.string()), category: v.optional(v.string()) },
+  handler: async (ctx, { residue, category }) => {
     await requireUser(ctx);
-    return await openLots(ctx, residue, true);
+    return await openLots(ctx, residue, true, category);
   },
 });
 
 /** The same open lots for anyone, signed in or not (the public /marketplace page). */
 export const publicLots = query({
-  args: { residue: v.optional(v.string()) },
-  handler: async (ctx, { residue }) => await openLots(ctx, residue, false),
+  args: { residue: v.optional(v.string()), category: v.optional(v.string()) },
+  handler: async (ctx, { residue, category }) => await openLots(ctx, residue, false, category),
 });
 
 /** The farm shows released lab results on its own lot (the request must be about that lot). */
@@ -283,6 +295,7 @@ export const makeOffer = mutation({
     const listing = await ctx.db.get(args.listingId);
     if (!listing) throw new ConvexError(MARKET_REFUSE.noListing);
     if (listing.status !== "open") throw new ConvexError(MARKET_REFUSE.closed);
+    if (listing.managed) throw new ConvexError(MARKET_REFUSE.managed);
     const quantityKg = cleanQuantity(args.quantityKg);
     if (!offerFits({ quantityKg }, listing.remainingKg)) throw new ConvexError(MARKET_REFUSE.tooMuch);
     const priceDzdPerKg = cleanPrice(args.priceDzdPerKg);
@@ -354,6 +367,7 @@ export const respond = mutation({
       offerId,
       sellerId: offer.sellerId,
       buyerId: offer.buyerId,
+      category: listing.category ?? "residue",
       residue: listing.residue,
       residueName: listing.residueName,
       quantityKg: offer.quantityKg,
@@ -420,12 +434,14 @@ export const mySales = query({
       const other = await ctx.db.get(side === "sold" ? s.buyerId : s.sellerId);
       out.push({
         saleId: s._id,
+        category: s.category ?? "residue",
         residue: s.residue,
         residueName: s.residueName,
         quantityKg: s.quantityKg,
         priceDzdPerKg: s.priceDzdPerKg,
         totalDzd: s.totalDzd,
         feeDzd: s.feeDzd,
+        sellerFeeDzd: s.sellerFeeDzd ?? 0,
         side,
         otherName: other?.name ?? "",
         otherRegion: other?.region ?? "",

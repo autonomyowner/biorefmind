@@ -32,6 +32,7 @@ import { pagesMessages } from "@/components/dashboard/pages-messages";
 import { Panel } from "@/components/dashboard/profile-card";
 import { useDashboard } from "@/components/dashboard/shell";
 import { useDashHref } from "@/components/dashboard/use-dash-href";
+import { interestMessages } from "@/components/marketplace/interest-messages";
 import { useLocale, useMessages } from "@/i18n/provider";
 import { api } from "@/lib/backend";
 import { catalogLabels, residueLabel } from "@/lib/catalog-labels";
@@ -413,6 +414,7 @@ function FactoryOverview() {
   const d = useMessages(dashboardMessages);
   const nav = d.nav.pages;
   const labels = useMessages(catalogLabels).residues;
+  const partner = useMessages(interestMessages);
   const f = useFormat();
   const lots = useOpenListings();
   const offers = useMyOffers();
@@ -430,7 +432,10 @@ function FactoryOverview() {
     next = lot
       ? {
           title: fill(t.overview.next.factory, { kg: f.kg(lot.remainingKg), residue: residueLabel(labels, lot), price: f.dzdKg(lot.priceDzdPerKg) }),
-          detail: fill(t.overview.next.factoryFrom, { name: lot.sellerName, region: lot.region }),
+          detail: fill(t.overview.next.factoryFrom, {
+            name: lot.managed ? fill(partner.partner, { n: lot.partnerNo ?? "" }) : lot.sellerName,
+            region: lot.region,
+          }),
           href: DASH.browse,
           button: t.overview.next.factoryButton,
         }

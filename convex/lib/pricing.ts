@@ -9,6 +9,9 @@ export const LAB_PRICE_DZD = toDzd(LAB_PRICE_USD);
 /** BiorefMind's marketplace fee: a share of each sale, paid by the buyer on top (draft rate). */
 export const MARKET_FEE_RATE = 0.05;
 
+/** BiorefMind's fee on the seller's side (owner, 2026-10-11: commission on both sides; draft rate), out of the price. */
+export const SELLER_FEE_RATE = 0.05;
+
 export function toDzd(usd: number): number {
   return Math.round(usd * USD_TO_DZD);
 }

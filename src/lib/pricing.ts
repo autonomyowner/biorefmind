@@ -1,7 +1,7 @@
 import type { Locale } from "@/i18n/locale";
-import { LAB_PRICE_DZD, LAB_PRICE_USD, MARKET_FEE_RATE, toDzd, USD_TO_DZD } from "../../convex/lib/pricing";
+import { LAB_PRICE_DZD, LAB_PRICE_USD, MARKET_FEE_RATE, SELLER_FEE_RATE, toDzd, USD_TO_DZD } from "../../convex/lib/pricing";
 
-export { LAB_PRICE_DZD, LAB_PRICE_USD, MARKET_FEE_RATE, USD_TO_DZD };
+export { LAB_PRICE_DZD, LAB_PRICE_USD, MARKET_FEE_RATE, SELLER_FEE_RATE, USD_TO_DZD };
 
 /** Prices are set in dollars and shown in dollars or Algerian dinars. */
 export type Currency = "usd" | "dzd";

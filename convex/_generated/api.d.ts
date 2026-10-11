@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as adminLots from "../adminLots.js";
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as assistant from "../assistant.js";
@@ -19,6 +20,7 @@ import type * as crops from "../crops.js";
 import type * as demo from "../demo.js";
 import type * as enterprise from "../enterprise.js";
 import type * as http from "../http.js";
+import type * as inquiries from "../inquiries.js";
 import type * as insights from "../insights.js";
 import type * as labAi from "../labAi.js";
 import type * as labs from "../labs.js";
@@ -30,6 +32,7 @@ import type * as lib_aiRead from "../lib/aiRead.js";
 import type * as lib_assistant from "../lib/assistant.js";
 import type * as lib_catalog from "../lib/catalog.js";
 import type * as lib_crops from "../lib/crops.js";
+import type * as lib_inquiries from "../lib/inquiries.js";
 import type * as lib_insights from "../lib/insights.js";
 import type * as lib_labwork from "../lib/labwork.js";
 import type * as lib_market from "../lib/market.js";
@@ -50,6 +53,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  adminLots: typeof adminLots;
   ai: typeof ai;
   analytics: typeof analytics;
   assistant: typeof assistant;
@@ -60,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   demo: typeof demo;
   enterprise: typeof enterprise;
   http: typeof http;
+  inquiries: typeof inquiries;
   insights: typeof insights;
   labAi: typeof labAi;
   labs: typeof labs;
@@ -71,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   "lib/assistant": typeof lib_assistant;
   "lib/catalog": typeof lib_catalog;
   "lib/crops": typeof lib_crops;
+  "lib/inquiries": typeof lib_inquiries;
   "lib/insights": typeof lib_insights;
   "lib/labwork": typeof lib_labwork;
   "lib/market": typeof lib_market;

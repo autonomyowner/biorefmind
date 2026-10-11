@@ -79,7 +79,8 @@ export const create = mutation({
         .query("companies")
         .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
         .collect();
-      if (owned.some((c) => c.kind === "farm")) throw new ConvexError(REFUSE.oneFarm);
+      // The house farm (BiorefMind's own lots, owned by an admin) doesn't count.
+      if (owned.some((c) => c.kind === "farm" && !c.house)) throw new ConvexError(REFUSE.oneFarm);
     }
     const now = Date.now();
     const companyId = await ctx.db.insert("companies", {

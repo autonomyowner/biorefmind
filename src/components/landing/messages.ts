@@ -22,7 +22,7 @@ export const landingMessages = defineMessages({
       dashboard: "Dashboard",
       openMenu: "Open menu",
       closeMenu: "Close menu",
-      farmers: { label: "Farmers", body: "Sell crop residues, free" },
+      farmers: { label: "Farmers", body: "Sell residues and fresh produce" },
       labs: { label: "Labs", body: `List your analyses, ${LAB_EN}/month` },
       factories: { label: "Factories", body: "Buy scored raw material" },
       quality: { label: "Quality score", body: "A 0–100 score on every batch" },
@@ -57,16 +57,16 @@ export const landingMessages = defineMessages({
       titleLead: "Farmers sell, factories buy,",
       titleAccent: "labs analyse",
       body: "One marketplace for what is left after the harvest: every batch is scored, so everyone knows what changes hands.",
-      farmLabel: "Farmers · free",
+      farmLabel: "Farmers · free to list",
       factoryLabel: "Factories · custom pricing",
       farm: [
         {
-          title: "Sell crop residues",
-          body: "Peels, husks and pulp you used to burn or dump now have buyers among extract, food and feed factories.",
+          title: "Sell residues and fresh produce",
+          body: "Peels, husks and pulp you used to burn or dump now have buyers among extract, food and feed factories, and so does your fresh produce.",
         },
         {
-          title: "Free, full price for you",
-          body: "Listing costs nothing and you keep the whole agreed price. The buyer pays BiorefMind's 5% fee on top.",
+          title: "Free to list, 5% when you sell",
+          body: "Listing costs nothing. When you sell, BiorefMind keeps 5% of the price; the buyer pays another 5% on top.",
         },
         {
           title: "Pickup at the farm",
@@ -196,7 +196,7 @@ export const landingMessages = defineMessages({
     },
     pricing: {
       eyebrow: "Pricing",
-      titleLead: "Free for farmers.",
+      titleLead: "Free to list.",
       titleAccent: "Fair for everyone.",
       draft: "For now, buyers pay sellers directly; BiorefMind sends a monthly statement for its fees.",
       plans: [
@@ -204,8 +204,8 @@ export const landingMessages = defineMessages({
           name: "Farmers",
           lead: "Sell what's left of your harvest.",
           price: "Free",
-          unit: "buyers pay the 5% fee",
-          features: ["Unlimited listings", "Quality score on every batch", "Offers from factories", "Find labs near you"],
+          unit: "to list · 5% only when you sell",
+          features: ["Unlimited listings", "Residues and fresh produce", "Offers from factories", "Find labs near you"],
           cta: "Join as a farmer",
         },
         {
@@ -233,15 +233,15 @@ export const landingMessages = defineMessages({
       items: [
         {
           q: "Who can join BiorefMind?",
-          a: "Farmers and cooperatives who sell crop residues, labs that run the analyses, and factories that buy residues and book analyses. Each signs up with its own account type.",
+          a: "Farmers and cooperatives who sell crop residues or fresh produce, labs that run the analyses, and factories that buy them and book analyses. Each signs up with its own account type.",
         },
         {
           q: "What does it cost?",
-          a: `Farmers pay nothing. Labs pay ${LAB_EN} a month after a 14-day free trial. Factories get custom enterprise pricing, and pay a 5% platform fee on top of each accepted deal.`,
+          a: `Listing is free for farmers; on each sale BiorefMind takes 5% from the seller and 5% from the buyer. Labs pay ${LAB_EN} a month after a 14-day free trial. Factories get custom enterprise pricing and pay the 5% buyer fee on top of each accepted deal.`,
         },
         {
           q: "How do buyer and seller close a deal?",
-          a: "The factory makes an offer on a listing, the farmer accepts, and both agree on pickup. For now the factory pays the farmer directly; BiorefMind records the deal and invoices its 5% fee to the factory.",
+          a: "The factory makes an offer on a listing, the farmer accepts, and both agree on pickup. For now the factory pays the farmer directly; BiorefMind records the deal and invoices its 5% fee to each side.",
         },
         {
           q: "How is the quality score calculated?",
@@ -256,7 +256,7 @@ export const landingMessages = defineMessages({
     closing: {
       titleLead: "Nothing grown should be",
       titleAccent: "wasted",
-      body: "List your waste for free, list your lab, or find your next raw material.",
+      body: "List your residues or fresh produce for free, list your lab, or find your next raw material.",
       cta: "Create a free account",
       guest: "Preview as guest",
     },
@@ -294,7 +294,7 @@ export const landingMessages = defineMessages({
       dashboard: "لوحة التحكم",
       openMenu: "فتح القائمة",
       closeMenu: "إغلاق القائمة",
-      farmers: { label: "المزارعون", body: "بِع مخلفات محاصيلك مجانًا" },
+      farmers: { label: "المزارعون", body: "بِع المخلفات والمنتجات الطازجة" },
       labs: { label: "المختبرات", body: `اعرض تحاليلك مقابل ${LAB_AR} شهريًا` },
       factories: { label: "المصانع", body: "اشترِ مادة خام مُقيّمة" },
       quality: { label: "تقييم الجودة", body: "تقييم من 0 إلى 100 لكل دفعة" },
@@ -329,16 +329,16 @@ export const landingMessages = defineMessages({
       titleLead: "المزارع يبيع، والمصنع يشتري،",
       titleAccent: "والمختبر يحلّل",
       body: "سوق واحدة لما يتبقّى بعد الحصاد: كل دفعة تُقيَّم، فيعرف الجميع ما يُتداول.",
-      farmLabel: "المزارعون · مجانًا",
+      farmLabel: "المزارعون · إدراج مجاني",
       factoryLabel: "المصانع · تسعير حسب الطلب",
       farm: [
         {
-          title: "بِع مخلفات محاصيلك",
-          body: "القشور والأغلفة واللب التي كنت تحرقها أو ترميها أصبح لها مشترون من مصانع المستخلصات والأغذية والأعلاف.",
+          title: "بِع المخلفات والمنتجات الطازجة",
+          body: "القشور والأغلفة واللب التي كنت تحرقها أو ترميها أصبح لها مشترون من مصانع المستخلصات والأغذية والأعلاف، وكذلك منتجاتك الطازجة.",
         },
         {
-          title: "مجاني، والسعر كاملًا لك",
-          body: "الإدراج مجاني وتحصل على السعر المتفق عليه كاملًا. ويدفع المشتري عمولة BiorefMind البالغة 5% فوقه.",
+          title: "إدراج مجاني، و5% عند البيع",
+          body: "الإدراج مجاني. عند البيع يحتفظ BiorefMind بـ 5% من السعر، ويدفع المشتري 5% أخرى فوقه.",
         },
         {
           title: "الاستلام من المزرعة",
@@ -468,7 +468,7 @@ export const landingMessages = defineMessages({
     },
     pricing: {
       eyebrow: "الأسعار",
-      titleLead: "مجاني للمزارعين.",
+      titleLead: "الإدراج مجاني.",
       titleAccent: "عادل للجميع.",
       draft: "حاليًا يدفع المشتري للبائع مباشرة، وترسل BiorefMind كشفًا شهريًا برسومها.",
       plans: [
@@ -476,8 +476,8 @@ export const landingMessages = defineMessages({
           name: "المزارعون",
           lead: "بِع ما تبقّى من محصولك.",
           price: "مجانًا",
-          unit: "يدفع المشتري عمولة 5%",
-          features: ["إدراجات غير محدودة", "تقييم جودة لكل دفعة", "عروض من المصانع", "مختبرات قريبة منك"],
+          unit: "للإدراج · 5% فقط عند البيع",
+          features: ["إدراجات غير محدودة", "مخلفات ومنتجات طازجة", "عروض من المصانع", "مختبرات قريبة منك"],
           cta: "انضم كمزارع",
         },
         {
@@ -505,15 +505,15 @@ export const landingMessages = defineMessages({
       items: [
         {
           q: "من يمكنه الانضمام إلى BiorefMind؟",
-          a: "المزارعون والتعاونيات الذين يبيعون مخلفات المحاصيل، والمختبرات التي تجري التحاليل، والمصانع التي تشتري المخلفات وتحجز التحاليل. لكلٍّ منهم نوع حساب خاص به.",
+          a: "المزارعون والتعاونيات الذين يبيعون مخلفات المحاصيل أو المنتجات الطازجة، والمختبرات التي تجري التحاليل، والمصانع التي تشتريها وتحجز التحاليل. لكلٍّ منهم نوع حساب خاص به.",
         },
         {
           q: "كم التكلفة؟",
-          a: `المزارعون لا يدفعون شيئًا. المختبرات تدفع ${LAB_AR} شهريًا بعد تجربة مجانية لمدة 14 يومًا. والمصانع تحصل على تسعير مؤسسات خاص، وتدفع عمولة منصة 5% فوق كل صفقة مقبولة.`,
+          a: `الإدراج مجاني للمزارعين، وفي كل صفقة تأخذ BiorefMind عمولة 5% من البائع و5% من المشتري. المختبرات تدفع ${LAB_AR} شهريًا بعد تجربة مجانية لمدة 14 يومًا. والمصانع تحصل على تسعير مؤسسات خاص، وتدفع عمولة المشتري 5% فوق كل صفقة مقبولة.`,
         },
         {
           q: "كيف يُتم البائع والمشتري الصفقة؟",
-          a: "يقدّم المصنع عرضًا على الإدراج، ويقبله المزارع، ويتفقان على الاستلام. حاليًا يدفع المصنع للمزارع مباشرة، وتسجّل BiorefMind الصفقة وتفوتر عمولتها 5% للمصنع.",
+          a: "يقدّم المصنع عرضًا على الإدراج، ويقبله المزارع، ويتفقان على الاستلام. حاليًا يدفع المصنع للمزارع مباشرة، وتسجّل BiorefMind الصفقة وتفوتر عمولتها 5% لكل طرف.",
         },
         {
           q: "كيف يُحسب تقييم الجودة؟",
@@ -528,7 +528,7 @@ export const landingMessages = defineMessages({
     closing: {
       titleLead: "لا شيء مما نزرعه",
       titleAccent: "يجب أن يُهدر",
-      body: "أدرج مخلفاتك مجانًا، أو أدرج مختبرك، أو اعثر على مادتك الخام القادمة.",
+      body: "أدرج مخلفاتك أو منتجاتك الطازجة مجانًا، أو أدرج مختبرك، أو اعثر على مادتك الخام القادمة.",
       cta: "أنشئ حسابًا مجانيًا",
       guest: "جرّب كزائر",
     },
