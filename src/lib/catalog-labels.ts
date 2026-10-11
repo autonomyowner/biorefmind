@@ -43,9 +43,29 @@ export const RESIDUE_KEYS = [
   "grape_marc",
   "date_pits",
   "corn_silk",
+  "corn_husks",
 ] as const;
 /** Every residue a lot can have: the catalog plus "other" (the farmer typed what it is). */
 export const LOT_RESIDUE_KEYS = [...RESIDUE_KEYS, "other"] as const;
+/** Fresh produce (convex/lib/catalog.ts FRESH_PRODUCE). Labels share the `residues` map: keys never collide. */
+export const FRESH_KEYS = [
+  "mushrooms",
+  "pomegranates",
+  "tomatoes",
+  "potatoes",
+  "onions",
+  "peppers",
+  "citrus",
+  "dates",
+  "olives",
+  "grapes",
+  "apples",
+  "figs",
+] as const;
+export const LOT_FRESH_KEYS = [...FRESH_KEYS, "other"] as const;
+/** What a lot is: leftovers or fresh produce (convex/lib/catalog.ts CATEGORIES). */
+export const CATEGORY_KEYS = ["residue", "fresh"] as const;
+export type Category = (typeof CATEGORY_KEYS)[number];
 
 export const catalogLabels = defineMessages({
   en: {
@@ -69,6 +89,19 @@ export const catalogLabels = defineMessages({
       grape_marc: "Grape marc",
       date_pits: "Date pits",
       corn_silk: "Corn silk",
+      corn_husks: "Corn husks",
+      mushrooms: "Mushrooms",
+      pomegranates: "Pomegranates",
+      tomatoes: "Tomatoes",
+      potatoes: "Potatoes",
+      onions: "Onions",
+      peppers: "Peppers",
+      citrus: "Citrus fruit",
+      dates: "Dates",
+      olives: "Olives",
+      grapes: "Grapes",
+      apples: "Apples",
+      figs: "Figs",
       other: "Other",
     },
   },
@@ -93,6 +126,19 @@ export const catalogLabels = defineMessages({
       grape_marc: "تفل العنب",
       date_pits: "نوى التمر",
       corn_silk: "حرير الذرة",
+      corn_husks: "أغلفة الذرة",
+      mushrooms: "الفطر",
+      pomegranates: "الرمان",
+      tomatoes: "الطماطم",
+      potatoes: "البطاطا",
+      onions: "البصل",
+      peppers: "الفلفل",
+      citrus: "الحمضيات",
+      dates: "التمر",
+      olives: "الزيتون",
+      grapes: "العنب",
+      apples: "التفاح",
+      figs: "التين",
       other: "أخرى",
     },
   },
