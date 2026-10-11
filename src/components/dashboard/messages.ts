@@ -63,8 +63,8 @@ export const dashboardMessages = defineMessages({
       name: "Name",
     },
     farm: {
-      freeTitle: "Free for farmers",
-      freeBody: "You keep the full price. Buyers pay BiorefMind's 5% platform fee on top.",
+      freeTitle: "Listing is free",
+      freeBody: "List residues and fresh produce for free. When you sell, BiorefMind keeps 5% of the price; the buyer pays another 5% on top.",
     },
     lab: {
       planTitle: "Your plan",
@@ -160,8 +160,8 @@ export const dashboardMessages = defineMessages({
       name: "الاسم",
     },
     farm: {
-      freeTitle: "مجاني للمزارعين",
-      freeBody: "تحصل على السعر كاملًا. ويدفع المشتري عمولة المنصة 5% فوقه.",
+      freeTitle: "الإدراج مجاني",
+      freeBody: "أدرج المخلفات والمنتجات الطازجة مجانًا. عند البيع يحتفظ BiorefMind بـ 5% من السعر، ويدفع المشتري 5% أخرى فوقه.",
     },
     lab: {
       planTitle: "اشتراكك",

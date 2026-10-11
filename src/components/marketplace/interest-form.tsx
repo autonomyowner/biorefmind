@@ -54,12 +54,15 @@ export function InterestForm({
   lot,
   lotName,
   defaultCompany = "",
+  stacked = false,
   onCancel,
   className,
 }: {
   lot: { listingId: Id<"listings">; remainingKg: number };
   lotName: string;
   defaultCompany?: string;
+  /** One field per row (narrow places such as a dashboard card). */
+  stacked?: boolean;
   onCancel?: () => void;
   className?: string;
 }) {
@@ -131,7 +134,7 @@ export function InterestForm({
       className={cn("relative space-y-3 rounded-2xl bg-[#eef2ff] p-3.5 text-start sm:p-4", className)}
     >
       <p className="text-[15px] font-semibold">{t.title}</p>
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+      <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-2.5", !stacked && "sm:grid-cols-[repeat(2,minmax(0,1fr))]")}>
         <label className="block text-[13px] font-medium">
           {t.name} *
           <Input required autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} className={cn(FIELD, "mt-1")} />
