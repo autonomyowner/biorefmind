@@ -147,3 +147,11 @@ export type LabRequestStatus = MyLabRequest["status"];
 
 // Dashboard analytics. Contract: docs/superpowers/specs/2026-10-06-dashboard-pages-design.md §7
 export type WorkspaceInsights = FunctionReturnType<typeof api.insights.workspace>;
+
+// Admin: BiorefMind lots, interest requests, moderation, activity. Contract: docs/superpowers/specs/2026-10-11-fresh-managed-admin-design.md
+export type AdminStats = FunctionReturnType<typeof api.admin.overview>["stats"];
+export type AdminInquiry = FunctionReturnType<typeof api.inquiries.list>[number];
+export type InquiryStatus = AdminInquiry["status"];
+export type HouseLot = FunctionReturnType<typeof api.adminLots.list>[number];
+export type AdminOpenLot = FunctionReturnType<typeof api.admin.openLots>[number];
+export type AdminActivity = FunctionReturnType<typeof api.admin.activity>[number];
