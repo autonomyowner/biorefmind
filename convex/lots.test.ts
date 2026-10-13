@@ -309,6 +309,80 @@ describe("admin moderation", () => {
     await expect(f.as.query(api.admin.openLots, {})).rejects.toThrow("Only BiorefMind admins can do this.");
   });
 
+  test("the admin edits a farm's own lot: product, price, kg left, region, note and photos; the farm sees it", async () => {
+    const t = newBackend();
+    const boss = await member(t, "boss@biorefmind.com", "Boss");
+    const f = await farm(t);
+    const buyer = await factory(t);
+    const [p1, p2, p3] = [await photo(t), await photo(t), await photo(t)];
+    const listingId = await f.as.mutation(api.market.createListing, {
+      companyId: f.id,
+      residue: "olive_pomace",
+      quantityKg: 100,
+      priceDzdPerKg: 5,
+      photoIds: [p1, p2],
+    });
+    const small = await buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId, quantityKg: 20, priceDzdPerKg: 5 });
+    const big = await buyer.as.mutation(api.market.makeOffer, { companyId: buyer.id, listingId, quantityKg: 80, priceDzdPerKg: 5 });
+    expect(small).toBe(big); // one pending offer per buyer: the second replaced the first
+
+    await boss.mutation(api.admin.editLot, {
+      listingId,
+      category: "residue",
+      residue: "pomegranate_peels",
+      priceDzdPerKg: 7.5,
+      remainingKg: 50,
+      region: "Batna",
+      note: "Dry, in bags",
+      photoIds: [p2, p3], // p1 removed, p3 added
+    });
+    const [mine] = await f.as.query(api.market.myListings, { companyId: f.id });
+    expect(mine).toMatchObject({ residue: "pomegranate_peels", priceDzdPerKg: 7.5, remainingKg: 50, region: "Batna", note: "Dry, in bags", status: "open" });
+    expect(mine.photoUrls).toHaveLength(2);
+    expect(mine.adminEditedAt).toEqual(expect.any(Number));
+    expect(mine.offers[0]).toMatchObject({ status: "declined" }); // 80 kg no longer fits in 50
+    expect(await t.run(async (ctx) => ctx.storage.getUrl(p1))).toBeNull();
+
+    const [admin] = await boss.query(api.admin.openLots, {});
+    expect(admin.photos.map((p) => p.storageId)).toEqual([p2, p3]);
+    expect((await boss.query(api.admin.activity, {}))[0]).toMatchObject({
+      action: "lot.edit",
+      detail: "Ferme Saïd · olive_pomace: product, price, kg left, region, note, photos",
+    });
+
+    // Refusals: a photo from another lot, too many photos, more kg than listed, phone numbers in the note.
+    const other = await f.as.mutation(api.market.createListing, { companyId: f.id, residue: "olive_pomace", quantityKg: 10, priceDzdPerKg: 5, photoIds: [await photo(t)] });
+    const taken = (await boss.query(api.admin.openLots, {})).find((l) => l.listingId === other)!.photos[0].storageId;
+    await expect(boss.mutation(api.admin.editLot, { listingId, photoIds: [p2, taken] })).rejects.toThrow("One of the photos could not be found.");
+    const five = [p2, p3, await photo(t), await photo(t), await photo(t)];
+    await expect(boss.mutation(api.admin.editLot, { listingId, photoIds: five })).rejects.toThrow("You can attach up to 4 photos.");
+    await expect(boss.mutation(api.admin.editLot, { listingId, remainingKg: 101 })).rejects.toThrow("Quantity left must be between");
+    await expect(boss.mutation(api.admin.editLot, { listingId, note: "call 0661 23 45 67" })).rejects.toThrow();
+    await expect(f.as.mutation(api.admin.editLot, { listingId, priceDzdPerKg: 1 })).rejects.toThrow("Only BiorefMind admins can do this.");
+
+    // 0 kg left marks it sold; no change logs nothing.
+    await boss.mutation(api.admin.editLot, { listingId, remainingKg: 0 });
+    expect((await f.as.query(api.market.myListings, { companyId: f.id })).find((l) => l.listingId === listingId)?.status).toBe("sold");
+    const logged = (await boss.query(api.admin.activity, {})).length;
+    await boss.mutation(api.admin.editLot, { listingId, region: "Batna" });
+    expect(await boss.query(api.admin.activity, {})).toHaveLength(logged);
+  });
+
+  test("the admin changes a BiorefMind lot's photos and product", async () => {
+    const t = newBackend();
+    const boss = await member(t, "boss@biorefmind.com", "Boss");
+    const [p1, p2] = [await photo(t), await photo(t)];
+    const listingId = await boss.mutation(api.adminLots.create, { ...houseLot, photoIds: [p1] });
+    await boss.mutation(api.adminLots.update, { listingId, category: "fresh", residue: "mushrooms", photoIds: [p2], farmerName: "Ammi Rabah B." });
+    const [lot] = await boss.query(api.adminLots.list, {});
+    expect(lot).toMatchObject({ category: "fresh", residue: "mushrooms", farmerName: "Ammi Rabah B.", partnerNo: 1 });
+    expect(lot.photos.map((p) => p.storageId)).toEqual([p2]);
+    expect((await boss.query(api.admin.activity, {}))[0].detail).toContain("product, photos, farmer");
+    await expect(boss.mutation(api.adminLots.update, { listingId, photoIds: [p2, await photo(t), await photo(t), await photo(t)] })).rejects.toThrow(
+      "You can attach up to 3 photos.",
+    );
+  });
+
   test("lab billing actions are logged too", async () => {
     const t = newBackend();
     const boss = await member(t, "boss@biorefmind.com", "Boss");

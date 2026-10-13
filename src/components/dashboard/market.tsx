@@ -58,6 +58,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     listingId: "g1" as Id<"listings">,
     category: "residue",
     withdrawnReason: undefined,
+    adminEditedAt: undefined,
     residue: "pomegranate_peels",
     residueName: undefined,
     quantityKg: 1200,
@@ -97,6 +98,7 @@ const SAMPLE_LISTINGS: MyListing[] = [
     listingId: "g2" as Id<"listings">,
     category: "residue",
     withdrawnReason: undefined,
+    adminEditedAt: undefined,
     residue: "olive_pomace",
     residueName: undefined,
     quantityKg: 3000,
@@ -613,6 +615,9 @@ function ListingCard({ listing: l }: { listing: MyListing }) {
         <p className="mt-3 rounded-xl bg-[#fff1d6] px-3 py-2 text-[13px] leading-relaxed text-[#8a4f08]">
           {fill(t.listings.takenDown, { reason: l.withdrawnReason })}
         </p>
+      ) : null}
+      {l.adminEditedAt ? (
+        <p className="mt-2 text-[13px] text-muted-foreground">{fill(t.listings.editedByAdmin, { date: f.date(l.adminEditedAt) })}</p>
       ) : null}
       {l.photoCheck && l.status === "open" ? <FarmerPhotoCheck listingId={l.listingId} check={l.photoCheck} residue={name} canAct={canAct} /> : null}
 

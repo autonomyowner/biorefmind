@@ -1,10 +1,12 @@
 import { ConvexError, v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireUser } from "./lib/access";
-import { isAdmin, labListed, REFUSE } from "./lib/accounts";
-import { cleanText, INQUIRY_REFUSE } from "./lib/inquiries";
-import { MARKET_REFUSE } from "./lib/market";
+import { cleanRegion, isAdmin, labListed, REFUSE } from "./lib/accounts";
+import { cleanText, INQUIRY_REFUSE, MAX_HOUSE_PHOTOS } from "./lib/inquiries";
+import { cleanNote, cleanPrice, cleanProduct, MARKET_REFUSE, MAX_LISTING_PHOTOS, offerFits } from "./lib/market";
+import { declinePending } from "./market";
+import { recheckPhotos } from "./photoCheck";
 import { effectiveStatus } from "./lib/labwork";
 import { addMonths, extendBase } from "./lib/pricing";
 
@@ -19,6 +21,131 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
 export async function logAdmin(ctx: MutationCtx, user: Doc<"users">, action: string, detail: string) {
   await ctx.db.insert("adminLog", { userId: user._id, email: user.email, action, detail: detail.slice(0, 500), createdAt: Date.now() });
 }
+
+/** What the admin may change on any lot. Each field is optional; a note of "" clears it. */
+export const lotEditArgs = {
+  category: v.optional(v.string()), // with residue: the product changes
+  residue: v.optional(v.string()),
+  residueName: v.optional(v.string()),
+  priceDzdPerKg: v.optional(v.number()),
+  remainingKg: v.optional(v.number()),
+  region: v.optional(v.string()),
+  note: v.optional(v.string()),
+  photoIds: v.optional(v.array(v.id("_storage"))), // the whole new list, in order: kept photos and fresh uploads
+};
+
+type LotEdit = {
+  category?: string;
+  residue?: string;
+  residueName?: string;
+  priceDzdPerKg?: number;
+  remainingKg?: number;
+  region?: string;
+  note?: string;
+  photoIds?: Id<"_storage">[];
+};
+
+/**
+ * Applies an admin's edit to a lot (a farm's own or a BiorefMind lot) and returns the names of what changed.
+ * Fewer kg left declines the pending offers that no longer fit (all of them at 0, which marks an open lot sold).
+ * Removed photos are deleted; new ones must be fresh uploads. New photos or product: the AI photo check runs again.
+ */
+export async function applyLotEdit(ctx: MutationCtx, listing: Doc<"listings">, args: LotEdit): Promise<string[]> {
+  const patch: Partial<Doc<"listings">> = {};
+  const changed: string[] = [];
+
+  if (args.residue !== undefined) {
+    const p = cleanProduct(args.category ?? listing.category, args.residue, args.residueName);
+    if (p.category !== (listing.category ?? "residue") || p.residue !== listing.residue || p.residueName !== listing.residueName) {
+      Object.assign(patch, { category: p.category, residue: p.residue, residueName: p.residueName });
+      changed.push("product");
+    }
+  }
+  if (args.priceDzdPerKg !== undefined) {
+    const price = cleanPrice(args.priceDzdPerKg);
+    if (price !== listing.priceDzdPerKg) {
+      patch.priceDzdPerKg = price;
+      changed.push("price");
+    }
+  }
+  if (args.remainingKg !== undefined) {
+    const kg = args.remainingKg;
+    if (!Number.isInteger(kg) || kg < 0 || kg > listing.quantityKg) throw new ConvexError(INQUIRY_REFUSE.remaining);
+    if (kg !== listing.remainingKg) {
+      patch.remainingKg = kg;
+      if (kg === 0 && listing.status === "open") patch.status = "sold";
+      changed.push("kg left");
+    }
+  }
+  if (args.region !== undefined) {
+    const region = cleanRegion(args.region);
+    if (region !== listing.region) {
+      patch.region = region;
+      changed.push("region");
+    }
+  }
+  if (args.note !== undefined) {
+    const note = cleanNote(args.note);
+    if (note !== listing.note) {
+      patch.note = note;
+      changed.push("note");
+    }
+  }
+  if (args.photoIds !== undefined) {
+    const ids = [...new Set(args.photoIds)];
+    if (ids.length > (listing.managed ? MAX_HOUSE_PHOTOS : MAX_LISTING_PHOTOS)) {
+      throw new ConvexError(listing.managed ? INQUIRY_REFUSE.photos : MARKET_REFUSE.photos);
+    }
+    const before = new Set(listing.photoIds);
+    for (const storageId of ids) {
+      if (before.has(storageId)) continue;
+      const claimed = await ctx.db
+        .query("photoClaims")
+        .withIndex("by_storage", (q) => q.eq("storageId", storageId))
+        .first();
+      if (claimed || !(await ctx.db.system.get(storageId))) throw new ConvexError(MARKET_REFUSE.photoMissing);
+      await ctx.db.insert("photoClaims", { storageId, companyId: listing.companyId });
+    }
+    for (const storageId of listing.photoIds) {
+      if (ids.includes(storageId)) continue;
+      const claim = await ctx.db
+        .query("photoClaims")
+        .withIndex("by_storage", (q) => q.eq("storageId", storageId))
+        .first();
+      if (claim) await ctx.db.delete(claim._id);
+      if (await ctx.db.system.get(storageId)) await ctx.storage.delete(storageId);
+    }
+    if (ids.join() !== listing.photoIds.join()) {
+      patch.photoIds = ids;
+      changed.push("photos");
+    }
+  }
+
+  if (changed.length === 0) return changed;
+  await ctx.db.patch(listing._id, { ...patch, adminEditedAt: Date.now() });
+  if (patch.remainingKg !== undefined) {
+    const left = patch.remainingKg;
+    await declinePending(ctx, listing._id, (o) => left > 0 && offerFits(o, left));
+  }
+  if (changed.includes("photos") || changed.includes("product")) await recheckPhotos(ctx, (await ctx.db.get(listing._id))!);
+  return changed;
+}
+
+/** The admin edits any lot: product, price, kg left, region, public note, photos. Logged; the farm sees "edited". */
+export const editLot = mutation({
+  args: { listingId: v.id("listings"), ...lotEditArgs },
+  handler: async (ctx, { listingId, ...args }) => {
+    const admin = await requireAdmin(ctx);
+    const listing = await ctx.db.get(listingId);
+    if (!listing) throw new ConvexError(MARKET_REFUSE.noListing);
+    const changed = await applyLotEdit(ctx, listing, args);
+    if (changed.length === 0) return null;
+    const seller = await ctx.db.get(listing.companyId);
+    const who = listing.managed ? `partner farm #${listing.partnerNo}` : (seller?.name ?? "");
+    await logAdmin(ctx, admin, "lot.edit", `${who} · ${listing.residueName ?? listing.residue}: ${changed.join(", ")}`);
+    return null;
+  },
+});
 
 /** Every account (newest first, up to 500), the latest enterprise requests, and live counts. */
 export const overview = query({
@@ -155,6 +282,16 @@ export const sales = query({
   },
 });
 
+/** A lot's photos with their ids (for editing), skipping any that are gone. */
+export async function photoList(ctx: QueryCtx, ids: Id<"_storage">[]) {
+  const out: { storageId: Id<"_storage">; url: string }[] = [];
+  for (const storageId of ids) {
+    const url = await ctx.storage.getUrl(storageId);
+    if (url) out.push({ storageId, url });
+  }
+  return out;
+}
+
 /** Every open lot (newest first, up to 300) with the real seller and phone, for moderation. */
 export const openLots = query({
   args: {},
@@ -172,17 +309,20 @@ export const openLots = query({
         .query("offers")
         .withIndex("by_listing", (q) => q.eq("listingId", l._id))
         .collect();
-      const photo = l.photoIds[0] ? await ctx.storage.getUrl(l.photoIds[0]) : null;
+      const photos = await photoList(ctx, l.photoIds);
       out.push({
         listingId: l._id,
         category: l.category ?? "residue",
         residue: l.residue,
         residueName: l.residueName,
+        quantityKg: l.quantityKg,
         remainingKg: l.remainingKg,
         priceDzdPerKg: l.priceDzdPerKg,
         region: l.region,
         note: l.note,
-        photoUrl: photo ?? undefined,
+        photoUrl: photos[0]?.url,
+        photos,
+        adminEditedAt: l.adminEditedAt,
         managed: Boolean(l.managed),
         partnerNo: l.partnerNo,
         seller: l.managed?.farmerName ?? seller?.name ?? "",

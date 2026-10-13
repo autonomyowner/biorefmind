@@ -39,7 +39,7 @@ async function photoUrls(ctx: QueryCtx, ids: Id<"_storage">[]): Promise<string[]
 }
 
 /** Turns every pending offer on a lot that `keep` rejects into a decline. */
-async function declinePending(ctx: MutationCtx, listingId: Id<"listings">, keep: (o: Doc<"offers">) => boolean) {
+export async function declinePending(ctx: MutationCtx, listingId: Id<"listings">, keep: (o: Doc<"offers">) => boolean) {
   const now = Date.now();
   const offers = await ctx.db
     .query("offers")
@@ -170,6 +170,7 @@ export const myListings = query({
         note: l.note,
         status: l.status,
         withdrawnReason: l.withdrawnReason,
+        adminEditedAt: l.adminEditedAt,
         photoUrls: await photoUrls(ctx, l.photoIds),
         labRequestId: l.labRequestId,
         photoCheck: farmerView(await checkFor(ctx, l._id), Date.now()),

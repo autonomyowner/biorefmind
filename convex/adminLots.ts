@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
-import { logAdmin, requireAdmin } from "./admin";
+import { applyLotEdit, logAdmin, lotEditArgs, photoList, requireAdmin } from "./admin";
 import { cleanRegion, isAdmin, REFUSE } from "./lib/accounts";
 import { cleanInquiry, cleanText, INQUIRY_REFUSE, MAX_HOUSE_PHOTOS, partnerKey } from "./lib/inquiries";
 import { cleanNote, cleanPrice, cleanProduct, cleanQuantity, MARKET_REFUSE } from "./lib/market";
@@ -168,40 +168,30 @@ async function createHouseLot(
   return listingId;
 }
 
+/** The lot's own fields (admin.applyLotEdit: product, price, kg left, region, note, photos) and the private farmer details. */
 export const update = mutation({
   args: {
     listingId: v.id("listings"),
-    priceDzdPerKg: v.optional(v.number()),
-    remainingKg: v.optional(v.number()),
-    region: v.optional(v.string()),
-    note: v.optional(v.string()), // "" clears it
+    ...lotEditArgs,
     farmerName: v.optional(v.string()),
     farmerPhone: v.optional(v.string()), // "" clears it
     privateNote: v.optional(v.string()), // "" clears it
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { listingId, farmerName, farmerPhone, privateNote, ...lotArgs }) => {
     const admin = await requireAdmin(ctx);
-    const listing = await houseLot(ctx, args.listingId);
-    const patch: Partial<Doc<"listings">> = {};
-    if (args.priceDzdPerKg !== undefined) patch.priceDzdPerKg = cleanPrice(args.priceDzdPerKg);
-    if (args.remainingKg !== undefined) {
-      const kg = args.remainingKg;
-      if (!Number.isInteger(kg) || kg < 0 || kg > listing.quantityKg) throw new ConvexError(INQUIRY_REFUSE.remaining);
-      patch.remainingKg = kg;
-      if (kg === 0 && listing.status === "open") patch.status = "sold";
-    }
-    if (args.region !== undefined) patch.region = cleanRegion(args.region);
-    if (args.note !== undefined) patch.note = cleanNote(args.note);
-    if (args.farmerName !== undefined || args.farmerPhone !== undefined || args.privateNote !== undefined) {
+    const listing = await houseLot(ctx, listingId);
+    const changed = await applyLotEdit(ctx, listing, lotArgs);
+    if (farmerName !== undefined || farmerPhone !== undefined || privateNote !== undefined) {
       // The partner number stays: the public name of a lot does not change after it is posted.
-      patch.managed = cleanFarmer({
-        farmerName: args.farmerName ?? listing.managed.farmerName,
-        farmerPhone: args.farmerPhone ?? listing.managed.farmerPhone,
-        privateNote: args.privateNote ?? listing.managed.privateNote,
+      const managed = cleanFarmer({
+        farmerName: farmerName ?? listing.managed.farmerName,
+        farmerPhone: farmerPhone ?? listing.managed.farmerPhone,
+        privateNote: privateNote ?? listing.managed.privateNote,
       });
+      await ctx.db.patch(listing._id, { managed });
+      changed.push("farmer");
     }
-    await ctx.db.patch(listing._id, patch);
-    const changed = Object.keys(args).filter((k) => k !== "listingId");
+    if (changed.length === 0) return null;
     await logAdmin(ctx, admin, "lot.update", `${label(listing)} · partner farm #${listing.partnerNo}: ${changed.join(", ")}`);
     return null;
   },
@@ -243,7 +233,7 @@ export const list = query({
         .query("inquiries")
         .withIndex("by_listing", (q) => q.eq("listingId", l._id))
         .collect();
-      const urls = await Promise.all(l.photoIds.map((id) => ctx.storage.getUrl(id)));
+      const photos = await photoList(ctx, l.photoIds);
       out.push({
         listingId: l._id,
         category: l.category ?? "residue",
@@ -255,7 +245,8 @@ export const list = query({
         region: l.region,
         note: l.note,
         status: l.status,
-        photoUrls: urls.filter((u): u is string => u !== null),
+        photoUrls: photos.map((p) => p.url),
+        photos,
         partnerNo: l.partnerNo,
         farmerName: l.managed.farmerName,
         farmerPhone: l.managed.farmerPhone ?? "",

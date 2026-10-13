@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { ImagePlus, MapPin, Pencil, Plus, UserRound, X } from "lucide-react";
+import { MapPin, Pencil, Plus, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -20,22 +20,16 @@ import {
   TelLink,
   Thumb,
 } from "@/components/admin/admin-shared";
+import { dzd, kg, LotEditFields, PhotoPicker, useLotEdit, usePhotoUploads } from "@/components/admin/lot-editor";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/backend";
 import { LOT_FRESH_KEYS, LOT_RESIDUE_KEYS, residueLabel, type Category } from "@/lib/catalog-labels";
 import { errorMessage } from "@/lib/errors";
 import { formatDzd, formatKg } from "@/lib/pricing";
-import { shrinkImage } from "@/lib/shrink-image";
 import type { HouseLot } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import type { Id } from "../../../convex/_generated/dataModel";
 
 const MAX_PHOTOS = 3;
-
-/** Kilograms: "1 200" / "1,200" → 1200. NaN when empty: the backend refuses it in its own words. */
-const kg = (s: string) => (s.trim() === "" ? Number.NaN : Number(s.replace(/[\s,]/g, "")));
-/** DA per kg: "12,5" or "12.5" → 12.5. */
-const dzd = (s: string) => (s.trim() === "" ? Number.NaN : Number(s.replace(/\s/g, "").replace(",", ".")));
 
 /** Lots BiorefMind sells for farmers who are not on the platform. */
 export function HouseLotsSection() {
@@ -77,11 +71,8 @@ export function HouseLotsSection() {
 
 /* ---------- Post a lot ---------- */
 
-type Upload = { key: string; preview: string; storageId?: Id<"_storage"> };
-
 function NewLotForm({ onDone }: { onDone: () => void }) {
   const create = useMutation(api.adminLots.create);
-  const uploadUrl = useMutation(api.adminLots.uploadUrl);
 
   const [category, setCategory] = useState<Category>("residue");
   const [product, setProduct] = useState<string | null>(null);
@@ -90,34 +81,14 @@ function NewLotForm({ onDone }: { onDone: () => void }) {
   const [price, setPrice] = useState("");
   const [region, setRegion] = useState("");
   const [note, setNote] = useState("");
-  const [photos, setPhotos] = useState<Upload[]>([]);
+  const uploads = usePhotoUploads(MAX_PHOTOS);
   const [farmerName, setFarmerName] = useState("");
   const [farmerPhone, setFarmerPhone] = useState("");
   const [privateNote, setPrivateNote] = useState("");
   const [busy, setBusy] = useState(false);
 
   const keys = category === "fresh" ? LOT_FRESH_KEYS : LOT_RESIDUE_KEYS;
-  const uploading = photos.some((p) => !p.storageId);
-
-  async function addPhotos(files: FileList | null) {
-    const chosen = Array.from(files ?? [])
-      .filter((file) => file.type.startsWith("image/"))
-      .slice(0, MAX_PHOTOS - photos.length);
-    for (const file of chosen) {
-      const key = `${file.name}-${file.size}-${Math.random()}`;
-      setPhotos((p) => [...p, { key, preview: URL.createObjectURL(file) }]);
-      try {
-        const [url, blob] = await Promise.all([uploadUrl({}), shrinkImage(file, 1600)]);
-        const res = await fetch(url, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob });
-        if (!res.ok) throw new Error("upload");
-        const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-        setPhotos((p) => p.map((x) => (x.key === key ? { ...x, storageId } : x)));
-      } catch {
-        setPhotos((p) => p.filter((x) => x.key !== key));
-        toast.error("A photo could not be uploaded. Please try again.");
-      }
-    }
-  }
+  const uploading = uploads.uploading;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,7 +103,7 @@ function NewLotForm({ onDone }: { onDone: () => void }) {
         priceDzdPerKg: dzd(price),
         region,
         note: note.trim() || undefined,
-        photoIds: photos.flatMap((p) => (p.storageId ? [p.storageId] : [])),
+        photoIds: uploads.ids,
         farmerName,
         farmerPhone: farmerPhone.trim() || undefined,
         privateNote: privateNote.trim() || undefined,
@@ -232,50 +203,7 @@ function NewLotForm({ onDone }: { onDone: () => void }) {
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={1000} className={cn(AREA, "mt-1.5")} />
       </label>
 
-      <div>
-        <p className="mb-2 text-[14px] font-medium">
-          Photos <span className="font-normal text-muted-foreground">(up to {MAX_PHOTOS})</span>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {photos.map((p) => (
-            <div key={p.key} className="relative size-20 overflow-hidden rounded-xl bg-white">
-              {/* A local preview (blob: URL), so not through the image optimizer. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.preview} alt="" className="size-full object-cover" />
-              {p.storageId ? (
-                <button
-                  type="button"
-                  aria-label="Remove photo"
-                  onClick={() => setPhotos((all) => all.filter((x) => x.key !== p.key))}
-                  className="absolute end-1 top-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white"
-                >
-                  <X className="size-3.5" />
-                </button>
-              ) : (
-                <span className="absolute inset-0 flex items-center justify-center bg-white/60">
-                  <Spinner size="sm" label={null} />
-                </span>
-              )}
-            </div>
-          ))}
-          {photos.length < MAX_PHOTOS ? (
-            <label className="flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-azure/40 bg-white/60 text-[11px] font-medium text-azure transition-colors hover:bg-white">
-              <ImagePlus className="size-5" strokeWidth={1.8} />
-              Add photo
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="sr-only"
-                onChange={(e) => {
-                  void addPhotos(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          ) : null}
-        </div>
-      </div>
+      <PhotoPicker uploads={uploads} />
 
       <fieldset className="rounded-xl border border-dashed border-violet/30 bg-[#f4f1ff]/60 p-3 sm:p-4">
         <legend className="px-1 text-[13px] font-semibold text-violet">Private: only admins see this</legend>
@@ -425,10 +353,7 @@ function HouseLotRow({ lot }: { lot: HouseLot }) {
 /** Inline edit: only the fields that changed are sent; an empty note, phone or private note clears it. */
 function EditLot({ lot, onDone }: { lot: HouseLot; onDone: () => void }) {
   const update = useMutation(api.adminLots.update);
-  const [price, setPrice] = useState(String(lot.priceDzdPerKg));
-  const [left, setLeft] = useState(String(lot.remainingKg));
-  const [region, setRegion] = useState(lot.region);
-  const [note, setNote] = useState(lot.note ?? "");
+  const edit = useLotEdit(lot, MAX_PHOTOS);
   const [farmerName, setFarmerName] = useState(lot.farmerName);
   const [farmerPhone, setFarmerPhone] = useState(lot.farmerPhone);
   const [privateNote, setPrivateNote] = useState(lot.privateNote);
@@ -436,11 +361,8 @@ function EditLot({ lot, onDone }: { lot: HouseLot; onDone: () => void }) {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const patch: Parameters<typeof update>[0] = { listingId: lot.listingId };
-    if (dzd(price) !== lot.priceDzdPerKg) patch.priceDzdPerKg = dzd(price);
-    if (kg(left) !== lot.remainingKg) patch.remainingKg = kg(left);
-    if (region.trim() !== lot.region) patch.region = region;
-    if (note.trim() !== (lot.note ?? "")) patch.note = note.trim();
+    if (edit.uploads.uploading) return;
+    const patch: Parameters<typeof update>[0] = { listingId: lot.listingId, ...edit.patch() };
     if (farmerName.trim() !== lot.farmerName) patch.farmerName = farmerName;
     if (farmerPhone.trim() !== lot.farmerPhone) patch.farmerPhone = farmerPhone.trim();
     if (privateNote.trim() !== lot.privateNote) patch.privateNote = privateNote.trim();
@@ -459,24 +381,7 @@ function EditLot({ lot, onDone }: { lot: HouseLot; onDone: () => void }) {
 
   return (
     <form onSubmit={save} className="mt-3 space-y-3 rounded-xl border border-white bg-white/60 p-3 sm:p-4">
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
-        <label className="block text-[13px] font-medium">
-          Price (DA per kg)
-          <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} className={cn(FIELD, "mt-1")} />
-        </label>
-        <label className="block text-[13px] font-medium">
-          Kg left <span className="font-normal text-muted-foreground">(of {formatKg(lot.quantityKg, "en")})</span>
-          <input inputMode="numeric" value={left} onChange={(e) => setLeft(e.target.value)} className={cn(FIELD, "mt-1")} />
-        </label>
-        <label className="block text-[13px] font-medium">
-          Region
-          <input value={region} onChange={(e) => setRegion(e.target.value)} className={cn(FIELD, "mt-1")} />
-        </label>
-      </div>
-      <label className="block text-[13px] font-medium">
-        Public note
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={1000} className={cn(AREA, "mt-1")} />
-      </label>
+      <LotEditFields edit={edit} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
         <label className="block text-[13px] font-medium">
           Farmer name (private)
@@ -495,9 +400,9 @@ function EditLot({ lot, onDone }: { lot: HouseLot; onDone: () => void }) {
         <button type="button" onClick={onDone} className={QUIET}>
           Cancel
         </button>
-        <button type="submit" disabled={busy} className={PRIMARY}>
+        <button type="submit" disabled={busy || edit.uploads.uploading} className={PRIMARY}>
           {busy ? <Spinner size="sm" label={null} /> : null}
-          Save changes
+          {edit.uploads.uploading ? "Uploading photos…" : "Save changes"}
         </button>
       </div>
     </form>

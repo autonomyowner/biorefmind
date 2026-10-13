@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { MapPin, Search } from "lucide-react";
+import { MapPin, Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import { CategoryBadge, EMPTY, FIELD, fmt, RESIDUE_EN, ROW, SECTION, TelLink, Thumb } from "@/components/admin/admin-shared";
+import { CategoryBadge, EMPTY, FIELD, fmt, PRIMARY, QUIET, RESIDUE_EN, ROW, SECTION, TelLink, Thumb } from "@/components/admin/admin-shared";
+import { LotEditFields, useLotEdit } from "@/components/admin/lot-editor";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/backend";
 import { residueLabel } from "@/lib/catalog-labels";
@@ -14,7 +15,7 @@ import { formatDzd, formatKg } from "@/lib/pricing";
 import type { AdminOpenLot } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** Every open lot on the marketplace with the real seller, so the admin can take down spam or wrong lots. */
+/** Every open lot on the marketplace with the real seller, so the admin can correct it or take it down. */
 export function ModerationSection() {
   const lots = useQuery(api.admin.openLots, {});
   const [query, setQuery] = useState("");
@@ -31,8 +32,9 @@ export function ModerationSection() {
             All open lots {lots ? <span className="text-muted-foreground tabular-nums">· {rows.length}</span> : null}
           </h2>
           <p className="mt-1 max-w-[560px] text-[14px] text-muted-foreground">
-            Everything for sale right now, with the real seller. Take down a lot that is spam, wrong or abusive: its pending
-            offers are declined and the farm sees your reason.
+            Everything for sale right now, with the real seller. Edit a lot to fix its product, price, quantity, region, note or
+            photos (the farm sees that BiorefMind edited it), or take down a lot that is spam or abusive: its pending offers
+            are declined and the farm sees your reason.
           </p>
         </div>
         <label className="relative w-full sm:w-72">
@@ -65,6 +67,7 @@ export function ModerationSection() {
 function OpenLotCard({ lot }: { lot: AdminOpenLot }) {
   const withdraw = useMutation(api.admin.withdrawLot);
   const [asking, setAsking] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const name = residueLabel(RESIDUE_EN, lot);
@@ -111,9 +114,13 @@ function OpenLotCard({ lot }: { lot: AdminOpenLot }) {
         </div>
         <p className="shrink-0 text-muted-foreground">
           {lot.managed ? "" : `${lot.pendingOffers} pending ${lot.pendingOffers === 1 ? "offer" : "offers"} · `}posted {fmt(lot.createdAt)}
+          {lot.adminEditedAt ? ` · edited ${fmt(lot.adminEditedAt)}` : ""}
+          {lot.photos.length > 1 ? ` · ${lot.photos.length} photos` : ""}
         </p>
       </div>
       {lot.note ? <p className="mt-2 line-clamp-3 break-words text-[13px] text-muted-foreground">Note: {lot.note}</p> : null}
+
+      {editing ? <EditOpenLot lot={lot} onDone={() => setEditing(false)} /> : null}
 
       {asking ? (
         <form onSubmit={takeDown} className="mt-3 space-y-2">
@@ -152,14 +159,63 @@ function OpenLotCard({ lot }: { lot: AdminOpenLot }) {
           </div>
         </form>
       ) : (
-        <button
-          type="button"
-          onClick={() => setAsking(true)}
-          className="mt-3 inline-flex h-9 items-center rounded-full border border-destructive/30 px-4 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/5"
-        >
-          Take down
-        </button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {!editing ? (
+            <button type="button" onClick={() => setEditing(true)} className={QUIET}>
+              <Pencil className="size-3.5" /> Edit
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setAsking(true)}
+            className="inline-flex h-9 items-center rounded-full border border-destructive/30 px-4 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/5"
+          >
+            Take down
+          </button>
+        </div>
       )}
     </li>
+  );
+}
+
+/** Any lot's product, price, kg left, region, note and photos; only what changed is sent. */
+function EditOpenLot({ lot, onDone }: { lot: AdminOpenLot; onDone: () => void }) {
+  const editLot = useMutation(api.admin.editLot);
+  const edit = useLotEdit(lot, lot.managed ? 3 : 4);
+  const [busy, setBusy] = useState(false);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (edit.uploads.uploading) return;
+    const patch = edit.patch();
+    if (Object.keys(patch).length === 0) return onDone();
+    setBusy(true);
+    try {
+      await editLot({ listingId: lot.listingId, ...patch });
+      toast.success(patch.remainingKg === 0 ? "Lot updated and marked sold." : "Lot updated.");
+      onDone();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="mt-3 space-y-3 rounded-xl border border-white bg-white/60 p-3 sm:p-4">
+      <LotEditFields edit={edit} />
+      {!lot.managed && lot.pendingOffers > 0 ? (
+        <p className="text-[12px] text-muted-foreground">Fewer kg left declines the pending offers that no longer fit.</p>
+      ) : null}
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={onDone} className={QUIET}>
+          Cancel
+        </button>
+        <button type="submit" disabled={busy || edit.uploads.uploading} className={PRIMARY}>
+          {busy ? <Spinner size="sm" label={null} /> : null}
+          {edit.uploads.uploading ? "Uploading photos…" : "Save changes"}
+        </button>
+      </div>
+    </form>
   );
 }

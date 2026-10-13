@@ -146,6 +146,7 @@ export default defineSchema({
     managed: v.optional(v.object({ farmerName: v.string(), farmerPhone: v.optional(v.string()), privateNote: v.optional(v.string()) })),
     partnerNo: v.optional(v.number()), // the public name: "BiorefMind partner farm #N"
     withdrawnReason: v.optional(v.string()), // the admin took the lot down (moderation)
+    adminEditedAt: v.optional(v.number()), // the admin last changed the lot (admin.editLot); the farm sees it
     createdBy: v.id("users"),
     createdAt: v.number(),
   })

@@ -59,6 +59,23 @@ export async function queuePhotoCheck(ctx: MutationCtx, listingId: Id<"listings"
   await ctx.scheduler.runAfter(0, internal.photoCheck.run, { checkId });
 }
 
+/**
+ * Looks again after the admin changed a lot's photos or product (admin.editLot): the lot's check goes back to
+ * pending (its cost so far is kept), or is removed when no photos are left. A check already pending reads the
+ * lot when it runs, so it is left alone.
+ */
+export async function recheckPhotos(ctx: MutationCtx, listing: Doc<"listings">) {
+  const check = await checkFor(ctx, listing._id);
+  if (listing.photoIds.length === 0) {
+    if (check) await ctx.db.delete(check._id);
+    return;
+  }
+  if (!check) return await queuePhotoCheck(ctx, listing._id, listing.companyId);
+  if (check.status === "pending") return;
+  await ctx.db.patch(check._id, { status: "pending", result: undefined, queuedAt: Date.now() });
+  await ctx.scheduler.runAfter(0, internal.photoCheck.run, { checkId: check._id });
+}
+
 /** The farmer's view: status always, result when done. */
 export function farmerView(p: Doc<"photoChecks"> | null, now: number) {
   if (!p) return undefined;
