@@ -1,10 +1,26 @@
 import Link from "next/link";
+import { Mail, Phone } from "lucide-react";
 
 import { Wordmark } from "@/components/landing/site-header";
 import type { Go } from "@/components/landing/go";
 import type { LandingMessages } from "@/components/landing/messages";
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_TEL } from "@/lib/contact";
 
 type T = LandingMessages;
+
+/** Support email and phone, as two small links. */
+function ContactLinks({ className }: { className?: string }) {
+  return (
+    <div className={className}>
+      <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-70">
+        <Mail className="size-3.5 text-azure" /> {SUPPORT_EMAIL}
+      </a>
+      <a href={`tel:${SUPPORT_PHONE_TEL}`} dir="ltr" className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-70">
+        <Phone className="size-3.5 text-azure" /> {SUPPORT_PHONE}
+      </a>
+    </div>
+  );
+}
 
 /** The public pages' footer (home, /marketplace, /verify). Links point at the home page's sections. */
 export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account: T["account"] }) {
@@ -58,6 +74,7 @@ export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account
               </li>
             ))}
           </ul>
+          <ContactLinks className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-[13.5px] text-muted-foreground" />
           <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-5">
             <Wordmark className="shrink-0 text-[19px] [&_img]:size-7" />
             <span dir="ltr" className="text-[13px] text-muted-foreground">© 2026</span>
@@ -86,6 +103,10 @@ export function SiteFooter({ t, go, account }: { t: T["footer"]; go: Go; account
         </div>
         <div className="mt-16 hidden justify-between gap-3 border-t border-border pt-6 text-[13px] text-muted-foreground md:flex">
           <span>{t.rights}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{t.contact}</span>
+            <ContactLinks className="flex gap-5" />
+          </span>
           <span>{t.madeFor}</span>
         </div>
       </div>

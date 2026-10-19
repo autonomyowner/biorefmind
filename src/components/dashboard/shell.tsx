@@ -10,9 +10,11 @@ import {
   FlaskConical,
   HandCoins,
   LayoutDashboard,
+  Mail,
   ListChecks,
   MapPin,
   PackageSearch,
+  Phone,
   Receipt,
   Settings,
   Sparkles,
@@ -23,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { LanguageSwitch } from "@/components/language-switch";
+import { SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_PHONE_TEL } from "@/lib/contact";
 import { AppFrame, FrameSkeleton, type FrameItem } from "@/components/app-frame";
 import { forwardHash } from "@/components/dashboard/forward-hash";
 import { WithBadges, type Badges } from "@/components/dashboard/frame/badges";
@@ -172,18 +175,29 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   ) : null;
 
   const identity = (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
-      <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
-        {initialsOf(value.workspace.name)}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate font-semibold">{value.workspace.name}</span>
-        <span className="flex items-center gap-1 truncate text-muted-foreground">
-          {value.workspace.region ? <MapPin className="size-3.5 shrink-0 text-azure" /> : null}
-          {value.workspace.region || t.kinds[value.workspace.kind]}
+    <>
+      <div className="mb-3 rounded-2xl border border-white/80 bg-white/40 p-3 text-[12.5px]">
+        <p className="font-semibold text-foreground/80">{t.nav.support}</p>
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="mt-1.5 flex items-center gap-1.5 truncate text-muted-foreground transition-colors hover:text-azure">
+          <Mail className="size-3.5 shrink-0 text-azure" /> <span className="truncate">{SUPPORT_EMAIL}</span>
+        </a>
+        <a href={`tel:${SUPPORT_PHONE_TEL}`} className="mt-1 flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-azure">
+          <Phone className="size-3.5 shrink-0 text-azure" /> <span dir="ltr">{SUPPORT_PHONE}</span>
+        </a>
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/55 p-3 text-[13px]">
+        <span className="orb flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold">
+          {initialsOf(value.workspace.name)}
         </span>
-      </span>
-    </div>
+        <span className="min-w-0">
+          <span className="block truncate font-semibold">{value.workspace.name}</span>
+          <span className="flex items-center gap-1 truncate text-muted-foreground">
+            {value.workspace.region ? <MapPin className="size-3.5 shrink-0 text-azure" /> : null}
+            {value.workspace.region || t.kinds[value.workspace.kind]}
+          </span>
+        </span>
+      </div>
+    </>
   );
 
   // Like the reference: search at the start of the bar on wide screens (the page carries its own

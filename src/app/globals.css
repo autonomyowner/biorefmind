@@ -43,6 +43,22 @@
   --color-violet: var(--violet);
 
   --animate-marquee: marquee 40s linear infinite;
+  /* The assistant's "working" signals (a status, not decoration): a light sweep and a blinking caret. */
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-caret: caret 1s steps(2, start) infinite;
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes caret {
+    to {
+      visibility: hidden;
+    }
+  }
   @keyframes marquee {
     from {
       transform: translateX(0);

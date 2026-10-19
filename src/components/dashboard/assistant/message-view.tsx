@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "convex/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Check, Copy, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -76,15 +77,17 @@ export function AssistantAnswer({ message, photos, canAct }: { message: Assistan
 
   return (
     <div className="flex gap-3">
-      <span className="orb mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full" aria-hidden>
-        <Sparkles className="size-4" strokeWidth={1.9} />
-      </span>
+      <AssistantOrb active={streaming} />
       <div className="min-w-0 flex-1 space-y-3">
-        {message.steps.length ? (
+        {streaming && !message.text ? (
+          <Analyzing steps={message.steps} startedAt={message.createdAt} />
+        ) : message.steps.length ? (
           <ul className="flex flex-wrap gap-1.5" aria-label="steps">
             {message.steps.map((s, i) => (
-              <li
+              <motion.li
                 key={i}
+                initial={streaming ? { opacity: 0, scale: 0.9 } : false}
+                animate={{ opacity: 1, scale: 1 }}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium",
                   s.tool.endsWith(":skipped") ? "bg-foreground/[0.05] text-muted-foreground" : "bg-violet/[0.09] text-[#4a3aa8]",
@@ -92,17 +95,21 @@ export function AssistantAnswer({ message, photos, canAct }: { message: Assistan
               >
                 <Check className="size-3" strokeWidth={2.4} />
                 {stepLabel(s)}
-              </li>
+              </motion.li>
             ))}
           </ul>
         ) : null}
 
         {message.text ? (
-          <Markdown text={message.text} />
-        ) : streaming ? (
-          <p className="text-[15px] font-medium text-violet" role="status">
-            <span className="text-gradient">{t.message.thinking}</span>
-          </p>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
+            <Markdown text={message.text} />
+            {streaming ? (
+              <p className="mt-2 inline-flex items-center gap-2 text-[12.5px] font-medium text-violet" role="status">
+                <span className="inline-block h-4 w-[3px] animate-caret rounded-full bg-violet" aria-hidden />
+                {t.message.writing}
+              </p>
+            ) : null}
+          </motion.div>
         ) : null}
 
         {message.status === "failed" ? (
@@ -134,6 +141,80 @@ export function AssistantAnswer({ message, photos, canAct }: { message: Assistan
           </button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/** The assistant's avatar; while it works, a turning azure-violet ring and a soft halo say so. */
+function AssistantOrb({ active }: { active: boolean }) {
+  return (
+    <span className="relative mt-0.5 flex size-8 shrink-0" aria-hidden>
+      {active ? (
+        <>
+          <motion.span
+            className="absolute -inset-2.5 rounded-full bg-violet/25 blur-[8px]"
+            animate={{ opacity: [0.35, 0.9, 0.35] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.span
+            className="absolute -inset-[6px] rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,var(--azure)_120deg,var(--violet)_240deg,transparent_360deg)]"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+          />
+        </>
+      ) : null}
+      <span className="orb relative flex size-8 items-center justify-center rounded-full">
+        <Sparkles className="size-4" strokeWidth={1.9} />
+      </span>
+    </span>
+  );
+}
+
+/** Before the first words arrive: the steps the assistant has really taken, the one it is on, a timer and placeholder lines. */
+function Analyzing({ steps, startedAt }: { steps: Step[]; startedAt: number }) {
+  const t = useMessages(assistantMessages);
+  const stepLabel = useStepLabel();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  // Until the first real step comes back, say what is happening in general terms.
+  const current = steps.length ? t.message.composing : seconds < 2 ? t.message.reading : t.message.checking;
+
+  return (
+    <div className="glass max-w-md overflow-hidden rounded-[22px] rounded-ss-md" role="status" aria-live="polite" aria-label={`${t.message.analyzing}: ${current}`}>
+      <div className="flex items-center justify-between gap-3 px-4 pt-3.5">
+        <p className="animate-shimmer bg-[linear-gradient(100deg,var(--azure)_0%,var(--violet)_35%,#c9c2ff_50%,var(--violet)_65%,var(--azure)_100%)] bg-[length:200%_100%] bg-clip-text text-[14.5px] font-semibold text-transparent">
+          {t.message.analyzing}
+        </p>
+        <span dir="ltr" className="font-mono text-[11.5px] text-muted-foreground tabular-nums">
+          {seconds}s
+        </span>
+      </div>
+      <ul className="space-y-2 px-4 pt-3 pb-3.5 text-[13px]">
+        <AnimatePresence initial={false}>
+          {steps.map((s, i) => (
+            <motion.li key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 text-foreground/75">
+              <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-azure to-violet text-white">
+                <Check className="size-2.5" strokeWidth={3} />
+              </span>
+              {stepLabel(s)}
+            </motion.li>
+          ))}
+          <motion.li key={`now-${steps.length}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 font-medium text-foreground">
+            <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full border-2 border-violet/25 border-t-violet motion-safe:animate-spin" />
+            {current}…
+          </motion.li>
+        </AnimatePresence>
+      </ul>
+      <div className="space-y-2 px-4 pb-4" aria-hidden>
+        {["w-11/12", "w-3/4", "w-1/2"].map((w) => (
+          <div key={w} className={cn("h-2.5 animate-shimmer rounded-full bg-[linear-gradient(90deg,rgba(123,92,240,0.08)_0%,rgba(63,108,242,0.22)_50%,rgba(123,92,240,0.08)_100%)] bg-[length:200%_100%]", w)} />
+        ))}
+      </div>
+      <div className="h-[3px] animate-shimmer bg-[linear-gradient(90deg,transparent,var(--azure),var(--violet),transparent)] bg-[length:200%_100%]" aria-hidden />
     </div>
   );
 }

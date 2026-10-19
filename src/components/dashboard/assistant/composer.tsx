@@ -120,8 +120,15 @@ export const Composer = forwardRef<ComposerHandle, { busy: boolean; disabled: bo
       className={cn(
         "glass relative rounded-[26px] p-2 shadow-[0_24px_50px_-30px_rgba(40,60,170,0.55)] transition-shadow",
         dragging && "ring-2 ring-violet/50",
+        busy && "ring-1 ring-violet/25",
       )}
     >
+      {busy ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-6 top-0 h-[2px] animate-shimmer rounded-full bg-[linear-gradient(90deg,transparent,var(--azure),var(--violet),transparent)] bg-[length:200%_100%]"
+        />
+      ) : null}
       {dragging ? (
         <p className="absolute inset-0 z-10 flex items-center justify-center rounded-[26px] bg-white/85 text-[15px] font-semibold text-violet">{t.composer.drop}</p>
       ) : null}
@@ -172,7 +179,7 @@ export const Composer = forwardRef<ComposerHandle, { busy: boolean; disabled: bo
           value={text}
           disabled={disabled}
           maxLength={2000}
-          placeholder={disabled ? t.composer.guest : t.composer.placeholder}
+          placeholder={disabled ? t.composer.guest : busy ? t.composer.working : t.composer.placeholder}
           aria-label={t.composer.placeholder}
           onChange={(e) => setText(e.target.value)}
           onPaste={(e) => {
