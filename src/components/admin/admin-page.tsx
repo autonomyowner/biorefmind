@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createContext, use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -68,32 +69,60 @@ function status(a: Account, now: number) {
   return `Trial ended ${fmt(a.trialEndsAt)}`;
 }
 
+/** Every admin page: its path, its sidebar entry and the anchor it had on the old one-page admin. */
+export const ADMIN = {
+  overview: { href: "/admin", label: "Overview", icon: LayoutDashboard, anchor: "top" },
+  interest: { href: "/admin/interest", label: "Interest requests", icon: MessageSquareHeart, anchor: "interest" },
+  lots: { href: "/admin/lots", label: "BiorefMind lots", icon: Package, anchor: "lots" },
+  openLots: { href: "/admin/open-lots", label: "All open lots", icon: Store, anchor: "moderation" },
+  accounts: { href: "/admin/accounts", label: "Accounts", icon: Users, anchor: "accounts" },
+  billing: { href: "/admin/billing", label: "Lab billing", icon: CreditCard, anchor: "billing" },
+  market: { href: "/admin/marketplace", label: "Marketplace", icon: HandCoins, anchor: "market" },
+  labWork: { href: "/admin/lab-requests", label: "Lab requests", icon: FlaskConical, anchor: "labwork" },
+  enterprise: { href: "/admin/enterprise", label: "Enterprise requests", icon: Inbox, anchor: "requests" },
+  activity: { href: "/admin/activity", label: "Activity", icon: History, anchor: "activity" },
+  ai: { href: "/admin/ai", label: "AI", icon: Sparkles, anchor: "ai" },
+} as const satisfies Record<string, { href: string; label: string; icon: LucideIcon; anchor: string }>;
+
 /** The sidebar; the interest requests item shows how many are new. */
 function nav(newInquiries: number): FrameItem[] {
-  return [
-    { href: "#top", label: "Overview", icon: LayoutDashboard },
-    { href: "#interest", label: "Interest requests", icon: MessageSquareHeart, badge: newInquiries },
-    { href: "#lots", label: "BiorefMind lots", icon: Package },
-    { href: "#moderation", label: "All open lots", icon: Store },
-    { href: "#accounts", label: "Accounts", icon: Users },
-    { href: "#billing", label: "Lab billing", icon: CreditCard },
-    { href: "#market", label: "Marketplace", icon: HandCoins },
-    { href: "#labwork", label: "Lab requests", icon: FlaskConical },
-    { href: "#requests", label: "Enterprise requests", icon: Inbox },
-    { href: "#activity", label: "Activity", icon: History },
-    { href: "#ai", label: "AI", icon: Sparkles },
-  ];
+  return Object.entries(ADMIN).map(([key, p]) => ({
+    href: p.href,
+    label: p.label,
+    icon: p.icon,
+    badge: key === "interest" ? newInquiries : undefined,
+  }));
+}
+
+/** The figures every admin page may need, loaded once by the shell. */
+const AdminContext = createContext<{ overview: Overview; now: number } | null>(null);
+
+function useAdmin() {
+  const value = use(AdminContext);
+  if (!value) throw new Error("useAdmin outside AdminShell");
+  return value;
 }
 
 /**
- * Admin dashboard: figures, interest requests, BiorefMind lots, moderation, accounts, lab billing, marketplace,
- * lab and enterprise requests, activity, AI settings. Others see "Page not found".
+ * The admin area's frame (`src/app/admin/layout.tsx`): sidebar with one page per section, the admin check
+ * (others see "Page not found") and the overview figures shared by the pages. Old `/admin#section` links
+ * forward to the page that now holds that section.
  */
-export function AdminPage() {
+export function AdminShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { isLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : "skip") as Viewer | undefined;
   const overview = useQuery(api.admin.overview, viewer?.isAdmin ? {} : "skip") as Overview | undefined;
   const [now] = useState(() => Date.now());
+
+  useEffect(() => {
+    const anchor = window.location.hash.slice(1);
+    if (pathname !== "/admin" || !anchor) return;
+    const page = Object.values(ADMIN).find((p) => p.anchor === anchor);
+    if (page && page.href !== "/admin") router.replace(page.href);
+  }, [pathname, router]);
+  const current = Object.values(ADMIN).find((p) => p.href === pathname)?.label ?? "Admin";
 
   if (isLoading || (isAuthenticated && viewer === undefined)) return <FrameSkeleton />;
   if (!viewer?.isAdmin) {
@@ -129,20 +158,25 @@ export function AdminPage() {
           <p className="truncate text-muted-foreground">{viewer.email}</p>
         </div>
       }
-      headerStart={<p className="truncate text-[15px] font-medium">Admin</p>}
+      headerStart={<p className="truncate text-[15px] font-medium">{current}</p>}
       headerEnd={<CurrencySwitch />}
     >
       {!overview ? (
         <Spinner className="flex py-20" />
       ) : (
-        <AdminBody overview={overview} now={now} />
+        // Sections were written for one long page; on their own page (inside the fade-in template) the first sits at the top.
+        <AdminContext value={{ overview, now }}>
+          <div className="[&>div>section:first-child]:mt-0">{children}</div>
+        </AdminContext>
       )}
     </AppFrame>
   );
 }
 
-function AdminBody({ overview, now }: { overview: Overview; now: number }) {
-  const { accounts, requests, stats } = overview;
+/** `/admin`: the figures, sign-ups, lab revenue and the labs that need attention. */
+export function AdminOverview() {
+  const { overview, now } = useAdmin();
+  const { accounts, stats } = overview;
   const sales = useQuery(api.admin.sales, {}) as AdminSales | undefined;
   const labs = accounts.filter((a) => a.kind === "lab");
   const paidLabs = labs.filter((a) => a.plan === "lab_paid" && (a.paidUntil ?? 0) > now).length;
@@ -164,20 +198,20 @@ function AdminBody({ overview, now }: { overview: Overview; now: number }) {
     { icon: Building2, label: "Factories", value: <CountUp value={count("factory")} /> },
   ];
   const marketTiles: { icon: LucideIcon; label: string; value: React.ReactNode; note?: string; href: string }[] = [
-    { icon: Store, label: "Open lots", value: <CountUp value={stats.openLots} />, note: "On the marketplace now", href: "#moderation" },
+    { icon: Store, label: "Open lots", value: <CountUp value={stats.openLots} />, note: "On the marketplace now", href: ADMIN.openLots.href },
     {
       icon: MessageSquareHeart,
       label: "New interest requests",
       value: <CountUp value={stats.newInquiries} />,
       note: stats.newInquiries > 0 ? "Call them back" : "All answered",
-      href: "#interest",
+      href: ADMIN.interest.href,
     },
     {
       icon: HandCoins,
       label: "Fees earned",
       value: sales ? formatDzd(sales.feeDzd + sales.sellerFeeDzd, "en") : "…",
       note: sales ? `buyers ${formatDzd(sales.feeDzd, "en")} · sellers ${formatDzd(sales.sellerFeeDzd, "en")}` : undefined,
-      href: "#market",
+      href: ADMIN.market.href,
     },
   ];
 
@@ -210,11 +244,11 @@ function AdminBody({ overview, now }: { overview: Overview; now: number }) {
       <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 sm:mt-4 sm:grid-cols-[repeat(3,minmax(0,1fr))] sm:gap-4">
         {marketTiles.map((s, i) => (
           <FadeIn as="li" key={s.label} index={i + 5} className="min-w-0">
-            <a
+            <Link
               href={s.href}
               className={cn(
                 "glass flex min-w-0 items-center gap-4 rounded-[22px] p-4 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-22px_rgba(40,60,170,0.55)] sm:p-5",
-                s.href === "#interest" && stats.newInquiries > 0 && "ring-2 ring-azure/40",
+                s.href === ADMIN.interest.href && stats.newInquiries > 0 && "ring-2 ring-azure/40",
               )}
             >
               <span className="orb flex size-10 shrink-0 items-center justify-center rounded-full">
@@ -225,7 +259,7 @@ function AdminBody({ overview, now }: { overview: Overview; now: number }) {
                 <span className="mt-1.5 block truncate text-[13px] text-muted-foreground">{s.label}</span>
                 {s.note ? <span className="mt-0.5 block truncate text-[12px] text-muted-foreground/80">{s.note}</span> : null}
               </span>
-            </a>
+            </Link>
           </FadeIn>
         ))}
       </ul>
@@ -270,20 +304,29 @@ function AdminBody({ overview, now }: { overview: Overview; now: number }) {
           </ul>
         </FadeIn>
       ) : null}
-
-      <InquiriesSection />
-      <HouseLotsSection />
-      <ModerationSection />
-      <AccountsSection accounts={accounts} now={now} />
-      <BillingSection labs={labs} now={now} />
-      <MarketSection />
-      <LabWorkSection />
-      <RequestsSection requests={requests} />
-      <ActivitySection />
-      <AiSection />
     </>
   );
 }
+
+/* ---------- One page per section (src/app/admin/<page>/page.tsx) ---------- */
+
+export function AdminAccountsPage() {
+  const { overview, now } = useAdmin();
+  return <AccountsSection accounts={overview.accounts} now={now} />;
+}
+
+export function AdminBillingPage() {
+  const { overview, now } = useAdmin();
+  return <BillingSection labs={overview.accounts.filter((a) => a.kind === "lab")} now={now} />;
+}
+
+export function AdminEnterprisePage() {
+  const { overview } = useAdmin();
+  return <RequestsSection requests={overview.requests} />;
+}
+
+export { ActivitySection, AiSection, HouseLotsSection, InquiriesSection, MarketSection, ModerationSection };
+export { LabWorkSection };
 
 /* ---------- Sign-ups chart ---------- */
 

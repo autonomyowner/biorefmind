@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { MapPin, Pencil, Plus, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
@@ -302,9 +303,9 @@ function HouseLotRow({ lot }: { lot: HouseLot }) {
             {lot.inquiries.new > 0 ? (
               <>
                 {" · "}
-                <a href="#interest" className="font-semibold text-azure">
+                <Link href="/admin/interest" className="font-semibold text-azure">
                   {lot.inquiries.new} new
-                </a>
+                </Link>
               </>
             ) : null}
           </p>
