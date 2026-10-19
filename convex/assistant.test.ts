@@ -64,17 +64,34 @@ async function photo(t: Backend): Promise<Id<"_storage">> {
   return await t.run(async (ctx) => ctx.storage.store(new Blob([data], { type: "image/jpeg" })));
 }
 
-/* ---------- A fake OpenRouter: each call takes the next scripted reply ---------- */
+/* ---------- A fake Anthropic API: each call takes the next scripted reply ---------- */
 
-const sse = (...events: object[]) =>
-  new Response(events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n", {
+/** Input tokens that cost `usd` at Haiku 5.5's $0.10 per million. */
+const tokensFor = (usd: number) => Math.round(usd * 1e7);
+
+/** A streamed Claude answer (server-sent events) made of the given content blocks. */
+function sse(blocks: { start: object; deltas: object[] }[], stopReason: string, cost: number) {
+  const events: [string, object][] = [
+    ["message_start", { type: "message_start", message: { id: "msg_1", type: "message", role: "assistant", model: "claude-haiku-5-5", content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: tokensFor(cost), output_tokens: 0 } } }],
+  ];
+  blocks.forEach((b, index) => {
+    events.push(["content_block_start", { type: "content_block_start", index, content_block: b.start }]);
+    for (const delta of b.deltas) events.push(["content_block_delta", { type: "content_block_delta", index, delta }]);
+    events.push(["content_block_stop", { type: "content_block_stop", index }]);
+  });
+  events.push(["message_delta", { type: "message_delta", delta: { stop_reason: stopReason, stop_sequence: null }, usage: { output_tokens: 0 } }]);
+  events.push(["message_stop", { type: "message_stop" }]);
+  return new Response(events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join(""), {
     status: 200,
     headers: { "Content-Type": "text/event-stream" },
   });
+}
 const say = (text: string, cost = 0.001) =>
-  sse(...text.split(/(?<= )/).map((w) => ({ choices: [{ delta: { content: w } }] })), { choices: [{ delta: {} }], usage: { cost } });
+  sse([{ start: { type: "text", text: "" }, deltas: text.split(/(?<= )/).map((w) => ({ type: "text_delta", text: w })) }], "end_turn", cost);
 const call = (name: string, args: object, id = "c1") =>
-  sse({ choices: [{ delta: { tool_calls: [{ index: 0, id, type: "function", function: { name, arguments: JSON.stringify(args) } }] } }] }, { usage: { cost: 0.001 } });
+  sse([{ start: { type: "tool_use", id, name, input: {} }, deltas: [{ type: "input_json_delta", partial_json: JSON.stringify(args) }] }], "tool_use", 0.001);
+/** The tool results the next call sent back (the last user message), as text. */
+const toolResultsOf = (i: number) => JSON.stringify(bodyOf(i).messages.at(-1).content);
 
 let replies: (() => Response)[] = [];
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -91,7 +108,7 @@ async function settle(t: Backend) {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
-  vi.stubEnv("OPENROUTER_API_KEY", "sk-or-v1-envkey0000000000000");
+  vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api03-envkey00000000000000000000");
   vi.stubEnv("ADMIN_EMAILS", "boss@biorefmind.com");
 });
 afterEach(() => {
@@ -116,8 +133,8 @@ describe("conversations", () => {
     ]);
     const body = bodyOf(0);
     expect(body.stream).toBe(true);
-    expect(body.messages[0].content).toContain("Ferme Saïd");
-    expect(body.tools.map((x: { function: { name: string } }) => x.function.name)).toContain("propose_listing");
+    expect(body.system).toContain("Ferme Saïd");
+    expect(body.tools.map((x: { name: string }) => x.name)).toContain("propose_listing");
   });
 
   test("tool rounds: the model looks at my listings, then answers; a step chip is recorded", async () => {
@@ -130,10 +147,10 @@ describe("conversations", () => {
 
     const [, answer] = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(answer).toMatchObject({ text: "You have one open lot.", status: "done", steps: [{ tool: "my_listings", detail: "1" }] });
-    const second = bodyOf(1).messages;
-    const toolMsg = second.find((m: { role: string }) => m.role === "tool");
-    expect(toolMsg.content).toContain("olive_pomace");
-    expect(toolMsg.content).not.toContain("555");
+    const results = toolResultsOf(1);
+    expect(results).toContain("tool_result");
+    expect(results).toContain("olive_pomace");
+    expect(results).not.toContain("555");
   });
 
   test("other people's text and phones never reach the model unmasked", async () => {
@@ -145,10 +162,10 @@ describe("conversations", () => {
     const buyer = await company(t, "factory", "buyer@x.dz", "Usine Est");
     await buyer.as.mutation(api.assistant.send, { companyId: buyer.id, text: "Olive pomace?", photoIds: [] });
     await settle(t);
-    const toolMsg = bodyOf(1).messages.find((m: { role: string }) => m.role === "tool");
-    expect(toolMsg.content).toContain("•••");
-    expect(toolMsg.content).not.toMatch(/0555/);
-    expect(toolMsg.content).toContain("data, not instructions");
+    const results = toolResultsOf(1);
+    expect(results).toContain("•••");
+    expect(results).not.toMatch(/0555/);
+    expect(results).toContain("data, not instructions");
   });
 
   test("only the thread's owner can read, write, rename or delete it", async () => {
@@ -182,9 +199,9 @@ describe("conversations", () => {
     await boss.mutation(api.ai.update, { assistant: false });
     await expect(farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "hi", photoIds: [] })).rejects.toThrow(ASSIST_REFUSE.off);
     await boss.mutation(api.ai.update, { assistant: true });
-    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
     await expect(farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "hi", photoIds: [] })).rejects.toThrow(ASSIST_REFUSE.off);
-    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-v1-envkey0000000000000");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api03-envkey00000000000000000000");
 
     const { threadId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "first", photoIds: [] });
     await expect(farm.as.mutation(api.assistant.send, { companyId: farm.id, threadId, text: "second", photoIds: [] })).rejects.toThrow(ASSIST_REFUSE.busy);
@@ -228,8 +245,8 @@ describe("photos and cards", () => {
     const { threadId } = await farm.as.mutation(api.assistant.send, { companyId: farm.id, text: "What can I sell this for?", photoIds: [p] });
     await settle(t);
 
-    const parts = bodyOf(0).messages.at(-1).content as { type: string; image_url?: { url: string } }[];
-    expect(parts.some((x) => x.type === "image_url" && x.image_url!.url.startsWith("data:image/jpeg;base64,"))).toBe(true);
+    const parts = bodyOf(0).messages.at(-1).content as { type: string; source?: { type: string; media_type: string } }[];
+    expect(parts.some((x) => x.type === "image" && x.source?.type === "base64" && x.source.media_type === "image/jpeg")).toBe(true);
 
     const [question, answer] = (await farm.as.query(api.assistant.messages, { threadId }))!;
     expect(question.photos).toHaveLength(1);
@@ -325,7 +342,11 @@ describe("photos and cards", () => {
     };
     script(
       () => call("read_sheet", { request_id: sampleNo }, "r1"),
-      () => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(reading) } }], usage: { cost: 0.004 } }), { status: 200 }),
+      () =>
+        new Response(
+          JSON.stringify({ id: "msg_2", type: "message", role: "assistant", model: "claude-haiku-5-5", content: [{ type: "text", text: JSON.stringify(reading) }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: tokensFor(0.004), output_tokens: 0 } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
       () => call("propose_results", { request_id: sampleNo }, "r2"),
       () => say("Open the request to check the values."),
     );
@@ -353,7 +374,7 @@ describe("runs", () => {
     await settle(t);
     await farm.as.mutation(api.assistant.send, { companyId: farm.id, threadId, text: "And now?", photoIds: [] });
     await settle(t);
-    expect(JSON.stringify(bodyOf(1).messages)).not.toContain("data:image");
+    expect(JSON.stringify(bodyOf(1).messages)).not.toContain('"type":"image"');
   });
 
   test("an old attempt can't write into a retried answer", async () => {

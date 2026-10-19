@@ -88,59 +88,52 @@ const pair = {
   additionalProperties: false,
 };
 
-/** OpenRouter `response_format` limited to the analyses this request asked for. */
+/** The JSON schema of a reading, limited to the analyses this request asked for (Claude's structured output). */
 export function readSchema(analyses: readonly string[]) {
   const { items, panels } = split(analyses);
   return {
-    type: "json_schema",
-    json_schema: {
-      name: "lab_results",
-      strict: true,
-      schema: {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
         type: "object",
         properties: {
-          items: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                analysis: { type: "string", enum: items.length ? items : ["none"] },
-                value: { type: "number" },
-                qualifier: qualifierEnum,
-                uncertainty: { type: "number" },
-              },
-              required: ["analysis", "value", "qualifier", "uncertainty"],
-              additionalProperties: false,
-            },
-          },
-          panels: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                analysis: { type: "string", enum: panels.length ? panels : ["none"] },
-                lines: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: { name: { type: "string" }, value: { type: "number" }, qualifier: qualifierEnum, unit: { type: "string" } },
-                    required: ["name", "value", "qualifier", "unit"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["analysis", "lines"],
-              additionalProperties: false,
-            },
-          },
-          testedFrom: { type: "string" },
-          testedTo: { type: "string" },
-          notes: { type: "array", items: pair },
+          analysis: { type: "string", enum: items.length ? items : ["none"] },
+          value: { type: "number" },
+          qualifier: qualifierEnum,
+          uncertainty: { type: "number" },
         },
-        required: ["items", "panels", "testedFrom", "testedTo", "notes"],
+        required: ["analysis", "value", "qualifier", "uncertainty"],
         additionalProperties: false,
       },
     },
+    panels: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          analysis: { type: "string", enum: panels.length ? panels : ["none"] },
+          lines: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: { name: { type: "string" }, value: { type: "number" }, qualifier: qualifierEnum, unit: { type: "string" } },
+              required: ["name", "value", "qualifier", "unit"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["analysis", "lines"],
+        additionalProperties: false,
+      },
+    },
+    testedFrom: { type: "string" },
+    testedTo: { type: "string" },
+    notes: { type: "array", items: pair },
+  },
+  required: ["items", "panels", "testedFrom", "testedTo", "notes"],
+  additionalProperties: false,
   } as const;
 }
 

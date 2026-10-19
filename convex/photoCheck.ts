@@ -3,12 +3,12 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireMember } from "./lib/access";
+import { askJson, mediaBlock } from "./lib/claude";
 import {
   AI_REFUSE,
   CALL_TIMEOUT_MS,
   DAILY_CAP,
   FARM_DAILY_CAP,
-  OPENROUTER_URL,
   parsePhotoCheck,
   PHOTO_SCHEMA,
   photoCheckData,
@@ -135,39 +135,26 @@ export const save = internalMutation({
   },
 });
 
-/** One OpenRouter call: the parsed answer and its cost, or null. */
+/** One Claude call: the parsed answer and its cost, or null. */
 async function ask(key: string, model: string, category: string, residue: string, residueName: string | undefined, photoUrls: string[]) {
-  const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-    body: JSON.stringify({
+  let answer: { text: string; costUsd: number };
+  try {
+    answer = await askJson({
+      key,
       model,
-      max_tokens: 700,
-      temperature: 0.2,
-      response_format: PHOTO_SCHEMA,
-      usage: { include: true },
-      messages: [
-        { role: "system", content: photoCheckPrompt(residue, category) },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `${photoCheckData(residue, residueName)}\nHere are the lot's photos.` },
-            ...photoUrls.map((url) => ({ type: "image_url", image_url: { url } })),
-          ],
-        },
-      ],
-    }),
-  });
-  if (!res.ok) {
-    console.error("Photo check: OpenRouter error", res.status);
+      system: photoCheckPrompt(residue, category),
+      content: [{ type: "text", text: `${photoCheckData(residue, residueName)}\nHere are the lot's photos.` }, ...photoUrls.map(mediaBlock)],
+      schema: PHOTO_SCHEMA,
+      maxTokens: 4000,
+      timeoutMs: CALL_TIMEOUT_MS,
+    });
+  } catch (e) {
+    console.error("Photo check: Claude error", e && typeof e === "object" && "status" in e ? (e as { status?: number }).status : "network");
     return { result: null, cost: 0 };
   }
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { cost?: number } };
-  const text = json.choices?.[0]?.message?.content ?? "";
-  const result = parsePhotoCheck(text);
+  const result = parsePhotoCheck(answer.text);
   if (!result) console.error("Photo check: answer did not fit the shape");
-  return { result, cost: typeof json.usage?.cost === "number" ? json.usage.cost : 0 };
+  return { result, cost: answer.costUsd };
 }
 
 export const run = internalAction({

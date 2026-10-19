@@ -20,13 +20,13 @@ const BUTTON =
   "inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-white/70 px-4 text-[14px] font-medium transition-colors hover:bg-white disabled:opacity-60";
 const SOURCE = {
   saved: "Saved here",
-  env: "From the server setting (OPENROUTER_API_KEY)",
+  env: "From the server setting (ANTHROPIC_API_KEY)",
   none: "No key: AI features are off",
 } as const;
 
 const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
 
-/** OpenRouter key, model, the two feature switches and this month's checks, readings and spend. */
+/** Anthropic key, model, the two feature switches and this month's checks, readings and spend. */
 export function AiSection() {
   const s = useQuery(api.ai.settings, {});
   const saveKey = useMutation(api.ai.saveKey);
@@ -57,7 +57,7 @@ export function AiSection() {
     setTest(null);
     try {
       const r = await testKey({});
-      setTest(r.ok ? `Key works · ${usd(r.usageUsd)} used · ${r.limitUsd === null ? "no spending limit" : `limit ${usd(r.limitUsd)}`}` : r.error);
+      setTest(r.ok ? `Key works · ${r.model} answers` : r.error);
     } catch (err) {
       setTest(errorMessage(err));
     } finally {
@@ -71,7 +71,7 @@ export function AiSection() {
         <Sparkles className="size-5 text-violet" /> AI
       </h2>
       <p className="mt-1 text-[14px] text-muted-foreground">
-        BiorefMind uses OpenRouter for the dashboard assistant, the photo check on lots and the lab results reader. The key never leaves the backend.
+        BiorefMind uses Claude (Anthropic) for the dashboard assistant, the photo check on lots and the lab results reader. The key never leaves the backend.
       </p>
       {!s ? (
         <Spinner className="flex py-8" />
@@ -95,7 +95,7 @@ export function AiSection() {
           <div className="mt-5 rounded-2xl border border-white bg-white/70 p-4">
             <p className="flex flex-wrap items-center gap-2 text-[14px]">
               <KeyRound className="size-4 text-azure" />
-              <span className="font-semibold">OpenRouter key</span>
+              <span className="font-semibold">Anthropic key</span>
               {s.keyMasked ? (
                 <code dir="ltr" className="rounded-md bg-foreground/[0.06] px-2 py-0.5 text-[13px]">
                   {s.keyMasked}
@@ -119,8 +119,8 @@ export function AiSection() {
                 autoComplete="off"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                placeholder="Paste a new key (sk-or-…)"
-                aria-label="New OpenRouter key"
+                placeholder="Paste a new key (sk-ant-…)"
+                aria-label="New Anthropic key"
                 dir="ltr"
                 className={FIELD}
               />
@@ -173,7 +173,7 @@ export function AiSection() {
               <label htmlFor="ai-model" className="text-[14px] font-semibold">
                 Model
               </label>
-              <p className="text-[13px] text-muted-foreground">Any OpenRouter model that reads images, written as provider/model.</p>
+              <p className="text-[13px] text-muted-foreground">A Claude model ID, for example claude-haiku-5-5 (fast and cheap) or claude-sonnet-5-5.</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <input id="ai-model" dir="ltr" value={model ?? s.model} onChange={(e) => setModel(e.target.value)} className={FIELD} />
                 <button type="submit" disabled={busy !== "" || model === null || model.trim() === s.model} className={BUTTON}>

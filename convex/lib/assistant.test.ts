@@ -5,61 +5,14 @@ import {
   cleanQuestion,
   cleanToolArgs,
   ASSIST_REFUSE,
-  StreamReader,
   systemPrompt,
   titleFrom,
   toolsFor,
 } from "./assistant";
 
-const sse = (...events: object[]) => events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n";
-
-describe("StreamReader", () => {
-  test("text deltas, split anywhere, and the cost at the end", () => {
-    const body = sse(
-      { choices: [{ delta: { content: "Hel" } }] },
-      { choices: [{ delta: { content: "lo " } }] },
-      { choices: [{ delta: { content: "Saïd" } }] },
-      { choices: [{ delta: {} }], usage: { cost: 0.0021 } },
-    );
-    const r = new StreamReader();
-    const texts: string[] = [];
-    // Feed in awkward pieces, as the network does.
-    for (let i = 0; i < body.length; i += 7) texts.push(...r.push(body.slice(i, i + 7)));
-    expect(texts.join("")).toBe("Hello Saïd");
-    expect(r.done).toBe(true);
-    expect(r.costUsd).toBe(0.0021);
-    expect(r.toolCalls()).toEqual([]);
-  });
-
-  test("tool calls arrive in pieces and are joined by index", () => {
-    const body = sse(
-      { choices: [{ delta: { tool_calls: [{ index: 0, id: "c1", type: "function", function: { name: "search_lots", arguments: "" } }] } }] },
-      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"resid' } }] } }] },
-      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'ue":"olive_pomace"}' } }] } }] },
-      { choices: [{ delta: { tool_calls: [{ index: 1, id: "c2", function: { name: "my_sales", arguments: "{}" } }] } }] },
-    );
-    const r = new StreamReader();
-    r.push(body);
-    expect(r.toolCalls()).toEqual([
-      { id: "c1", name: "search_lots", arguments: '{"residue":"olive_pomace"}' },
-      { id: "c2", name: "my_sales", arguments: "{}" },
-    ]);
-  });
-
-  test("a tool call without an id gets one", () => {
-    const r = new StreamReader();
-    r.push(sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "my_sales", arguments: "{}" } }] } }] }));
-    expect(r.toolCalls()[0].id).toBe("call_0");
-  });
-
-  test("comment lines and keep-alives are ignored", () => {
-    const r = new StreamReader();
-    expect(r.push(": OPENROUTER PROCESSING\n\n" + sse({ choices: [{ delta: { content: "ok" } }] }))).toEqual(["ok"]);
-  });
-});
 
 describe("toolsFor", () => {
-  const names = (k: "farm" | "factory" | "lab") => toolsFor(k).map((t) => t.function.name);
+  const names = (k: "farm" | "factory" | "lab") => toolsFor(k).map((t) => t.name);
   test("each account gets its own tools, plus the shared ones", () => {
     expect(names("farm")).toEqual(
       expect.arrayContaining(["search_lots", "price_guide", "lab_directory", "my_sales", "my_listings", "my_offers_received", "my_lab_tests", "propose_listing", "propose_lab_request"]),

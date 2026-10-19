@@ -55,8 +55,8 @@ const AR: Record<string, string> = {
   "You don't have access to this workspace.":"ليس لديك صلاحية الوصول إلى مساحة العمل هذه.",
   "Something went wrong. Please try again.": "حدث خطأ ما. حاول مرة أخرى.",
   // AI photo check (convex/lib/ai.ts)
-  "That doesn't look like an OpenRouter key (it starts with sk-or-).": "لا يبدو هذا مفتاح OpenRouter (يبدأ بـ sk-or-).",
-  "Write the model as provider/model, for example google/gemini-3.8-flash.": "اكتب النموذج بالشكل provider/model، مثل google/gemini-3.8-flash.",
+  "That doesn't look like an Anthropic API key (it starts with sk-ant-).": "لا يبدو هذا مفتاح Anthropic API (يبدأ بـ sk-ant-).",
+  "Write a Claude model ID, for example claude-haiku-5-5.": "اكتب معرّف نموذج Claude، مثل claude-haiku-5-5.",
   "This photo check is not waiting for a retry.": "فحص الصور هذا لا ينتظر إعادة المحاولة.",
   "You can try again 3 times a day. Please try tomorrow.": "يمكنك إعادة المحاولة 3 مرات في اليوم. حاول غدًا.",
   // Assistant (convex/lib/assistant.ts)

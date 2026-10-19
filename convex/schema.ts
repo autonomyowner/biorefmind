@@ -358,7 +358,8 @@ export default defineSchema({
 
   /** Admin's AI settings (one row). Design: specs/2026-10-06-ai-photo-check-design.md */
   aiSettings: defineTable({
-    openrouterKey: v.optional(v.string()), // never returned to any client; falls back to env OPENROUTER_API_KEY
+    openrouterKey: v.optional(v.string()), // OpenRouter key from before 2026-10-19; no longer read
+    anthropicKey: v.optional(v.string()), // never returned to any client; falls back to env ANTHROPIC_API_KEY
     model: v.optional(v.string()),
     photoCheck: v.boolean(),
     resultsReader: v.optional(v.boolean()), // lab results reader; missing = on

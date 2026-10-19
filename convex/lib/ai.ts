@@ -4,14 +4,14 @@ import { maskPhones } from "./market";
 // Design and contract: docs/superpowers/specs/2026-10-06-ai-photo-check-design.md
 
 export const AI_REFUSE = {
-  key: "That doesn't look like an OpenRouter key (it starts with sk-or-).",
-  model: "Write the model as provider/model, for example google/gemini-3.8-flash.",
+  key: "That doesn't look like an Anthropic API key (it starts with sk-ant-).",
+  model: "Write a Claude model ID, for example claude-haiku-5-5.",
   notFailed: "This photo check is not waiting for a retry.",
   retries: "You can try again 3 times a day. Please try tomorrow.",
 } as const;
 
-/** Vision model used when the admin has not chosen one (and by the assistant). */
-export const DEFAULT_MODEL = "google/gemini-3.8-flash";
+/** Claude model used when the admin has not chosen one (photo check, results reader, assistant). */
+export const DEFAULT_MODEL = "claude-haiku-5-5";
 /** Photo checks across the whole platform per UTC day; beyond it new lots get none. */
 export const DAILY_CAP = 300;
 /** Photo checks one farm can use per UTC day, so no farm uses up the platform's cap. */
@@ -20,9 +20,8 @@ export const FARM_DAILY_CAP = 20;
 export const RETRIES_PER_DAY = 3;
 /** A check still pending after this long is treated as failed (the run died). */
 export const STUCK_AFTER_MS = 10 * 60_000;
-/** Each OpenRouter call gives up after this long. */
+/** Each AI call gives up after this long. */
 export const CALL_TIMEOUT_MS = 30_000;
-export const OPENROUTER_URL = "https://openrouter.ai/api/v1";
 
 export const CONCERNS = ["mould", "wet", "browning", "foreign_matter", "mixed", "poor_photo"] as const;
 
@@ -47,18 +46,18 @@ export type PhotoCheckResult = {
 
 export function cleanKey(raw: string): string {
   const key = raw.trim();
-  if (!/^sk-or-[A-Za-z0-9_-]{14,194}$/.test(key)) throw new ConvexError(AI_REFUSE.key);
+  if (!/^sk-ant-[A-Za-z0-9_-]{20,250}$/.test(key)) throw new ConvexError(AI_REFUSE.key);
   return key;
 }
 
-/** "sk-or-…9fc9": enough to recognise a key, never enough to use it. */
+/** "sk-ant-…9fc9": enough to recognise a key, never enough to use it. */
 export function maskKey(key: string | undefined): string {
-  return key ? `sk-or-…${key.slice(-4)}` : "";
+  return key ? `sk-ant-…${key.slice(-4)}` : "";
 }
 
 export function cleanModel(raw: string): string {
   const model = raw.trim();
-  if (model.length > 100 || !/^~?[a-z0-9-]+\/[A-Za-z0-9._:-]+$/.test(model)) throw new ConvexError(AI_REFUSE.model);
+  if (model.length > 60 || !/^claude-[a-z0-9-]+$/.test(model)) throw new ConvexError(AI_REFUSE.model);
   return model;
 }
 
@@ -131,26 +130,19 @@ const textPair = {
   additionalProperties: false,
 };
 
-/** OpenRouter `response_format` asking for exactly the PhotoCheckResult shape. */
+/** The JSON schema of a PhotoCheckResult (Claude's structured output). */
 export const PHOTO_SCHEMA = {
-  type: "json_schema",
-  json_schema: {
-    name: "photo_check",
-    strict: true,
-    schema: {
-      type: "object",
-      properties: {
-        match: { type: "string", enum: ["yes", "unsure", "no"] },
-        seen: textPair,
-        state: { type: "string", enum: ["fresh", "dried", "unclear"] },
-        concerns: { type: "array", items: { type: "string", enum: [...CONCERNS] } },
-        tip: textPair,
-      },
-      required: ["match", "seen", "state", "concerns", "tip"],
-      additionalProperties: false,
-    },
+  type: "object",
+  properties: {
+    match: { type: "string", enum: ["yes", "unsure", "no"] },
+    seen: textPair,
+    state: { type: "string", enum: ["fresh", "dried", "unclear"] },
+    concerns: { type: "array", items: { type: "string", enum: [...CONCERNS] } },
+    tip: textPair,
   },
-} as const;
+  required: ["match", "seen", "state", "concerns", "tip"],
+  additionalProperties: false,
+};
 
 const MAX_TEXT = 160;
 /** Links and bare domains: the model's text is public, so it may not point anywhere. */

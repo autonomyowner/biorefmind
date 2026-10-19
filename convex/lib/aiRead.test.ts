@@ -108,12 +108,12 @@ describe("parseReading", () => {
 describe("readSchema and readingPrompt", () => {
   test("the schema only allows the analyses requested", () => {
     const s = readSchema(analyses);
-    const items = s.json_schema.schema.properties.items.items.properties.analysis.enum;
-    const panels = s.json_schema.schema.properties.panels.items.properties.analysis.enum;
+    const items = s.properties.items.items.properties.analysis.enum;
+    const panels = s.properties.panels.items.properties.analysis.enum;
     expect(items).toEqual(["moisture", "punicalagin", "mold"]);
     expect(panels).toEqual(["heavy_metals"]);
     // Nothing of one kind requested still gives a valid schema.
-    expect(readSchema(["moisture"]).json_schema.schema.properties.panels.items.properties.analysis.enum).toEqual(["none"]);
+    expect(readSchema(["moisture"]).properties.panels.items.properties.analysis.enum).toEqual(["none"]);
   });
 
   test("the prompt names each analysis with its unit", () => {

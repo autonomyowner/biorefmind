@@ -31,6 +31,7 @@ import type * as lib_ai from "../lib/ai.js";
 import type * as lib_aiRead from "../lib/aiRead.js";
 import type * as lib_assistant from "../lib/assistant.js";
 import type * as lib_catalog from "../lib/catalog.js";
+import type * as lib_claude from "../lib/claude.js";
 import type * as lib_crops from "../lib/crops.js";
 import type * as lib_inquiries from "../lib/inquiries.js";
 import type * as lib_insights from "../lib/insights.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   "lib/aiRead": typeof lib_aiRead;
   "lib/assistant": typeof lib_assistant;
   "lib/catalog": typeof lib_catalog;
+  "lib/claude": typeof lib_claude;
   "lib/crops": typeof lib_crops;
   "lib/inquiries": typeof lib_inquiries;
   "lib/insights": typeof lib_insights;

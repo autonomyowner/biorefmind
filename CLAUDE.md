@@ -36,7 +36,7 @@ English (default) and Arabic (right to left): no URL prefix; the language lives 
 - Reading the cookie makes every page dynamic (`ƒ` in the build).
 
 ## Convex
-Own project `biorefmind-platform` (team `azeddine-zellag`), dev deployment `resolute-retriever-764` (in `.env.local`). Env set on dev: `SITE_URL` (= `http://localhost:3100`), `BETTER_AUTH_SECRET`. Optional: `OPENROUTER_API_KEY`, `AI_MODEL`. No production deployment yet.
+Own project `biorefmind-platform` (team `azeddine-zellag`), dev deployment `resolute-retriever-764` (in `.env.local`). Env set on dev: `SITE_URL` (= `http://localhost:3100`), `BETTER_AUTH_SECRET`. Optional: `ANTHROPIC_API_KEY` (AI features), `AI_MODEL` (a `claude-…` ID). `OPENROUTER_API_KEY` is no longer read. No production deployment yet.
 
 ## Commands (PowerShell)
 ```
@@ -176,6 +176,13 @@ Design + contract `docs/superpowers/specs/2026-10-11-fresh-managed-admin-design.
 - `src/app/admin/layout.tsx` renders `AdminShell` (admin check, sidebar in route mode, `admin.overview` loaded once and shared through context); `template.tsx` cross-fades pages like the dashboard. Old `/admin#anchor` links forward to the new page (`ADMIN[*].anchor`).
 - Website only. 304 tests, type check, lint, build. Chrome on dev: all 11 pages load with the right sidebar item and tab title, `#ai` → `/admin/ai`, `#moderation` → `/admin/open-lots`, Overview tile → page, 360 px no sideways scroll, no console errors. A browser check must sign in through the login form (an API-only sign-in skips `ensureUser`, so the app profile is missing and the admin sees "Page Not Found"). Dev `ADMIN_EMAILS` also lists `admin-smoke-1019@example.com`. Rollback: redeploy `cad30b8`.
 
+## AI moved from OpenRouter to Claude (shipped 2026-10-19)
+- Owner: "use the Anthropic API and the Haiku model, not OpenRouter". Every AI call (dashboard assistant, its `read_sheet` step, lot photo check, lab results reader, admin Test key) now goes to Anthropic's Messages API through the official SDK `@anthropic-ai/sdk`, in one adapter `convex/lib/claude.ts` (`claude()` client, `askJson` structured answers, `mediaBlock` images/PDFs, `costOf` spend from token usage). Default model `claude-haiku-5-5` (`DEFAULT_MODEL` in `convex/lib/ai.ts`); the admin can set another `claude-…` ID. **Never import `lib/claude.ts` from the schema or anything it imports** (the SDK can't load while the schema is evaluated: `NoImportModuleInSchema`).
+- Key: env `ANTHROPIC_API_KEY`, or one saved in `/admin/ai` (`aiSettings.anthropicKey`, format `sk-ant-…`, masked). `aiSettings.openrouterKey` and an OpenRouter model saved earlier are ignored. Test key = `models.retrieve(model)` (free).
+- Assistant loop (`assistant.run`): our own streamed manual loop (step chips, cards, per-answer deadline and limits), not the SDK tool runner. Tools in Anthropic shape (`lib/assistant.ts`); the whole assistant turn (thinking blocks included) goes back with all tool results in one user message; the last round sends `tool_choice: none`; effort `low`, `max_tokens` 4000. Structured answers use `output_config.format` json_schema (`PHOTO_SCHEMA`, `readSchema`), effort low (photo) / medium (lab reading). No `temperature` (Haiku 5.5 rejects non-default sampling).
+- Spend: `costOf` at Haiku 5.5's $0.10 / $0.50 per million tokens (other Claude models in its table), rounded to 1e-9 USD.
+- 300 tests (Anthropic faked at `fetch`: JSON messages and SSE streams), both type checks, lint, build. Dev with the real model: photo check answered in ~5 s (bilingual, "not peels" for an illustration), assistant price question → "Checked asking prices" → streamed answer in ~3 s, admin Test key "Claude Haiku 5.5 answers"; no console errors. Shipped: Convex prod `ANTHROPIC_API_KEY` set and deployed first, then `main` pushed. Rollback: redeploy code `9984f44` and `npx convex deploy` from it (prod still has `OPENROUTER_API_KEY`).
+
 ## Production (shipped 2026-10-02)
 - Site: **https://biorefmind.vercel.app** (Vercel project `biorefmind`, team azeddine-zellags-projects, Git-connected: pushes to `main` deploy). First prod deployment: `biorefmind-6aeuzadn4…` (the earlier `biorefmind-1xqsierlj…` had broken env vars).
 - Convex prod: `adventurous-hornet-38` (`https://adventurous-hornet-38.eu-west-1.convex.cloud`); env `SITE_URL=https://biorefmind.vercel.app`, `BETTER_AUTH_SECRET`, `ADMIN_EMAILS`. Deploy functions with `npx convex deploy -y`.
@@ -185,7 +192,7 @@ Design + contract `docs/superpowers/specs/2026-10-11-fresh-managed-admin-design.
 
 ## Open decisions (ask the owner)
 1. Scoring thresholds in `convex/lib/crops.ts` are placeholders until calibrated with lab data.
-2. OpenRouter key: the owner pasted one in chat on 2026-10-06 (set on dev and prod). Make a fresh key with a monthly limit, paste it in `/admin#ai`, then delete the old one at openrouter.ai. Without any key, the assistant is rule-based and photo checks are off.
+2. Anthropic key (2026-10-19): the owner pasted one in chat; it is set as `ANTHROPIC_API_KEY` on dev and prod Convex. Better: make a fresh key with a monthly spend limit at console.anthropic.com, paste it in `/admin/ai`, then revoke the pasted one. The old OpenRouter key (pasted 2026-10-06) is no longer used and can be deleted at openrouter.ai. Without any key, the assistant is rule-based and photo checks are off.
 3. The theme's social icons (Facebook, X, Instagram) were left out: no account links yet.
 4. In Arabic the hero photo is mirrored, so the emblem in it is mirrored too. Alternative: keep it unmirrored on the left.
 5. Copy is BioGrena's with the brand renamed, plus new hero lines ("AI quality scoring for bio-waste", "Farmers, factories & labs on one platform") — Arabic should be reviewed by a native speaker.

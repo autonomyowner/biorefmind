@@ -10,25 +10,24 @@ const good = {
 };
 
 describe("keys", () => {
-  test("cleanKey keeps an OpenRouter key and refuses anything else", () => {
-    expect(cleanKey("  sk-or-v1-abcdef0123456789  ")).toBe("sk-or-v1-abcdef0123456789");
-    for (const bad of ["", "sk-abc", "sk-or-short", "sk-or-v1-" + "a".repeat(300), "sk-or-v1-abc def 0123456789"]) {
+  test("cleanKey keeps an Anthropic key and refuses anything else", () => {
+    expect(cleanKey("  sk-ant-api03-abcdef0123456789abcdef  ")).toBe("sk-ant-api03-abcdef0123456789abcdef");
+    for (const bad of ["", "sk-abc", "sk-or-v1-abcdef0123456789", "sk-ant-short", "sk-ant-api03-" + "a".repeat(300), "sk-ant-api03-abc def 0123456789abcdef"]) {
       expect(() => cleanKey(bad)).toThrow(AI_REFUSE.key);
     }
   });
 
   test("maskKey shows only the start and the last 4 characters", () => {
-    expect(maskKey("sk-or-v1-5ebb3f6aa7207e2e9fc9")).toBe("sk-or-…9fc9");
+    expect(maskKey("sk-ant-api03-5ebb3f6aa7207e2e9fc9")).toBe("sk-ant-…9fc9");
     expect(maskKey(undefined)).toBe("");
   });
 });
 
 describe("cleanModel", () => {
-  test("provider/model, up to 100 characters", () => {
-    expect(cleanModel(" google/gemini-3.8-flash ")).toBe("google/gemini-3.8-flash");
-    expect(cleanModel("~anthropic/claude-haiku-latest")).toBe("~anthropic/claude-haiku-latest");
-    expect(cleanModel("openai/gpt-5-mini:batch")).toBe("openai/gpt-5-mini:batch");
-    for (const bad of ["", "gemini", "google/", "/x", "a/b c", "a/" + "b".repeat(100)]) {
+  test("a Claude model ID, up to 60 characters", () => {
+    expect(cleanModel(" claude-haiku-5-5 ")).toBe("claude-haiku-5-5");
+    expect(cleanModel("claude-sonnet-5-5")).toBe("claude-sonnet-5-5");
+    for (const bad of ["", "haiku", "google/gemini-3.8-flash", "anthropic/claude-haiku", "claude-Haiku", "claude-" + "a".repeat(60)]) {
       expect(() => cleanModel(bad)).toThrow(AI_REFUSE.model);
     }
   });

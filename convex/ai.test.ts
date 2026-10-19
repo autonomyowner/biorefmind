@@ -85,11 +85,32 @@ const answer = {
   tip: { en: "Add a close-up.", ar: "أضف صورة قريبة." },
 };
 
-function okResponse(cost = 0.004) {
-  return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer) } }], usage: { cost } }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+const PRICE_IN: Record<string, number> = { "claude-haiku-5-5": 0.1, "claude-sonnet-5-5": 2 };
+
+/** A Claude Messages API answer; `cost` (USD) is turned into input tokens at `model`'s price. */
+function claudeMessage(text: string, cost = 0, model = DEFAULT_MODEL) {
+  const usage = { input_tokens: Math.round((cost / PRICE_IN[model]) * 1e6), output_tokens: 0 };
+  return new Response(
+    JSON.stringify({ id: "msg_1", type: "message", role: "assistant", model, content: [{ type: "text", text }], stop_reason: "end_turn", stop_sequence: null, usage }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function okResponse(cost = 0.004, model = DEFAULT_MODEL) {
+  return claudeMessage(JSON.stringify(answer), cost, model);
+}
+
+/** A streamed Claude answer (server-sent events) with one text block. */
+function claudeStream(text: string) {
+  const events: [string, object][] = [
+    ["message_start", { type: "message_start", message: { id: "msg_1", type: "message", role: "assistant", model: DEFAULT_MODEL, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 0 } } }],
+    ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }],
+    ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } }],
+    ["content_block_stop", { type: "content_block_stop", index: 0 }],
+    ["message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } }],
+    ["message_stop", { type: "message_stop" }],
+  ];
+  return new Response(events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join(""), { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -98,7 +119,7 @@ function stubFetch(impl: (url: string, init?: RequestInit) => Response | Promise
   vi.stubGlobal("fetch", fetchMock);
 }
 const bodyOf = (call: number) => JSON.parse(String(fetchMock.mock.calls[call][1]?.body));
-const authOf = (call: number) => (fetchMock.mock.calls[call][1]?.headers as Record<string, string>).Authorization;
+const authOf = (call: number) => new Headers(fetchMock.mock.calls[call][1]?.headers).get("x-api-key");
 
 /** Runs the scheduled photo check(s) to the end. */
 async function runChecks(t: Backend) {
@@ -107,7 +128,7 @@ async function runChecks(t: Backend) {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubEnv("OPENROUTER_API_KEY", "sk-or-v1-envkey0000000000000");
+  vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api03-envkey00000000000000000000");
   vi.stubEnv("ADMIN_EMAILS", "boss@biorefmind.com");
 });
 afterEach(() => {
@@ -129,13 +150,13 @@ describe("photo check", () => {
 
     await runChecks(t);
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(String(fetchMock.mock.calls[0][0])).toBe("https://openrouter.ai/api/v1/chat/completions");
-    expect(authOf(0)).toBe("Bearer sk-or-v1-envkey0000000000000");
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://api.anthropic.com/v1/messages");
+    expect(authOf(0)).toBe("sk-ant-api03-envkey00000000000000000000");
     const body = bodyOf(0);
     expect(body.model).toBe(DEFAULT_MODEL);
-    expect(body.response_format.type).toBe("json_schema");
-    const parts = body.messages[1].content as { type: string }[];
-    expect(parts.filter((p) => p.type === "image_url")).toHaveLength(2);
+    expect(body.output_config.format.type).toBe("json_schema");
+    const parts = body.messages[0].content as { type: string }[];
+    expect(parts.filter((p) => p.type === "image")).toHaveLength(2);
     // Nothing about the farm itself leaves BiorefMind.
     const sent = JSON.stringify(body);
     for (const secret of ["Ferme Saïd", "Sétif", "555", "Dried in the sun"]) expect(sent).not.toContain(secret);
@@ -165,7 +186,7 @@ describe("photo check", () => {
     await runChecks(t);
 
     await boss.mutation(api.ai.update, { photoCheck: true });
-    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
     await post(t, f.as, f.id);
     await runChecks(t);
 
@@ -257,8 +278,8 @@ describe("photo check", () => {
     await runChecks(t);
     expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
     const body = bodyOf(0);
-    expect(body.messages[0].content).not.toContain("Fig leaves");
-    expect(JSON.stringify(body.messages[1].content)).toContain("Fig leaves");
+    expect(body.system).not.toContain("Fig leaves");
+    expect(JSON.stringify(body.messages[0].content)).toContain("Fig leaves");
   });
 
   test("retry refuses a lot that is no longer open", async () => {
@@ -285,7 +306,7 @@ describe("photo check", () => {
     await expect(buyer.as.mutation(api.photoCheck.retry, { listingId })).rejects.toThrow("You don't have access to this workspace.");
 
     // A model answer that doesn't fit the shape also fails.
-    stubFetch(() => new Response(JSON.stringify({ choices: [{ message: { content: "sorry" } }] }), { status: 200 }));
+    stubFetch(() => claudeMessage("sorry"));
     await f.as.mutation(api.photoCheck.retry, { listingId });
     expect((await f.as.query(api.market.myListings, { companyId: f.id }))[0].photoCheck).toEqual({ status: "pending" });
     await runChecks(t);
@@ -317,7 +338,7 @@ describe("admin AI settings", () => {
     const f = await farm(t);
     for (const call of [
       () => f.as.query(api.ai.settings, {}),
-      () => f.as.mutation(api.ai.saveKey, { key: "sk-or-v1-abcdef0123456789" }),
+      () => f.as.mutation(api.ai.saveKey, { key: "sk-ant-api03-abcdef0123456789abcdef" }),
       () => f.as.mutation(api.ai.removeKey, {}),
       () => f.as.mutation(api.ai.update, { photoCheck: false }),
       () => f.as.action(api.ai.testKey, {}),
@@ -327,12 +348,12 @@ describe("admin AI settings", () => {
   });
 
   test("a saved key is masked, wins over the server setting, and can be removed", async () => {
-    stubFetch(() => okResponse(0.0025));
+    stubFetch(() => okResponse(0.0025, "claude-sonnet-5-5"));
     const t = newBackend();
     const boss = await admin(t);
     expect(await boss.query(api.ai.settings, {})).toEqual({
       keySource: "env",
-      keyMasked: "sk-or-…0000",
+      keyMasked: "sk-ant-…0000",
       model: DEFAULT_MODEL,
       photoCheck: true,
       resultsReader: true,
@@ -341,54 +362,54 @@ describe("admin AI settings", () => {
     });
 
     await expect(boss.mutation(api.ai.saveKey, { key: "nope" })).rejects.toThrow(AI_REFUSE.key);
-    await boss.mutation(api.ai.saveKey, { key: " sk-or-v1-savedkey1234567890abcd " });
-    await expect(boss.mutation(api.ai.update, { model: "gemini" })).rejects.toThrow(AI_REFUSE.model);
-    await boss.mutation(api.ai.update, { model: "openai/gpt-5-mini" });
+    await boss.mutation(api.ai.saveKey, { key: " sk-ant-api03-savedkey1234567890abcd " });
+    await expect(boss.mutation(api.ai.update, { model: "google/gemini-3.8-flash" })).rejects.toThrow(AI_REFUSE.model);
+    await boss.mutation(api.ai.update, { model: "claude-sonnet-5-5" });
     const s = await boss.query(api.ai.settings, {});
-    expect(s).toMatchObject({ keySource: "saved", keyMasked: "sk-or-…abcd", model: "openai/gpt-5-mini" });
+    expect(s).toMatchObject({ keySource: "saved", keyMasked: "sk-ant-…abcd", model: "claude-sonnet-5-5" });
     expect(JSON.stringify(s)).not.toContain("savedkey");
 
     const f = await farm(t);
     await post(t, f.as, f.id);
     await runChecks(t);
-    expect(authOf(0)).toBe("Bearer sk-or-v1-savedkey1234567890abcd");
-    expect(bodyOf(0).model).toBe("openai/gpt-5-mini");
+    expect(authOf(0)).toBe("sk-ant-api03-savedkey1234567890abcd");
+    expect(bodyOf(0).model).toBe("claude-sonnet-5-5");
     expect((await boss.query(api.ai.settings, {})).month).toEqual({ done: 1, failed: 0, reads: 0, questions: 0, costUsd: 0.0025 });
 
     await boss.mutation(api.ai.removeKey, {});
-    expect(await boss.query(api.ai.settings, {})).toMatchObject({ keySource: "env", keyMasked: "sk-or-…0000" });
-    vi.stubEnv("OPENROUTER_API_KEY", "");
+    expect(await boss.query(api.ai.settings, {})).toMatchObject({ keySource: "env", keyMasked: "sk-ant-…0000" });
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
     expect(await boss.query(api.ai.settings, {})).toMatchObject({ keySource: "none", keyMasked: "" });
   });
 
-  test("Test key reports usage and limit, or the problem in plain words", async () => {
+  test("Test key asks Anthropic about the model, or says the problem in plain words", async () => {
     const t = newBackend();
     const boss = await admin(t);
-    stubFetch(() => new Response(JSON.stringify({ data: { usage: 1.25, limit: 20 } }), { status: 200 }));
-    expect(await boss.action(api.ai.testKey, {})).toEqual({ ok: true, usageUsd: 1.25, limitUsd: 20 });
-    expect(String(fetchMock.mock.calls[0][0])).toBe("https://openrouter.ai/api/v1/key");
+    const json = (body: object, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+    stubFetch(() => json({ type: "model", id: DEFAULT_MODEL, display_name: "Claude Haiku 5.5", created_at: "2026-10-07T18:00:00Z" }));
+    expect(await boss.action(api.ai.testKey, {})).toEqual({ ok: true, model: "Claude Haiku 5.5" });
+    expect(String(fetchMock.mock.calls[0][0])).toBe(`https://api.anthropic.com/v1/models/${DEFAULT_MODEL}`);
 
-    stubFetch(() => new Response("{}", { status: 401 }));
-    expect(await boss.action(api.ai.testKey, {})).toEqual({ ok: false, error: "OpenRouter refused the key (401)." });
+    const apiError = (type: string) => ({ type: "error", error: { type, message: "x" } });
+    stubFetch(() => json(apiError("authentication_error"), 401));
+    expect(await boss.action(api.ai.testKey, {})).toEqual({ ok: false, error: "Anthropic refused the key (401)." });
+    stubFetch(() => json(apiError("not_found_error"), 404));
+    expect(await boss.action(api.ai.testKey, {})).toEqual({ ok: false, error: `The key works, but the model ${DEFAULT_MODEL} was not found.` });
 
-    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
     expect(await boss.action(api.ai.testKey, {})).toEqual({ ok: false, error: "No key saved." });
   });
 
   test("the assistant uses the saved key and model", async () => {
-    stubFetch(() => new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: "Hello" } }] })}
-
-data: [DONE]
-
-`, { status: 200 }));
+    stubFetch(() => claudeStream("Hello"));
     const t = newBackend();
     const boss = await admin(t);
-    await boss.mutation(api.ai.saveKey, { key: "sk-or-v1-savedkey1234567890abcd" });
+    await boss.mutation(api.ai.saveKey, { key: "sk-ant-api03-savedkey1234567890abcd" });
     const f = await factory(t);
     const { threadId } = await f.as.mutation(api.assistant.send, { companyId: f.id, text: "Hi", photoIds: [] });
     await runChecks(t);
     expect((await f.as.query(api.assistant.messages, { threadId }))![1].text).toBe("Hello");
-    expect(authOf(0)).toBe("Bearer sk-or-v1-savedkey1234567890abcd");
+    expect(authOf(0)).toBe("sk-ant-api03-savedkey1234567890abcd");
     expect(bodyOf(0).model).toBe(DEFAULT_MODEL);
   });
 });

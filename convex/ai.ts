@@ -3,7 +3,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireAdmin } from "./admin";
-import { cleanKey, cleanModel, DEFAULT_MODEL, maskKey, OPENROUTER_URL } from "./lib/ai";
+import { cleanKey, cleanModel, DEFAULT_MODEL, maskKey } from "./lib/ai";
+import { claude } from "./lib/claude";
 
 // Admin AI settings. Design and contract: docs/superpowers/specs/2026-10-06-ai-photo-check-design.md
 // The key is read only by internal functions; no public function ever returns it.
@@ -12,15 +13,18 @@ async function settingsRow(ctx: QueryCtx | MutationCtx) {
   return await ctx.db.query("aiSettings").first();
 }
 
-/** The key and model every AI call uses: the admin's saved key first, then the server setting. */
+/** A saved or configured model, unless it is an OpenRouter one from before the switch to Claude. */
+const claudeModel = (m: string | undefined) => (m && m.startsWith("claude-") ? m : undefined);
+
+/** The key and model every AI call uses: the admin's saved Anthropic key first, then the server setting. */
 export async function resolveConfig(ctx: QueryCtx) {
   const row = await settingsRow(ctx);
-  const envKey = process.env.OPENROUTER_API_KEY || undefined;
-  const key = row?.openrouterKey ?? envKey;
+  const envKey = process.env.ANTHROPIC_API_KEY || undefined;
+  const key = row?.anthropicKey ?? envKey;
   return {
     key,
-    keySource: (row?.openrouterKey ? "saved" : envKey ? "env" : "none") as "saved" | "env" | "none",
-    model: row?.model ?? (process.env.AI_MODEL || DEFAULT_MODEL),
+    keySource: (row?.anthropicKey ? "saved" : envKey ? "env" : "none") as "saved" | "env" | "none",
+    model: claudeModel(row?.model) ?? claudeModel(process.env.AI_MODEL) ?? DEFAULT_MODEL,
     photoCheck: row?.photoCheck ?? true,
     resultsReader: row?.resultsReader ?? true,
     assistant: row?.assistant ?? true,
@@ -89,7 +93,7 @@ export const settings = query({
 async function upsert(
   ctx: MutationCtx,
   userId: Id<"users">,
-  patch: { openrouterKey?: string | undefined; model?: string; photoCheck?: boolean; resultsReader?: boolean; assistant?: boolean },
+  patch: { anthropicKey?: string | undefined; model?: string; photoCheck?: boolean; resultsReader?: boolean; assistant?: boolean },
 ) {
   const row = await settingsRow(ctx);
   const stamp = { updatedAt: Date.now(), updatedBy: userId };
@@ -101,7 +105,7 @@ export const saveKey = mutation({
   args: { key: v.string() },
   handler: async (ctx, { key }) => {
     const user = await requireAdmin(ctx);
-    await upsert(ctx, user._id, { openrouterKey: cleanKey(key) });
+    await upsert(ctx, user._id, { anthropicKey: cleanKey(key) });
     return null;
   },
 });
@@ -111,7 +115,7 @@ export const removeKey = mutation({
   args: {},
   handler: async (ctx) => {
     const user = await requireAdmin(ctx);
-    await upsert(ctx, user._id, { openrouterKey: undefined });
+    await upsert(ctx, user._id, { anthropicKey: undefined });
     return null;
   },
 });
@@ -135,25 +139,27 @@ export const adminKey = internalQuery({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    return (await resolveConfig(ctx)).key ?? null;
+    const c = await resolveConfig(ctx);
+    return c.key ? { key: c.key, model: c.model } : null;
   },
 });
 
-type TestResult = { ok: true; usageUsd: number; limitUsd: number | null } | { ok: false; error: string };
+type TestResult = { ok: true; model: string } | { ok: false; error: string };
 
-/** Asks OpenRouter about the key (free): spend so far and the limit, or the problem in plain words. */
+/** Asks Anthropic about the chosen model with the key (free, no tokens): works, or the problem in plain words. */
 export const testKey = action({
   args: {},
   handler: async (ctx): Promise<TestResult> => {
-    const key: string | null = await ctx.runQuery(internal.ai.adminKey, {});
-    if (!key) return { ok: false, error: "No key saved." };
+    const cfg: { key: string; model: string } | null = await ctx.runQuery(internal.ai.adminKey, {});
+    if (!cfg) return { ok: false, error: "No key saved." };
     try {
-      const res = await fetch(`${OPENROUTER_URL}/key`, { headers: { Authorization: `Bearer ${key}` } });
-      if (!res.ok) return { ok: false, error: `OpenRouter refused the key (${res.status}).` };
-      const json = (await res.json()) as { data?: { usage?: number; limit?: number | null } };
-      return { ok: true, usageUsd: json.data?.usage ?? 0, limitUsd: json.data?.limit ?? null };
-    } catch {
-      return { ok: false, error: "Could not reach OpenRouter. Please try again." };
+      const m = await claude(cfg.key, 15_000).models.retrieve(cfg.model);
+      return { ok: true, model: m.display_name };
+    } catch (e) {
+      const status = e && typeof e === "object" && "status" in e ? (e as { status?: number }).status : undefined;
+      if (status === 401 || status === 403) return { ok: false, error: `Anthropic refused the key (${status}).` };
+      if (status === 404) return { ok: false, error: `The key works, but the model ${cfg.model} was not found.` };
+      return { ok: false, error: "Could not reach Anthropic. Please try again." };
     }
   },
 });

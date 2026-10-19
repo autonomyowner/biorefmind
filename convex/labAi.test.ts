@@ -114,12 +114,25 @@ function stubFetch(impl: () => Response) {
   fetchMock = vi.fn(async () => impl());
   vi.stubGlobal("fetch", fetchMock);
 }
+/** A Claude answer with the reading; `cost` (USD) becomes input tokens at Haiku 5.5's $0.10 per million. */
 const ok = (cost = 0.004) =>
-  new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer()) } }], usage: { cost } }), { status: 200 });
+  new Response(
+    JSON.stringify({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      model: "claude-haiku-5-5",
+      content: [{ type: "text", text: JSON.stringify(answer()) }],
+      stop_reason: "end_turn",
+      stop_sequence: null,
+      usage: { input_tokens: Math.round(cost * 1e7), output_tokens: 0 },
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
 const bodyOf = (call = 0) => JSON.parse(String(fetchMock.mock.calls[call][1]?.body));
 
 beforeEach(() => {
-  vi.stubEnv("OPENROUTER_API_KEY", "sk-or-v1-envkey0000000000000");
+  vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api03-envkey00000000000000000000");
   vi.stubEnv("ADMIN_EMAILS", "boss@biorefmind.com");
 });
 afterEach(() => {
@@ -147,10 +160,10 @@ describe("results reader", () => {
     });
 
     const body = bodyOf();
-    expect(body.response_format.json_schema.schema.properties.items.items.properties.analysis.enum).toEqual(["moisture", "punicalagin"]);
-    const parts = body.messages[1].content as { type: string; image_url?: { url: string } }[];
-    expect(parts.find((p) => p.type === "image_url")?.image_url?.url.startsWith("data:image/jpeg;base64,")).toBe(true);
-    const sent = JSON.stringify(body.messages[0]) + JSON.stringify(parts.filter((p) => p.type === "text"));
+    expect(body.output_config.format.schema.properties.items.items.properties.analysis.enum).toEqual(["moisture", "punicalagin"]);
+    const parts = body.messages[0].content as { type: string; source?: { type: string; media_type: string } }[];
+    expect(parts.find((p) => p.type === "image")?.source).toMatchObject({ type: "base64", media_type: "image/jpeg" });
+    const sent = JSON.stringify(body.system) + JSON.stringify(parts.filter((p) => p.type === "text"));
     for (const secret of ["Ferme Saïd", "Labo Nour", "555", "Lot A"]) expect(sent).not.toContain(secret);
 
     await t.run(async (ctx) => {
@@ -170,8 +183,8 @@ describe("results reader", () => {
     const t = newBackend();
     const { lab, requestId } = await receivedRequest(t);
     await lab.as.action(api.labAi.readResults, { requestId, files: [await upload(t, "application/pdf")] });
-    const parts = bodyOf().messages[1].content as { type: string; file?: { file_data: string } }[];
-    expect(parts.find((p) => p.type === "file")?.file?.file_data.startsWith("data:application/pdf;base64,")).toBe(true);
+    const parts = bodyOf().messages[0].content as { type: string; source?: { type: string; media_type: string } }[];
+    expect(parts.find((p) => p.type === "document")?.source).toMatchObject({ type: "base64", media_type: "application/pdf" });
   });
 
   test("who and when: other labs, clients, requests not in the lab, bad files", async () => {
@@ -227,9 +240,9 @@ describe("results reader", () => {
     await expect(lab.as.action(api.labAi.readResults, { requestId, files: [await upload(t)] })).rejects.toThrow(READ_REFUSE.off);
     await boss.mutation(api.ai.update, { resultsReader: true });
 
-    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
     await expect(lab.as.action(api.labAi.readResults, { requestId, files: [await upload(t)] })).rejects.toThrow(READ_REFUSE.off);
-    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-v1-envkey0000000000000");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api03-envkey00000000000000000000");
 
     await t.run(async (ctx) => {
       for (let i = 0; i < LAB_DAILY_READS; i++) {

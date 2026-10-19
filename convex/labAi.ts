@@ -4,7 +4,8 @@ import type { Doc } from "./_generated/dataModel";
 import { action, internalMutation, mutation, type MutationCtx } from "./_generated/server";
 import { resolveConfig } from "./ai";
 import { getRequest, requireLab } from "./labwork";
-import { OPENROUTER_URL, utcDay } from "./lib/ai";
+import { utcDay } from "./lib/ai";
+import { askJson, mediaBlock } from "./lib/claude";
 import {
   cleanUploads,
   LAB_DAILY_READS,
@@ -164,43 +165,28 @@ export const readResults = action({
         refused = true;
         throw e;
       }
-      const parts: object[] = [{ type: "text", text: "Here is the lab's results sheet." }];
-      for (const p of pages) {
-        const url = `data:${p.type};base64,${toBase64(p.data)}`;
-        parts.push(
-          p.type === "application/pdf"
-            ? { type: "file", file: { filename: "results.pdf", file_data: url } }
-            : { type: "image_url", image_url: { url } },
-        );
-      }
+      // Images go as images, a PDF as a document.
+      const parts = [
+        { type: "text" as const, text: "Here is the lab's results sheet." },
+        ...pages.map((p) => mediaBlock(`data:${p.type};base64,${toBase64(p.data)}`)),
+      ];
       for (let attempt = 1; attempt <= ATTEMPTS && !reading; attempt++) {
         try {
-          const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${job.key}`, "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(READ_TIMEOUT_MS),
-            body: JSON.stringify({
-              model: job.model,
-              max_tokens: 2500,
-              temperature: 0,
-              response_format: readSchema(job.analyses),
-              usage: { include: true },
-              messages: [
-                { role: "system", content: readingPrompt(job.analyses) },
-                { role: "user", content: parts },
-              ],
-            }),
+          const answer = await askJson({
+            key: job.key,
+            model: job.model,
+            system: readingPrompt(job.analyses),
+            content: parts,
+            schema: readSchema(job.analyses),
+            maxTokens: 8000,
+            timeoutMs: READ_TIMEOUT_MS,
+            effort: "medium",
           });
-          if (!res.ok) {
-            console.error("Results reader: OpenRouter error", res.status);
-            continue;
-          }
-          const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { cost?: number } };
-          if (typeof json.usage?.cost === "number") cost += json.usage.cost;
-          reading = parseReading(json.choices?.[0]?.message?.content ?? "", job.analyses, job.receivedAt, Date.now());
+          cost += answer.costUsd;
+          reading = parseReading(answer.text, job.analyses, job.receivedAt, Date.now());
           if (!reading) console.error("Results reader: answer did not fit the shape");
         } catch (e) {
-          console.error("Results reader: call failed", e instanceof Error ? e.name : "unknown");
+          console.error("Results reader: call failed", e && typeof e === "object" && "status" in e ? (e as { status?: number }).status : "network");
         }
       }
     } finally {

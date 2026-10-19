@@ -1,3 +1,4 @@
+import type Anthropic from "@anthropic-ai/sdk";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -14,7 +15,8 @@ import {
 import { resolveConfig } from "./ai";
 import { findMembership, requireMember, requireUser } from "./lib/access";
 import { labListed } from "./lib/accounts";
-import { OPENROUTER_URL, utcDay } from "./lib/ai";
+import { utcDay } from "./lib/ai";
+import { askJson, claude, costOf, mediaBlock } from "./lib/claude";
 import { LAB_DAILY_READS, parseReading, readingPrompt, readingValidator, readSchema, sniffType, type Reading } from "./lib/aiRead";
 import {
   ASSIST_REFUSE,
@@ -28,7 +30,6 @@ import {
   PHOTOS_PER_DAY,
   PHOTOS_PER_MESSAGE,
   QUESTIONS_PER_DAY,
-  StreamReader,
   RUN_DEADLINE_MS,
   STUCK_AFTER_MS,
   systemPrompt,
@@ -477,11 +478,6 @@ function countOf(json: string): string | undefined {
   return undefined;
 }
 
-type ChatMessage =
-  | { role: "system" | "user"; content: string | object[] }
-  | { role: "assistant"; content: string | null; tool_calls?: object[] }
-  | { role: "tool"; tool_call_id: string; content: string };
-
 export const run = internalAction({
   args: { messageId: v.id("aiMessages"), attempt: v.optional(v.number()) },
   handler: async (ctx, { messageId, attempt: given }) => {
@@ -511,18 +507,13 @@ export const run = internalAction({
       const latest = job.history.filter((m) => m.role === "user").at(-1);
       const sheetPages = (latest?.photoIds ?? []).map((id) => images.get(id)).filter((u): u is string => !!u);
 
-      const convo: ChatMessage[] = [
-        {
-          role: "system",
-          content: systemPrompt({ kind: job.kind, workspace: job.workspace, firstName: job.firstName, today: new Date().toISOString().slice(0, 10) }),
-        },
-        ...job.history.map((m): ChatMessage => {
-          if (m.role === "assistant") return { role: "assistant", content: m.text || "…" };
-          const pics = m.photoIds.map((id) => images.get(id)).filter((u): u is string => !!u);
-          if (pics.length === 0) return { role: "user", content: m.text || "(photos)" };
-          return { role: "user", content: [{ type: "text", text: m.text || "(photos)" }, ...pics.map((url) => ({ type: "image_url", image_url: { url } }))] };
-        }),
-      ];
+      const system = systemPrompt({ kind: job.kind, workspace: job.workspace, firstName: job.firstName, today: new Date().toISOString().slice(0, 10) });
+      const convo: Anthropic.MessageParam[] = job.history.map((m): Anthropic.MessageParam => {
+        if (m.role === "assistant") return { role: "assistant", content: m.text || "…" };
+        const pics = m.photoIds.map((id) => images.get(id)).filter((u): u is string => !!u);
+        if (pics.length === 0) return { role: "user", content: m.text || "(photos)" };
+        return { role: "user", content: [{ type: "text", text: m.text || "(photos)" }, ...pics.map(mediaBlock)] };
+      });
       const tools = toolsFor(job.kind);
       const readings = new Map<string, Reading>();
 
@@ -530,49 +521,39 @@ export const run = internalAction({
       for (let round = 0; round <= TOOL_ROUNDS; round++) {
         const left = RUN_DEADLINE_MS - (Date.now() - started);
         if (left < 5_000) break;
-        const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${job.key}`, "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(Math.min(CALL_TIMEOUT_MS, left)),
-          body: JSON.stringify({
-            model: job.model,
-            stream: true,
-            max_tokens: 1500,
-            temperature: 0.4,
-            usage: { include: true },
-            messages: convo,
-            // The last round has no tools, so the model must answer.
-            ...(round < TOOL_ROUNDS ? { tools } : {}),
-          }),
+        const stream = claude(job.key, Math.min(CALL_TIMEOUT_MS, left)).messages.stream({
+          model: job.model,
+          max_tokens: 4000,
+          system,
+          messages: convo,
+          output_config: { effort: "low" },
+          tools,
+          // The last round may not call tools, so the model must answer.
+          ...(round === TOOL_ROUNDS ? { tool_choice: { type: "none" as const } } : {}),
         });
-        if (!res.ok || !res.body) throw new Error(`OpenRouter ${res.status}`);
-        const reader = new StreamReader();
-        const decoder = new TextDecoder();
-        const stream = res.body.getReader();
         let roundText = "";
         let lastWrite = Date.now();
-        for (;;) {
-          const { value, done } = await stream.read();
-          if (done) break;
-          for (const piece of reader.push(decoder.decode(value, { stream: true }))) roundText += piece;
-          if (roundText && Date.now() - lastWrite > 500) {
+        for await (const ev of stream) {
+          if (ev.type !== "content_block_delta" || ev.delta.type !== "text_delta") continue;
+          roundText += ev.delta.text;
+          if (Date.now() - lastWrite > 500) {
             await ctx.runMutation(internal.assistant.write, { ...at, text: text + roundText });
             lastWrite = Date.now();
           }
         }
-        cost += reader.costUsd;
+        const message = await stream.finalMessage();
+        cost += costOf(job.model, message.usage);
         text += roundText;
-        const calls = reader.toolCalls().filter((c) => c.name);
-        if (calls.length === 0) break;
+        const calls = message.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+        // Tools only run on a complete tool turn (not one cut off by max_tokens or a refusal).
+        if (calls.length === 0 || message.stop_reason !== "tool_use") break;
         if (roundText) text += "\n\n";
 
-        convo.push({
-          role: "assistant",
-          content: roundText || null,
-          tool_calls: calls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: c.arguments || "{}" } })),
-        });
+        // The whole assistant turn goes back, thinking blocks included.
+        convo.push({ role: "assistant", content: message.content });
+        const results: Anthropic.ToolResultBlockParam[] = [];
         for (const c of calls) {
-          const args = c.arguments || "{}";
+          const args = JSON.stringify(c.input ?? {});
           let result: string;
           if (c.name.startsWith("propose_")) {
             const reqNo = c.name === "propose_results" ? argOf(args, "request_id").trim().toUpperCase() : "";
@@ -596,8 +577,10 @@ export const run = internalAction({
             result = await ctx.runQuery(internal.assistantTools.run, { companyId: job.companyId, name: c.name, args });
             await ctx.runMutation(internal.assistant.step, { ...at, tool: c.name, detail: countOf(result) });
           }
-          convo.push({ role: "tool", tool_call_id: c.id, content: result });
+          results.push({ type: "tool_result", tool_use_id: c.id, content: result });
         }
+        // Every result of one turn in a single user message.
+        convo.push({ role: "user", content: results });
       }
       text = text.trim();
       await ctx.runMutation(internal.assistant.finish, { ...at, text, status: text ? "done" : "failed", costUsd: cost });
@@ -624,27 +607,18 @@ async function readSheet(
   let reading: Reading | null = null;
   let cost = 0;
   try {
-    const res = await fetch(`${OPENROUTER_URL}/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${job.key}`, "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-      body: JSON.stringify({
-        model: job.model,
-        max_tokens: 2500,
-        temperature: 0,
-        response_format: readSchema(start.analyses),
-        usage: { include: true },
-        messages: [
-          { role: "system", content: readingPrompt(start.analyses) },
-          { role: "user", content: [{ type: "text", text: "Here is the lab's results sheet." }, ...pages.map((url) => ({ type: "image_url", image_url: { url } }))] },
-        ],
-      }),
+    const answer = await askJson({
+      key: job.key,
+      model: job.model,
+      system: readingPrompt(start.analyses),
+      content: [{ type: "text", text: "Here is the lab's results sheet." }, ...pages.map(mediaBlock)],
+      schema: readSchema(start.analyses),
+      maxTokens: 8000,
+      timeoutMs: CALL_TIMEOUT_MS,
+      effort: "medium",
     });
-    if (res.ok) {
-      const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { cost?: number } };
-      cost = typeof json.usage?.cost === "number" ? json.usage.cost : 0;
-      reading = parseReading(json.choices?.[0]?.message?.content ?? "", start.analyses, start.receivedAt, Date.now());
-    }
+    cost = answer.costUsd;
+    reading = parseReading(answer.text, start.analyses, start.receivedAt, Date.now());
   } catch {
     // reported below
   }
